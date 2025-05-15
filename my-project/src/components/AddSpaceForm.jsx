@@ -55,7 +55,14 @@ export default function AddSpaceForm() {
         alert('Something went wrong!');
       }
     };
-    
+    const formatForInput = (dateStr) => {
+  if (!dateStr) return '';
+  const [dd, mm, yyyy] = dateStr.split('-');
+  if (!yyyy || !mm || !dd) return '';
+  return `${yyyy}-${mm}-${dd}`;  // Converts back to YYYY-MM-DD for input box
+};
+
+
   const handleNext = () => {    
     if (!completedSteps.includes(step)) {
       setCompletedSteps((prev) => [...prev, step]);
@@ -113,7 +120,7 @@ export default function AddSpaceForm() {
               <Input label="Landlord" name="landlord" value={form.landlord} onChange={handleInputChange} />
               <Input label="Inventory Owner (Organization)" name="organization" value={form.organization} disabled />
               <Input label="Peer Media Owner" name="peerMediaOwner" value={form.peerMediaOwner} onChange={handleInputChange} />
-              <Select
+              {/* <Select
   label="Traded"
   name="traded"
   value={form.traded}
@@ -123,7 +130,7 @@ export default function AddSpaceForm() {
   <option value="">Select...</option>
   <option value="true">Yes</option>
   <option value="false">No</option>
-</Select>
+</Select> */}
 
               <Select label="Space Type" name="spaceType" value={form.spaceType} onChange={handleInputChange} required>
                 <option value="">Select...</option>
@@ -132,6 +139,31 @@ export default function AddSpaceForm() {
                 <option value="Pole kiosk">Pole kiosk</option>
                 <option value="Gantry">Gantry</option>
               </Select>
+              <Select label="Ownership Type" name="ownershipType" value={form.ownershipType} onChange={handleInputChange} required>
+                <option value="">Select...</option>
+                <option value="Billboard">Owned</option>
+                <option value="DOOH">Leased</option>
+                <option value="Pole kiosk">Traded</option>
+              </Select>
+              <Input
+  label="Start Date (DD-MM-YYYY)"
+  name="startDate"
+  type="date"
+  value={formatForInput(form.startDate)}
+  onChange={handleInputChange}
+  required
+/>
+
+<Input
+  label="End Date (DD-MM-YYYY)"
+  name="endDate"
+  type="date"
+  value={formatForInput(form.endDate)}
+  onChange={handleInputChange}
+  required
+/>
+
+
               <Select label="Category" name="category" value={form.category} onChange={handleInputChange} required>
                 <option value="">Select...</option>
                 <option value="Retail">Retail</option>

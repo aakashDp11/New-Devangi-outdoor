@@ -158,6 +158,8 @@ export default function SpaceDetails() {
               <div><strong>Tier:</strong> {space.tier}</div>
               <div><strong>Latitude:</strong> {space.latitude}</div>
               <div><strong>Longitude:</strong> {space.longitude}</div>
+                <div><strong>Start Date:</strong> {space.dates && space.dates[0]}</div>
+  <div><strong>End Date:</strong> {space.dates && space.dates[1]}</div>
             </div>
 
             <div className="mt-4">

@@ -3,161 +3,397 @@ import Booking from '../models/booking.model.js';
 import Space from '../models/space.model.js';
 import upload from '../middleware/multer.middleware.js';
 import pipelineModel from '../models/pipeline.model.js';
+import mongoose from 'mongoose';
+import Campaign from '../models/campign.model.js';
 const router = express.Router();
-
 // CREATE - POST /api/bookings
+export const getAllBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate({
+        path: 'campaigns',
+        populate: {
+          path: 'spaces.id',  // populate Space info inside Campaign
+          model: 'Space'
+        }
+      })
+      .sort({ createdAt: -1 });
 
+    return res.status(200).json({ bookings });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch bookings' });
+  }
+};
+export const createBooking = async (req, res) => {
+  console.log("Create booking data is",req.body);
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
+  try {
+    const {
+      companyName,
+      clientName,
+      clientEmail,
+      clientPanNumber,
+      clientGstNumber,
+      clientContactNumber,
+      brandDisplayName,
+      clientType,
+      campaigns = []
+    } = req.body;
+const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
+
+    // ✅ Validate basic info
+    if (!companyName) {
+      throw new Error('Company Name is required');
+    }
+
+    // ✅ Save Booking (empty campaigns ref for now)
+    const newBooking = new Booking({
+      companyName,
+      clientName,
+      clientEmail,
+      clientPanNumber,
+      clientGstNumber,
+      clientContactNumber,
+      brandDisplayName,
+      clientType,
+      campaigns: []
+    });
+
+    await newBooking.save({ session });
+
+    const createdCampaigns = [];
+
+    // ✅ Process each campaign
+    for (const campaignData of parsedCampaigns) {
+      const { campaignName, industry, description, selectedSpaces = [], campaignImages = [] } = campaignData;
+
+      // ✅ Update Space inventories
+      for (const selected of selectedSpaces) {
+        const space = await Space.findById(selected.id).session(session);
+        if (!space) throw new Error(`Space not found: ${selected.id}`);
+
+        // Validate available units
+        const availableUnits = space.unit - space.occupiedUnits;
+        if (selected.selectedUnits > availableUnits) {
+          throw new Error(`Not enough units available for space: ${space.spaceName}`);
+        }
+
+        // Update occupied units
+        space.occupiedUnits += selected.selectedUnits;
+
+        // Update availability status
+        if (space.occupiedUnits >= space.unit) {
+          space.availability = 'Completely booked';
+        } else if (space.occupiedUnits === 0) {
+          space.availability = 'Completely available';
+        } else {
+          space.availability = 'Partialy available';
+        }
+
+        await space.save({ session });
+      }
+
+      // ✅ Create Campaign document
+      const newCampaign = new Campaign({
+        campaignName,
+        description,
+        campaignImages,
+        spaces: selectedSpaces.map(s => ({
+          id: s.id,
+          selectedUnits: s.selectedUnits
+        })),
+        pipeline: null, // will be linked later if needed
+      });
+
+      await newCampaign.save({ session });
+      createdCampaigns.push(newCampaign._id);
+    }
+
+    // ✅ Update Booking with created campaigns
+    newBooking.campaigns = createdCampaigns;
+    await newBooking.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(201).json({ message: 'Booking created successfully', bookingId: newBooking._id });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error(error);
+    return res.status(500).json({ error: error.message || 'Failed to create booking' });
+  }
+};
+export const updateBooking = async (req, res) => {
+  const { id:bookingId } = req.params;
+  const {
+    companyName,
+    clientName,
+    clientEmail,
+    clientPanNumber,
+    clientGstNumber,
+    clientContactNumber,
+    brandDisplayName,
+    clientType,
+    campaigns = []
+  } = req.body;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const booking = await Booking.findById(bookingId).session(session);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
+    // ✅ Update basic info
+    Object.assign(booking, {
+      companyName,
+      clientName,
+      clientEmail,
+      clientPanNumber,
+      clientGstNumber,
+      clientContactNumber,
+      brandDisplayName,
+      clientType
+    });
+
+    // ✅ Update campaigns
+    for (const updatedCampaign of campaigns) {
+      const campaign = await Campaign.findById(updatedCampaign._id).session(session);
+      if (!campaign) continue;
+
+      // ✅ Update Campaign info
+      campaign.campaignName = updatedCampaign.campaignName;
+      campaign.description = updatedCampaign.description;
+
+      // ✅ Re-adjust spaces inventory (delta logic)
+      for (const updatedSpace of updatedCampaign.selectedSpaces) {
+        const space = await Space.findById(updatedSpace.id).session(session);
+        if (!space) throw new Error(`Space not found: ${updatedSpace.id}`);
+
+        const existingSelection = campaign.spaces.find(s => s.id.equals(updatedSpace.id));
+        const previousUnits = existingSelection ? existingSelection.selectedUnits : 0;
+        const delta = updatedSpace.selectedUnits - previousUnits;
+
+        // Validate available units
+        if (delta > 0 && space.occupiedUnits + delta > space.unit) {
+          throw new Error(`Not enough available units for space: ${space.spaceName}`);
+        }
+
+        // Update space occupiedUnits
+        space.occupiedUnits += delta;
+
+        // Update space availability
+        if (space.occupiedUnits >= space.unit) {
+          space.availability = 'Completely booked';
+        } else if (space.occupiedUnits === 0) {
+          space.availability = 'Completely available';
+        } else {
+          space.availability = 'Partialy available';
+        }
+
+        await space.save({ session });
+
+        // Update campaign's space selection
+        if (existingSelection) {
+          existingSelection.selectedUnits = updatedSpace.selectedUnits;
+        } else {
+          campaign.spaces.push({ id: updatedSpace.id, selectedUnits: updatedSpace.selectedUnits });
+        }
+      }
+
+      await campaign.save({ session });
+    }
+
+    await booking.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({ message: 'Booking updated successfully' });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error(error);
+    return res.status(500).json({ error: error.message || 'Failed to update booking' });
+  }
+};
+export const deleteBooking = async (req, res) => {
+  const { id:bookingId } = req.params;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const booking = await Booking.findById(bookingId).populate('campaigns').session(session);
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
+    // ✅ Revert space inventories
+    for (const campaign of booking.campaigns) {
+      for (const selected of campaign.spaces) {
+        const space = await Space.findById(selected.id).session(session);
+        if (!space) continue;
+
+        space.occupiedUnits = Math.max(0, space.occupiedUnits - selected.selectedUnits);
+
+        // Update availability
+        if (space.occupiedUnits >= space.unit) {
+          space.availability = 'Completely booked';
+        } else if (space.occupiedUnits === 0) {
+          space.availability = 'Completely available';
+        } else {
+          space.availability = 'Partialy available';
+        }
+
+        await space.save({ session });
+      }
+
+      // ✅ Delete Campaign
+      await Campaign.findByIdAndDelete(campaign._id).session(session);
+    }
+
+    // ✅ Delete Booking
+    await Booking.findByIdAndDelete(bookingId).session(session);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({ message: 'Booking deleted successfully' });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error(error);
+    return res.status(500).json({ error: error.message || 'Failed to delete booking' });
+  }
+};
+export const getBookingById = async (req, res) => {
+  const { id:bookingId } = req.params;
+
+  try {
+    const booking = await Booking.findById(bookingId)
+      .populate({
+        path: 'campaigns',
+        populate: {
+          path: 'spaces.id',  // populates Space inside Campaign
+          model: 'Space'
+        }
+      });
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    return res.status(200).json(booking);
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
+  }
+};
+router.get('/',getAllBookings);
+router.post('/',upload.array('campaignImages', 10),  // Limit to 10 images
+  createBooking
+);
 // router.post('/', upload.array('campaignImages', 10), async (req, res) => {
 //   try {
-//     const body = req.body;
+//     const rawSpaces = Array.isArray(req.body.spaces)
+//       ? req.body.spaces
+//       : [req.body.spaces];
 
-//     // Convert comma-separated string to array if needed
-//     const spacesArray = Array.isArray(body.spaces)
-//       ? body.spaces
-//       : body.spaces?.split(',') || [];
-
-//     const spacesExist = await Space.find({ _id: { $in: spacesArray } });
-//     if (spacesExist.length !== spacesArray.length) {
-//       return res.status(400).json({ error: 'One or more invalid space IDs' });
-//     }
-
-//     // Store file paths in booking
-//     const imagePaths = req.files.map(file => `/uploads/${file.filename}`);
-
-//     const newBooking = new Booking({
-//       ...body,
-//       spaces: spacesArray,
-//       campaignImages: imagePaths,
+//     // ✅ STEP 1: PARSE EACH ENTRY SAFELY
+//     const spaceEntries = rawSpaces.map(entry => {
+//       if (typeof entry === 'string') {
+//         try {
+//           return JSON.parse(entry);
+//         } catch (err) {
+//           throw new Error(`Invalid space JSON: ${entry}`);
+//         }
+//       }
+//       return entry;
 //     });
 
-//     const savedBooking = await newBooking.save();
+//     // ✅ STEP 2: Extract only ObjectIds
+//     const spaceIds = spaceEntries.map(s => s.id);
 
-//     await Space.updateMany(
-//       { _id: { $in: spacesArray } },
-//       { $set: { available: false } }
-//     );
+//     // ✅ STEP 3: Validate space IDs
+//     const spacesFound = await Space.find({ _id: { $in: spaceIds } });
+//     if (spacesFound.length !== spaceIds.length) {
+//       return res.status(400).json({ error: 'One or more space IDs are invalid' });
+//     }
 
-//     res.status(201).json({ message: 'Booking created successfully', data: savedBooking });
-//   } catch (error) {
-//     console.error('Booking creation error:', error);
-//     res.status(400).json({ error: 'Failed to create booking', details: error.message });
+ 
+//     for (const { id, selectedUnits } of spaceEntries) {
+//       const space = await Space.findById(id);
+//       if (!space) continue;
+    
+//       const newOccupied = space.occupiedUnits + selectedUnits;
+//       const total = space.unit;
+    
+//       // Determine new availability
+//       let newAvailability = 'Completely available';
+//       if (newOccupied === total) {
+//         newAvailability = 'Completely booked';
+//       } else if (newOccupied > 0 && newOccupied < total) {
+//         newAvailability = 'Partialy available';
+//       }
+    
+//       // Detect overlap if already full before increment
+//       if (space.occupiedUnits >= total) {
+//         await Space.findByIdAndUpdate(id, {
+//           $set: { overlappingBooking: true }
+//         });
+//       } else {
+//         await Space.findByIdAndUpdate(id, {
+//           $inc: { occupiedUnits: selectedUnits },
+//           $set: { availability: newAvailability }
+//         });
+    
+//         if (newOccupied > total) {
+//           await Space.findByIdAndUpdate(id, { overlappingBooking: true });
+//         }
+//       }
+//     }
+    
+//     const imagePaths = req.files.map(f => `/uploads/${f.filename}`);
+
+//     // ✅ STEP 6: Save the booking
+//     const newBooking = new Booking({
+//       companyName: req.body.companyName,
+//       clientName: req.body.clientName,
+//       clientEmail: req.body.clientEmail,
+//       clientPanNumber: req.body.clientPanNumber,
+//       clientGstNumber: req.body.clientGstNumber,
+//       clientContactNumber: req.body.clientContactNumber,
+//       brandDisplayName: req.body.brandDisplayName,
+//       clientType: req.body.clientType,
+//       campaignName: req.body.campaignName,
+//       industry: req.body.industry,
+//       description: req.body.description,
+//       campaignImages: imagePaths,
+//       spaces: spaceEntries  // ✅ includes id + selectedUnits
+//     });
+
+//     const saved = await newBooking.save();
+
+  
+    
+
+//     res.status(201).json({ message: 'Booking created successfully', data: saved });
+//   } catch (err) {
+//     console.error('Booking creation error:', err);
+//     res.status(500).json({ error: 'Failed to create booking', details: err.message });
 //   }
 // });
-router.post('/', upload.array('campaignImages', 10), async (req, res) => {
-  try {
-    const rawSpaces = Array.isArray(req.body.spaces)
-      ? req.body.spaces
-      : [req.body.spaces];
-
-    // ✅ STEP 1: PARSE EACH ENTRY SAFELY
-    const spaceEntries = rawSpaces.map(entry => {
-      if (typeof entry === 'string') {
-        try {
-          return JSON.parse(entry);
-        } catch (err) {
-          throw new Error(`Invalid space JSON: ${entry}`);
-        }
-      }
-      return entry;
-    });
-
-    // ✅ STEP 2: Extract only ObjectIds
-    const spaceIds = spaceEntries.map(s => s.id);
-
-    // ✅ STEP 3: Validate space IDs
-    const spacesFound = await Space.find({ _id: { $in: spaceIds } });
-    if (spacesFound.length !== spaceIds.length) {
-      return res.status(400).json({ error: 'One or more space IDs are invalid' });
-    }
-
-   
-    // for (const { id, selectedUnits } of spaceEntries) {
-    //   const space = await Space.findById(id);
-    
-    //   const newOccupied = space.occupiedUnits + selectedUnits;
-    //   const total = space.unit;
-    
-    //   // ✅ Check if booking causes overlap
-    //   if (space.occupiedUnits >= total) {
-    //     await Space.findByIdAndUpdate(id, { overlappingBooking: true });
-    //   } else {
-    //     // Normal flow: increment occupiedUnits
-    //     await Space.findByIdAndUpdate(id, {
-    //       $inc: { occupiedUnits: selectedUnits }
-    //     });
-    
-    //     // If still causes overbooking after increment, flag it
-    //     if (newOccupied > total) {
-    //       await Space.findByIdAndUpdate(id, { overlappingBooking: true });
-    //     }
-    //   }
-    // }
-    
-
-    // ✅ STEP 5: Store image paths
-    for (const { id, selectedUnits } of spaceEntries) {
-      const space = await Space.findById(id);
-      if (!space) continue;
-    
-      const newOccupied = space.occupiedUnits + selectedUnits;
-      const total = space.unit;
-    
-      // Determine new availability
-      let newAvailability = 'Completely available';
-      if (newOccupied === total) {
-        newAvailability = 'Completely booked';
-      } else if (newOccupied > 0 && newOccupied < total) {
-        newAvailability = 'Partialy available';
-      }
-    
-      // Detect overlap if already full before increment
-      if (space.occupiedUnits >= total) {
-        await Space.findByIdAndUpdate(id, {
-          $set: { overlappingBooking: true }
-        });
-      } else {
-        await Space.findByIdAndUpdate(id, {
-          $inc: { occupiedUnits: selectedUnits },
-          $set: { availability: newAvailability }
-        });
-    
-        if (newOccupied > total) {
-          await Space.findByIdAndUpdate(id, { overlappingBooking: true });
-        }
-      }
-    }
-    
-    const imagePaths = req.files.map(f => `/uploads/${f.filename}`);
-
-    // ✅ STEP 6: Save the booking
-    const newBooking = new Booking({
-      companyName: req.body.companyName,
-      clientName: req.body.clientName,
-      clientEmail: req.body.clientEmail,
-      clientPanNumber: req.body.clientPanNumber,
-      clientGstNumber: req.body.clientGstNumber,
-      clientContactNumber: req.body.clientContactNumber,
-      brandDisplayName: req.body.brandDisplayName,
-      clientType: req.body.clientType,
-      campaignName: req.body.campaignName,
-      industry: req.body.industry,
-      description: req.body.description,
-      campaignImages: imagePaths,
-      spaces: spaceEntries  // ✅ includes id + selectedUnits
-    });
-
-    const saved = await newBooking.save();
-
-    // ✅ STEP 7: Update occupiedUnits for each space
-    
-
-    res.status(201).json({ message: 'Booking created successfully', data: saved });
-  } catch (err) {
-    console.error('Booking creation error:', err);
-    res.status(500).json({ error: 'Failed to create booking', details: err.message });
-  }
-});
 
 
 // READ ALL - GET /api/bookings
@@ -171,71 +407,42 @@ router.post('/', upload.array('campaignImages', 10), async (req, res) => {
 // });
 
 // READ ALL - GET /api/bookings
-router.get('/', async (req, res) => {
-  try {
-    const bookings = await Booking.find().populate('spaces.id');
+// router.get('/', async (req, res) => {
+//   try {
+//     const bookings = await Booking.find().populate('spaces.id');
 
-    // ✅ Fetch all pipelines for these bookings
-    const bookingIds = bookings.map(b => b._id);
-    const pipelines = await pipelineModel.find({ booking: { $in: bookingIds } });
+//     // ✅ Fetch all pipelines for these bookings
+//     const bookingIds = bookings.map(b => b._id);
+//     const pipelines = await pipelineModel.find({ booking: { $in: bookingIds } });
 
-    // ✅ Create a pipeline lookup map { bookingId: pipeline }
-    const pipelineMap = {};
-    pipelines.forEach(p => {
-      pipelineMap[p.booking.toString()] = p;
-    });
+//     // ✅ Create a pipeline lookup map { bookingId: pipeline }
+//     const pipelineMap = {};
+//     pipelines.forEach(p => {
+//       pipelineMap[p.booking.toString()] = p;
+//     });
 
-    // ✅ Attach pipeline to each booking
-    const bookingsWithPipeline = bookings.map(b => ({
-      ...b.toObject(),
-      pipeline: pipelineMap[b._id.toString()] || null,
-    }));
+//     // ✅ Attach pipeline to each booking
+//     const bookingsWithPipeline = bookings.map(b => ({
+//       ...b.toObject(),
+//       pipeline: pipelineMap[b._id.toString()] || null,
+//     }));
 
-    res.json(bookingsWithPipeline);
+//     res.json(bookingsWithPipeline);
 
-  } catch (error) {
-    console.error('Error fetching bookings:', error);
-    res.status(500).json({ error: 'Failed to fetch bookings', details: error.message });
-  }
-});
+//   } catch (error) {
+//     console.error('Error fetching bookings:', error);
+//     res.status(500).json({ error: 'Failed to fetch bookings', details: error.message });
+//   }
+// });
 
 
 // READ ONE - GET /api/bookings/:id
-router.get('/:id', async (req, res) => {
-  try {
-    const booking = await Booking.findById(req.params.id).populate('spaces');
-    if (!booking) return res.status(404).json({ error: 'Booking not found' });
-    // console.log("Asked booking is",booking);
-    res.json(booking);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch booking', details: error.message });
-  }
-});
+router.get('/:id', getBookingById);
 
 // UPDATE - PUT /api/bookings/:id
-router.put('/:id', async (req, res) => {
-  try {
-    const updatedBooking = await Booking.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    }).populate('space');
-
-    if (!updatedBooking) return res.status(404).json({ error: 'Booking not found' });
-    res.json({ message: 'Booking updated successfully', data: updatedBooking });
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to update booking', details: error.message });
-  }
-});
+router.put('/:id', updateBooking);
 
 // DELETE - DELETE /api/bookings/:id
-router.delete('/:id', async (req, res) => {
-  try {
-    const deletedBooking = await Booking.findByIdAndDelete(req.params.id);
-    if (!deletedBooking) return res.status(404).json({ error: 'Booking not found' });
-    res.json({ message: 'Booking deleted successfully', data: deletedBooking });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete booking', details: error.message });
-  }
-});
+router.delete('/:id', deleteBooking);
 
 export default router;

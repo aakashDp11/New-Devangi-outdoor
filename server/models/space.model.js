@@ -128,6 +128,7 @@ occupiedUnits: {
   longitude: { type: String },
   landmark: { type: String },
   zone: { type: String, enum: ['East', 'West', 'North', 'South'] },
+  ownership: { type: String, enum: ['Owned', 'Leased', 'Traded'] },
   tier: { type: String, enum: ['Tier 1', 'Tier 2'] },
   // facing: { type: String, enum: ['Single Facing', 'Double Facing'],default:'Single Facing' },
   faciaTowards: { type: String },
@@ -137,9 +138,19 @@ occupiedUnits: {
   inventory: { type: String },   // could store image URL or file reference
   longShot: { type: String },
   closeShot: { type: String },
+   
+  printingStatus: {
+    confirmed: { type: Boolean, default: false },
+  },
+
+  mountingStatus: {
+    confirmed: { type: Boolean, default: false },
+  },
   otherPhotos: [String],
   availability: { type: String,enum: ['Completely available', 'Partialy available', 'Completely booked'], default: 'Completely available' },
-  dates: [{ type: String, default:"",match: /^\d{2}-\d{2}-\d{2}$/ }] // e.g., "24-04-25"
+  // dates: [{ type: String, default:"",match: /^\d{2}-\d{2}-\d{2}$/ }] // e.g., "24-04-25"
+  dates: [{ type: String, match: /^\d{2}-\d{2}-\d{4}$/ }]
+
 }, {
   timestamps: true
 });

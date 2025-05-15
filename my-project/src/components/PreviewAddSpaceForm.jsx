@@ -16,20 +16,9 @@ export default function PreviewAddSpace() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const today = new Date();
-const nextYear = new Date();
-nextYear.setFullYear(today.getFullYear() + 1);
+    // Update form.dates from form.startDate and form.endDate
+form.dates = [form.startDate, form.endDate];
 
-// Format function
-function formatDate(date) {
-  const dd = String(date.getDate()).padStart(2, '0');
-  const mm = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-based
-  const yy = String(date.getFullYear()).slice(-2); // Last 2 digits
-  return `${dd}-${mm}-${yy}`;
-}
-
-// Update form.dates before sending
-form.dates = [formatDate(today), formatDate(nextYear)];
 
     const formData = new FormData();
 

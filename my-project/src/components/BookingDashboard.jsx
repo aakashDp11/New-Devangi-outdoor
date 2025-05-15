@@ -196,8 +196,9 @@ export default function BookingsDashboard1() {
       try {
         const response = await fetch('http://localhost:3000/api/bookings');
         const data = await response.json();
-        data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setBookings(data);
+        console.log(data.bookings);
+        data.bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setBookings(data.bookings);
         console.log("Bookings data is",data);
       } catch (error) {
         console.error('Error fetching bookings:', error);
@@ -260,10 +261,10 @@ export default function BookingsDashboard1() {
                 <th>Booking ID</th>
                 <th>Client Name</th>
                 {/* <th>Category</th> */}
-                <th>Status</th>
+                {/* <th>Status</th> */}
                 <th>Booking Date</th>
-                <th>Start Date</th>
-                <th>End Date</th>
+                {/* <th>Start Date</th>
+                <th>End Date</th> */}
               </tr>
             </thead>
             <tbody>
@@ -287,14 +288,14 @@ export default function BookingsDashboard1() {
                   <td>{item._id}</td>
                   <td>{item.clientName || 'No Client'}</td>
                   {/* <td>{item.industry || 'No Category'}</td> */}
-                  <td>
+                  {/* <td>
                     <span className="badge badge-ghost badge-sm">
                       {getLatestPipelineStatus(item.pipeline)}
                     </span>
-                  </td>
+                  </td> */}
                   <td>{new Date(item.createdAt).toLocaleDateString()}</td>
-                  <td>{item.spaces?.[0]?.id?.dates[0] || 'N/A'}</td>
-<td>{item.spaces?.[0]?.id?.dates[1] || 'N/A'}</td>
+                  {/* <td>{item.spaces?.[0]?.id?.dates[0] || 'N/A'}</td>
+<td>{item.spaces?.[0]?.id?.dates[1] || 'N/A'}</td> */}
                 </tr>
               ))}
             </tbody>

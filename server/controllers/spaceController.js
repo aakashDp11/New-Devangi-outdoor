@@ -64,6 +64,7 @@ export const createSpace = async (req, res) => {
         longShot: longShot?.[0]?.filename,
         closeShot: closeShot?.[0]?.filename,
         otherPhotos: otherPhotos?.map((f) => f.filename) || [],
+        dates: [body.startDate, body.endDate]
       });
   
       const saved = await space.save();
