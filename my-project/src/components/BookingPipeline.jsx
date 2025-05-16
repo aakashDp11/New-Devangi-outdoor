@@ -268,27 +268,6 @@ const baseNodeStyle = {
   fontWeight: 600,
 };
 
-// Initial nodes and edges
-// const initialNodes = [
-//   { id: '1', position: { x: 0, y: 200 }, data: { label: 'Booking Confirmed' }, style: { ...baseNodeStyle, background: '#d1fae5', borderColor: '#10b981' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '2', position: { x: 300, y: 200 }, data: { label: 'PO status' }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '4', position: { x: 400, y: 450 }, data: { label: 'Invoice Details' }, style: { ...baseNodeStyle, background: '#fef3c7', borderColor: '#facc15' }, sourcePosition: 'right', targetPosition: 'top' },
-//   { id: '5', position: { x: 600, y: 450 }, data: { label: 'Payment status' }, style: { ...baseNodeStyle, background: '#ede9fe', borderColor: '#8b5cf6' }, sourcePosition: 'left', targetPosition: 'right' },
-//   { id: '6', position: { x: 500, y: 200 }, data: { label: 'Artwork status' }, style: { ...baseNodeStyle, background: '#fbcfe8', borderColor: '#ec4899' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '7', position: { x: 800, y: 200 }, data: { label: 'Printing Status' }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '8', position: { x: 1000, y: 200 }, data: { label: 'Mounting Status' }, style: { ...baseNodeStyle, background: '#fecaca', borderColor: '#ef4444' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '9', position: { x: 1200, y: 200 }, data: { label: 'Advertising Live' }, style: { ...baseNodeStyle, background: '#d9f99d', borderColor: '#84cc16' }, sourcePosition: 'right', targetPosition: 'left' },
-// ];
-// const initialNodes = [
-//   { id: '1', position: { x: 0, y: 100 }, data: { label: 'Booking Confirmed' }, style: { ...baseNodeStyle, background: '#d1fae5', borderColor: '#10b981' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '2', position: { x: 250, y: 100 }, data: { label: 'PO status' }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '6', position: { x: 500, y: 50 }, data: { label: 'Artwork status' }, style: { ...baseNodeStyle, background: '#fbcfe8', borderColor: '#ec4899' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '4', position: { x: 500, y: 200 }, data: { label: 'Invoice Details' }, style: { ...baseNodeStyle, background: '#fef3c7', borderColor: '#facc15' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '5', position: { x: 750, y: 200 }, data: { label: 'Payment status' }, style: { ...baseNodeStyle, background: '#ede9fe', borderColor: '#8b5cf6' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '7', position: { x: 750, y: 50 }, data: { label: 'Printing Status' }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '8', position: { x: 1000, y: 100 }, data: { label: 'Mounting Status' }, style: { ...baseNodeStyle, background: '#fecaca', borderColor: '#ef4444' }, sourcePosition: 'right', targetPosition: 'left' },
-//   { id: '9', position: { x: 1250, y: 100 }, data: { label: 'Advertising Live' }, style: { ...baseNodeStyle, background: '#d9f99d', borderColor: '#84cc16' }, sourcePosition: 'right', targetPosition: 'left' },
-// ];
 const initialNodes = [
   { id: '1', position: { x: 0, y: 200 }, data: { label: 'Booking Confirmed' }, style: { ...baseNodeStyle, background: '#d1fae5', borderColor: '#10b981' }, sourcePosition: 'right', targetPosition: 'left' },
   { id: '2', position: { x: 250, y: 200 }, data: { label: 'PO status' }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' }, sourcePosition: 'right', targetPosition: 'left' },
@@ -351,11 +330,7 @@ export default function BookingFlow({ bookingId }) {
     }
   }, [BookingId]);
 
-// useEffect(() => {
-//   if (nodes.length > 0 && pipelineData) {
-//     fitView({ padding: 0.1, duration: 500 });
-//   }
-// }, [nodes, pipelineData, fitView]);
+
 useEffect(() => {
   if (nodes.length > 0 && pipelineData) {
     fitView({ padding: 0.15, duration: 400 });
@@ -424,26 +399,6 @@ useEffect(() => {
       {selectedNode && (
         <div style={modalStyle}>
 
-          {/* <div style={modalContentStyle}>
-  <div style={{ flex: 1, overflowY: 'auto' }}>
-    {selectedNode.id === '1' && <BookingStatusForm bookingId={BookingId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-    {selectedNode.id === '2' && <POForm bookingId={BookingId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-    {selectedNode.id === '6' && <ArtworkForm bookingId={BookingId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-    {selectedNode.id === '4' && <InvoiceForm bookingId={BookingId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-    {selectedNode.id === '5' && <PaymentStatusForm bookingId={BookingId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-    {selectedNode.id === '7' && <PrintingStatus bookingId={BookingId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-    {selectedNode.id === '8' && <MountingStatus bookingId={BookingId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-  </div>
-
-  <div className="mt-4">
-    <button
-      className="w-[1/10] bg-gray-200 py-2 rounded hover:bg-gray-300 text-sm"
-      onClick={() => setSelectedNode(null)}
-    >
-      Close
-    </button>
-  </div>
-</div> */}
 <div style={modalContentStyle} className='bg-white shadow-lg rounded-lg p-6 border'>
   <div>
     {selectedNode.id === '1' && <BookingStatusForm bookingId={BookingId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}

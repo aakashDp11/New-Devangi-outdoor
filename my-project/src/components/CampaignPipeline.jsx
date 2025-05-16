@@ -1,0 +1,485 @@
+// import React, { useCallback, useEffect, useState, useContext } from 'react';
+// import { useParams } from 'react-router-dom';
+// import {
+//   ReactFlow,
+//   useNodesState,
+//   useEdgesState,
+//   addEdge,
+//   useReactFlow,
+// } from '@xyflow/react';
+// import '@xyflow/react/dist/style.css';
+
+// import BookingStatusForm from './modals/BookingStatusForm';
+// import POForm from './modals/PoStatus';
+// import ArtworkForm from './modals/ArtworkStatus';
+// import InvoiceForm from './modals/InvoiceDetailsForm';
+// import PaymentStatusForm from './modals/PaymentStatusForm';
+// import PrintingStatus from './modals/PrintingStatus';
+// import MountingStatus from './modals/MountingStatus';
+
+// import { PipelineContext } from '../context/PipelineContext';
+// import axios from 'axios';
+
+// const baseNodeStyle = {
+//   padding: 10,
+//   border: '2px solid',
+//   borderRadius: 8,
+//   fontWeight: 600,
+// };
+
+// export default function CampaignPipeline({ campaignId }) {
+//   const { id } = useParams();
+//   const CampaignId = campaignId || id;
+
+//   const [nodes, setNodes, onNodesChange] = useNodesState([]);
+//   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+//   const [selectedNode, setSelectedNode] = useState(null);
+//   const { pipelineData, setPipelineData } = useContext(PipelineContext);
+
+//   const { fitView } = useReactFlow();
+
+//   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), []);
+//   const onNodeClick = (_, node) => setSelectedNode(node);
+
+// useEffect(() => {
+//   const fetchOrCreatePipeline = async () => {
+//     try {
+//       const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+//       setPipelineData(res.data);
+//     } catch (err) {
+//       if (err.response && err.response.status === 404) {
+//         const createRes = await axios.post(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+//         setPipelineData(createRes.data);
+//       } else {
+//         console.error('Error fetching/creating pipeline:', err);
+//       }
+//     }
+//   };
+
+//   if (CampaignId) {
+//     fetchOrCreatePipeline();
+//   }
+// }, [CampaignId]);
+
+
+//   useEffect(() => {
+//     if (!pipelineData) return;
+
+//     let dynamicNodes = [];
+//     let dynamicEdges = [];
+
+//     // Always show Booking Confirmed
+//     const staticNodes = [
+//       { id: 'booking', data: { label: 'Booking confirmed' }, position: { x: 0, y: 200 }, style: { ...baseNodeStyle, background: '#d1fae5', borderColor: '#10b981' } },
+//     ];
+
+//     const staticEdges = [];
+
+//     // After booking confirmed, show PO, Artwork, Invoice
+//     if (pipelineData.bookingStatus?.confirmed) {
+//       staticNodes.push(
+//         { id: 'po', data: { label: 'PO status' }, position: { x: 250, y: 200 }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' } },
+//         { id: 'artwork', data: { label: 'Artwork' }, position: { x: 450, y: 200 }, style: { ...baseNodeStyle, background: '#fbcfe8', borderColor: '#ec4899' } },
+//         { id: 'invoice', data: { label: 'Invoice details' }, position: { x: 250, y: 400 }, style: { ...baseNodeStyle, background: '#fef3c7', borderColor: '#facc15' } },
+//       );
+//       staticEdges.push(
+//         { id: 'e-booking-po', source: 'booking', target: 'po', markerEnd: 'arrowclosed' },
+//         { id: 'e-po-artwork', source: 'po', target: 'artwork', markerEnd: 'arrowclosed' },
+//         { id: 'e-po-invoice', source: 'po', target: 'invoice', markerEnd: 'arrowclosed' },
+//       );
+//     }
+
+//     // After invoice, show Payment Status if required
+//     if (pipelineData.invoice?.invoiceNumber) {
+//       staticNodes.push(
+//         { id: 'payment', data: { label: 'Payment status' }, position: { x: 450, y: 400 }, style: { ...baseNodeStyle, background: '#ede9fe', borderColor: '#8b5cf6' } }
+//       );
+//       staticEdges.push(
+//         { id: 'e-invoice-payment', source: 'invoice', target: 'payment', markerEnd: 'arrowclosed' }
+//       );
+//     }
+
+//     // If artwork received, show Inventories + Printing + Mounting
+//     // if (pipelineData.artwork?.confirmed && pipelineData.spaces?.length > 0) {
+//     //   pipelineData.spaces.forEach((space, index) => {
+//     //     const inventoryId = `inventory-${space._id}`;
+//     //     const printId = `print-${space._id}`;
+//     //     const mountId = `mount-${space._id}`;
+
+//     //     dynamicNodes.push(
+//     //       { id: inventoryId, data: { label: space.spaceName }, position: { x: 650, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' } },
+//     //       { id: printId, data: { label: 'Printing status' }, position: { x: 850, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#ede9fe', borderColor: '#8b5cf6' } },
+//     //       { id: mountId, data: { label: 'Mounting status' }, position: { x: 1050, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#fecaca', borderColor: '#ef4444' } },
+//     //     );
+
+//     //     dynamicEdges.push(
+//     //       { id: `e-artwork-${space._id}`, source: 'artwork', target: inventoryId, markerEnd: 'arrowclosed' },
+//     //       { id: `e-${space._id}-print`, source: inventoryId, target: printId, markerEnd: 'arrowclosed' },
+//     //     );
+
+//     //     // Conditionally show Mounting only if printing is confirmed globally (or you can switch to per space logic if needed)
+//     //     if (pipelineData.printingStatus?.confirmed) {
+//     //       dynamicEdges.push(
+//     //         { id: `e-print-${space._id}-mount`, source: printId, target: mountId, markerEnd: 'arrowclosed' },
+//     //       );
+//     //     }
+//     //   });
+//     // }
+// if (pipelineData.artwork?.confirmed && pipelineData.spaces?.length > 0) {
+//   pipelineData.spaces.forEach((space, index) => {
+//     const inventoryId = `inventory-${space._id}`;
+//     const printId = `print-${space._id}`;
+//     const mountId = `mount-${space._id}`;
+
+//     dynamicNodes.push(
+//       { id: inventoryId, data: { label: space.spaceName }, position: { x: 650, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' } },
+//       { id: printId, data: { label: 'Printing status' }, position: { x: 850, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#ede9fe', borderColor: '#8b5cf6' } },
+//       { id: mountId, data: { label: 'Mounting status' }, position: { x: 1050, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#fecaca', borderColor: '#ef4444' } },
+//     );
+
+//     dynamicEdges.push(
+//       { id: `e-artwork-${space._id}`, source: 'artwork', target: inventoryId, markerEnd: 'arrowclosed' },
+//       { id: `e-${space._id}-print`, source: inventoryId, target: printId, markerEnd: 'arrowclosed' },
+//     );
+
+//     // ✅ Check space level printing status
+//     if (space.printingStatus?.confirmed) {
+//       dynamicEdges.push(
+//         { id: `e-print-${space._id}-mount`, source: printId, target: mountId, markerEnd: 'arrowclosed' },
+//       );
+//     }
+//   });
+// }
+
+//     setNodes([...staticNodes, ...dynamicNodes]);
+//     setEdges([...staticEdges, ...dynamicEdges]);
+
+//     fitView({ padding: 0.15, duration: 500 });
+//   }, [pipelineData]);
+
+//   if (!pipelineData) {
+//     return <div>Loading Campaign Pipeline Data...</div>;
+//   }
+
+//   return (
+//     <div style={{ height: '130vh', width: '100vw' }}>
+//       <ReactFlow
+//         nodes={nodes}
+//         edges={edges}
+//         onNodesChange={onNodesChange}
+//         onEdgesChange={onEdgesChange}
+//         onConnect={onConnect}
+//         onNodeClick={onNodeClick}
+//         fitView
+//         zoomOnScroll={false}
+//         panOnScroll={false}
+//       />
+
+//       {selectedNode && (
+//         <div style={modalStyle}>
+//           <div style={modalContentStyle} className='bg-white shadow-lg rounded-lg p-6 border'>
+//             <div>
+//               {selectedNode.id === 'booking' && <BookingStatusForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+//               {selectedNode.id === 'po' && <POForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+//               {selectedNode.id === 'artwork' && <ArtworkForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+//               {selectedNode.id === 'invoice' && <InvoiceForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+//               {selectedNode.id === 'payment' && <PaymentStatusForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+//               {selectedNode.id.startsWith('print-') && <PrintingStatus campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+//               {selectedNode.id.startsWith('mount-') && <MountingStatus campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+//             </div>
+
+//             <div className="mt-4 justify-center flex">
+//               <button className="bg-gray-200 py-2 rounded hover:bg-gray-300 text-sm" onClick={() => setSelectedNode(null)}>Close</button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+// const modalStyle = {
+//   position: 'fixed',
+//   top: 0,
+//   left: 0,
+//   zIndex: 1000,
+//   width: '100vw',
+//   height: '100vh',
+//   backgroundColor: 'rgba(0,0,0,0.5)',
+//   display: 'flex',
+//   justifyContent: 'center',
+//   alignItems: 'center',
+// };
+
+// const modalContentStyle = {
+//   background: 'white',
+//   padding: '20px',
+//   borderRadius: '12px',
+//   display: 'inline-flex',
+//   flexDirection: 'column',
+//   maxHeight: '80vh',
+//   maxWidth: '90vw',
+//   overflowY: 'auto',
+//   boxSizing: 'border-box',
+// };
+
+import React, { useCallback, useEffect, useState, useContext } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  ReactFlow,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  useReactFlow,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+import BookingStatusForm from './modals/BookingStatusForm';
+import POForm from './modals/PoStatus';
+import ArtworkForm from './modals/ArtworkStatus';
+import InvoiceForm from './modals/InvoiceDetailsForm';
+import PaymentStatusForm from './modals/PaymentStatusForm';
+import PrintingStatus from './modals/PrintingStatus';
+import MountingStatus from './modals/MountingStatus';
+
+import { PipelineContext } from '../context/PipelineContext';
+import axios from 'axios';
+
+const baseNodeStyle = {
+  padding: 10,
+  border: '2px solid',
+  borderRadius: 8,
+  fontWeight: 600,
+};
+
+export default function CampaignPipeline({ campaignId }) {
+  const { id } = useParams();
+  const CampaignId = campaignId || id;
+
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const { pipelineData, setPipelineData } = useContext(PipelineContext);
+  const [spaces, setSpaces] = useState([]); // Local state for spaces
+
+  const { fitView } = useReactFlow();
+
+  const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), []);
+  const onNodeClick = (_, node) => setSelectedNode(node);
+
+  // ✅ Fetch pipeline (create if missing)
+  useEffect(() => {
+    const fetchOrCreatePipeline = async () => {
+      try {
+        const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+        setPipelineData(res.data);
+      } catch (err) {
+        if (err.response && err.response.status === 404) {
+          const createRes = await axios.post(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+          setPipelineData(createRes.data);
+        } else {
+          console.error('Error fetching/creating pipeline:', err);
+        }
+      }
+    };
+
+    if (CampaignId) {
+      fetchOrCreatePipeline();
+    }
+  }, [CampaignId]);
+
+  // ✅ Fetch spaces after artwork confirmed
+  useEffect(() => {
+   const fetchSpaces = async () => {
+  try {
+    const res = await axios.get(`http://localhost:3000/api/campaign/${CampaignId}`);
+    console.log("Campaign data fetched:", res.data);
+
+    // Extract populated space objects from 'spaces.id'
+    const populatedSpaces = res.data.spaces.map(s => s.id);
+    setSpaces(populatedSpaces);
+  } catch (error) {
+    console.error('Failed to fetch campaign spaces:', error);
+  }
+};
+
+
+    if (pipelineData?.artwork?.confirmed) {
+      fetchSpaces();
+    }
+  }, [pipelineData?.artwork?.confirmed, CampaignId]);
+
+  // ✅ Build nodes and edges
+  useEffect(() => {
+    if (!pipelineData) return;
+
+    let dynamicNodes = [];
+    let dynamicEdges = [];
+
+    const staticNodes = [
+      { id: 'booking', data: { label: 'Booking confirmed' }, position: { x: 0, y: 200 }, style: { ...baseNodeStyle, background: '#d1fae5', borderColor: '#10b981' } },
+    ];
+
+    const staticEdges = [];
+
+    if (pipelineData.bookingStatus?.confirmed) {
+      staticNodes.push(
+        { id: 'po', data: { label: 'PO status' }, position: { x: 250, y: 200 }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' } },
+        { id: 'artwork', data: { label: 'Artwork' }, position: { x: 450, y: 200 }, style: { ...baseNodeStyle, background: '#fbcfe8', borderColor: '#ec4899' } },
+        { id: 'invoice', data: { label: 'Invoice details' }, position: { x: 250, y: 400 }, style: { ...baseNodeStyle, background: '#fef3c7', borderColor: '#facc15' } },
+      );
+      staticEdges.push(
+        { id: 'e-booking-po', source: 'booking', target: 'po', markerEnd: 'arrowclosed' },
+        { id: 'e-po-artwork', source: 'po', target: 'artwork', markerEnd: 'arrowclosed' },
+        { id: 'e-po-invoice', source: 'po', target: 'invoice', markerEnd: 'arrowclosed' },
+      );
+    }
+
+    if (pipelineData.invoice?.invoiceNumber) {
+      staticNodes.push(
+        { id: 'payment', data: { label: 'Payment status' }, position: { x: 450, y: 400 }, style: { ...baseNodeStyle, background: '#ede9fe', borderColor: '#8b5cf6' } }
+      );
+      staticEdges.push(
+        { id: 'e-invoice-payment', source: 'invoice', target: 'payment', markerEnd: 'arrowclosed' }
+      );
+    }
+
+    // ✅ After artwork, show inventory nodes per space
+   console.log('Current pipelineData:', pipelineData);
+console.log('Spaces fetched:', spaces);
+
+if (pipelineData?.artwork?.confirmed) {
+  console.log('Artwork is confirmed');
+}
+
+if (spaces.length > 0) {
+  console.log('Spaces are present');
+}
+
+// Combined check to see what is failing:
+if (pipelineData.artwork?.confirmed && pipelineData.spaces.length > 0) {
+  console.log('Now inside dynamic space rendering block', pipelineData, spaces);
+}
+
+    // if (pipelineData.artwork?.confirmed && spaces.length > 0) {
+    //     console.log("Pipeline data after artwork is",pipelineData);
+    //   spaces.forEach((space, index) => {
+    //     const inventoryId = `inventory-${space._id}`;
+    //     const printId = `print-${space._id}`;
+    //     const mountId = `mount-${space._id}`;
+
+    //     dynamicNodes.push(
+    //       { id: inventoryId, data: { label: space.spaceName }, position: { x: 650, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' } },
+    //       { id: printId, data: { label: 'Printing status' }, position: { x: 850, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#ede9fe', borderColor: '#8b5cf6' } },
+    //       { id: mountId, data: { label: 'Mounting status' }, position: { x: 1050, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#fecaca', borderColor: '#ef4444' } },
+    //     );
+
+    //     dynamicEdges.push(
+    //       { id: `e-artwork-${space._id}`, source: 'artwork', target: inventoryId, markerEnd: 'arrowclosed' },
+    //       { id: `e-${space._id}-print`, source: inventoryId, target: printId, markerEnd: 'arrowclosed' },
+    //     );
+
+    //     if (space.printingStatus?.confirmed) {
+    //       dynamicEdges.push(
+    //         { id: `e-print-${space._id}-mount`, source: printId, target: mountId, markerEnd: 'arrowclosed' },
+    //       );
+    //     }
+    //   });
+    // }
+    if (pipelineData.artwork?.confirmed && pipelineData.spaces.length > 0) {
+  pipelineData.spaces.forEach((space, index) => {
+    const inventoryId = `inventory-${space._id}`;
+    const printId = `print-${space._id}`;
+    const mountId = `mount-${space._id}`;
+
+    dynamicNodes.push(
+      { id: inventoryId, data: { label: space.spaceName }, position: { x: 650, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' } },
+      { id: printId, data: { label: 'Printing status' }, position: { x: 850, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#ede9fe', borderColor: '#8b5cf6' } },
+      { id: mountId, data: { label: 'Mounting status' }, position: { x: 1050, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#fecaca', borderColor: '#ef4444' } },
+    );
+
+    dynamicEdges.push(
+      { id: `e-artwork-${space._id}`, source: 'artwork', target: inventoryId, markerEnd: 'arrowclosed' },
+      { id: `e-${space._id}-print`, source: inventoryId, target: printId, markerEnd: 'arrowclosed' },
+    );
+
+    if (space.printingStatus?.confirmed) {
+      dynamicEdges.push(
+        { id: `e-print-${space._id}-mount`, source: printId, target: mountId, markerEnd: 'arrowclosed' },
+      );
+    }
+  });
+}
+
+
+    setNodes([...staticNodes, ...dynamicNodes]);
+    setEdges([...staticEdges, ...dynamicEdges]);
+
+    fitView({ padding: 0.15, duration: 500 });
+  }, [pipelineData, spaces]);
+
+  if (!pipelineData) {
+    return <div>Loading Campaign Pipeline Data...</div>;
+  }
+
+  return (
+    <div style={{ height: '130vh', width: '100vw' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        fitView
+        zoomOnScroll={false}
+        panOnScroll={false}
+      />
+
+      {selectedNode && (
+        <div style={modalStyle}>
+          <div style={modalContentStyle} className='bg-white shadow-lg rounded-lg p-6 border'>
+            <div>
+              {selectedNode.id === 'booking' && <BookingStatusForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+              {selectedNode.id === 'po' && <POForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+              {selectedNode.id === 'artwork' && <ArtworkForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+              {selectedNode.id === 'invoice' && <InvoiceForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+              {selectedNode.id === 'payment' && <PaymentStatusForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+              {selectedNode.id.startsWith('print-') && <PrintingStatus spaceId={selectedNode.id.split('-')[1]} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+              {selectedNode.id.startsWith('mount-') && <MountingStatus spaceId={selectedNode.id.split('-')[1]} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+            </div>
+
+            <div className="mt-4 justify-center flex">
+              <button className="bg-gray-200 py-2 rounded hover:bg-gray-300 text-sm" onClick={() => setSelectedNode(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const modalStyle = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  zIndex: 1000,
+  width: '100vw',
+  height: '100vh',
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+};
+
+const modalContentStyle = {
+  background: 'white',
+  padding: '20px',
+  borderRadius: '12px',
+  display: 'inline-flex',
+  flexDirection: 'column',
+  maxHeight: '80vh',
+  maxWidth: '90vw',
+  overflowY: 'auto',
+  boxSizing: 'border-box',
+};

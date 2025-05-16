@@ -48,8 +48,8 @@ export default function ListPipelines() {
       try {
         const response = await fetch('http://localhost:3000/api/bookings');
         const data = await response.json();
-        data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setBookings(data);
+        data.bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setBookings(data.bookings);
       } catch (error) {
         console.error('Error fetching bookings:', error);
       }

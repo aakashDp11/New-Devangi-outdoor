@@ -1,33 +1,63 @@
 import express from 'express';
 import {
-  createPipelineForBooking,
-  getPipelineByBooking,
-  updatePipelineStep,
-  uploadStepFile,
-  deletePipelineByBookingId
+  getPipelineByCampaignId,
+  createPipelineForCampaign,
+  updateBookingStatus,
+  confirmArtwork,
+  confirmPrintingStatus,
+  confirmMountingStatus
 } from '../controllers/pipeline.controller.js';
-import pipelineModel from '../models/pipeline.model.js';
 import upload from '../middleware/multer.middleware.js';
-
+import Campaign from '../models/campign.model.js';
 const router = express.Router();
-router.get('/', async (req, res) => {
+import Pipeline from '../models/pipeline.model.js';
+router.get('/campaign/:campaignId', getPipelineByCampaignId);
+// router.get('/campaign/:campaignId', async (req, res) => {
+//   try {
+//     const campaign = await Campaign.findById(req.params.campaignId)
+//       .populate('spaces.id');  // ✅ Ensure spaces are populated
+
+//     if (!campaign) {
+//       return res.status(404).json({ error: 'Campaign not found' });
+//     }
+
+//     res.json(campaign);
+//   } catch (error) {
+//     console.error('Error fetching campaign:', error);
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+router.post('/campaign/:campaignId', createPipelineForCampaign);
+
+router.put('/campaign/:campaignId/bookingStatus', updateBookingStatus);
+router.put('/campaign/:campaignId/artwork', confirmArtwork);
+router.post('/campaign/:campaignId/artwork/upload', upload.single('file'), async (req, res) => {
   try {
-    const pipelines = await pipelineModel.find().sort({ createdAt: -1 });
-    res.json(pipelines);
-  } catch (err) {
-    console.error('Error fetching pipelines', err);
-    res.status(500).json({ error: 'Internal server error' });
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`; // Adjust path if needed
+
+    // ✅ Save the document URL to pipeline.artwork.documentUrl
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: req.params.campaignId },
+      { 'artwork.documentUrl': fileUrl },
+      { new: true }
+    );
+
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found for the campaign' });
+    }
+
+    res.status(200).json({ message: 'Artwork uploaded', documentUrl: fileUrl, pipeline });
+  } catch (error) {
+    console.error('Artwork upload error:', error);
+    res.status(500).json({ error: error.message || 'Failed to upload artwork' });
   }
 });
-router.post('/:id', createPipelineForBooking);
-router.get('/:id', getPipelineByBooking);
-
-// Text updates (e.g., bookingStatus, payment, etc.)
-router.put('/:bookingId/:step', updatePipelineStep);
-
-// File upload for artwork, po, or invoice
-router.post('/:bookingId/:step/upload', upload.single('file'), uploadStepFile);
-router.delete('/:bookingId', deletePipelineByBookingId);
-
+router.put('/campaign/:campaignId/printingStatus', confirmPrintingStatus);
+router.put('/campaign/:campaignId/mountingStatus', confirmMountingStatus);
 
 export default router;

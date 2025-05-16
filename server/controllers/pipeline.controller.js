@@ -1,190 +1,125 @@
 import Pipeline from '../models/pipeline.model.js';
+import Campaign from '../models/campign.model.js';
+import Space from '../models/space.model.js';
 
-export const createPipelineForBooking = async (req, res) => {
+/**
+ * Get pipeline by Campaign ID
+ */
+export const getPipelineByCampaignId = async (req, res) => {
+  const { campaignId } = req.params;
   try {
-    // console.log("create Pipeline");
-    const { id } = req.params;
-    console.log("create pipleine",id);
-    const newPipeline = new Pipeline({ booking: id });
+    const pipeline = await Pipeline.findOne({ campaign: campaignId }).populate('spaces');
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found' });
+    }
+    res.json(pipeline);
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
+  }
+};
+
+/**
+ * Create pipeline for Campaign (if not exists)
+ */
+export const createPipelineForCampaign = async (req, res) => {
+  const { campaignId } = req.params;
+  try {
+    const campaign = await Campaign.findById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    // Check if already exists
+    let existingPipeline = await Pipeline.findOne({ campaign: campaignId });
+    if (existingPipeline) {
+      return res.status(200).json(existingPipeline);
+    }
+
+    // Initialize pipeline with Campaign's spaces (optional - can be empty initially if you want)
+     const newPipeline = new Pipeline({
+      campaign: campaignId,
+      spaces: campaign.spaces.map(s => s.id),
+      bookingStatus: { confirmed: false, reference: '' },
+      po: { confirmed: false, documentUrl: '' },
+      artwork: { confirmed: false, documentUrl: '' },
+      invoice: { invoiceNumber: '', documentUrl: '' },
+      payment: { payments: [], totalAmount: 0, totalPaid: 0, paymentDue: 0 },  
+    });
+
     await newPipeline.save();
     res.status(201).json(newPipeline);
-  } catch (err) {
-    res.status(500).json({ message: 'Error creating pipeline', error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to create pipeline' });
   }
 };
 
-export const getPipelineByBooking = async (req, res) => {
-    console.log("getPipeline");
+/**
+ * Update booking status
+ */
+export const updateBookingStatus = async (req, res) => {
+  const { campaignId } = req.params;
+  const { confirmed, reference } = req.body;
+
   try {
-    const pipeline = await Pipeline.findOne({ booking: req.params.id });
-    if (!pipeline) return res.status(404).json({ message: 'Pipeline not found' });
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { bookingStatus: { confirmed, reference } },
+      { new: true }
+    );
     res.json(pipeline);
-  } catch (err) {
-    res.status(500).json({ message: 'Error fetching pipeline', error: err.message });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to update booking status' });
   }
 };
 
-// export const updatePipelineStep = async (req, res) => {
-//   const { bookingId, step } = req.params;
-//   const updateData = req.body;
+/**
+ * Confirm Artwork
+ */
+export const confirmArtwork = async (req, res) => {
+  const { campaignId } = req.params;
+  try {
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { 'artwork.confirmed': true },
+      { new: true }
+    );
+    res.json(pipeline);
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to confirm artwork' });
+  }
+};
 
-//   try {
-//     const pipeline = await Pipeline.findOneAndUpdate(
-//       { booking: bookingId },
-//       { $set: { [step]: updateData } },
-//       { new: true, runValidators: true }
-//     );
+/**
+ * Confirm Printing Status
+ */
+export const confirmPrintingStatus = async (req, res) => {
+  const { campaignId } = req.params;
+  try {
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { 'printingStatus.confirmed': true },
+      { new: true }
+    );
+    res.json(pipeline);
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to confirm printing status' });
+  }
+};
 
-//     if (!pipeline) return res.status(404).json({ message: 'Pipeline not found' });
+/**
+ * Confirm Mounting Status
+ */
+export const confirmMountingStatus = async (req, res) => {
+  const { campaignId } = req.params;
+  try {
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { 'mountingStatus.confirmed': true },
+      { new: true }
+    );
+    res.json(pipeline);
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to confirm mounting status' });
+  }
+};
 
-//     res.json(pipeline);
-//   } catch (err) {
-//     res.status(500).json({ message: `Error updating step: ${step}`, error: err.message });
-//   }
-// };
-export const updatePipelineStep = async (req, res) => {
-    const { bookingId, step } = req.params;
-    const updateData = req.body;
-  
-    try {
-      const setObj = {};
-  
-      // For nested objects like invoice, po, artwork — do a field-wise set
-      if (['invoice', 'po', 'artwork'].includes(step) && typeof updateData === 'object') {
-        for (const key in updateData) {
-          setObj[`${step}.${key}`] = updateData[key];
-        }
-      } else {
-        // For flat fields like bookingStatus or printingStatus
-        setObj[step] = updateData;
-      }
-  
-      const pipeline = await Pipeline.findOneAndUpdate(
-        { booking: bookingId },
-        { $set: setObj },
-        { new: true, runValidators: true }
-      );
-  
-      if (!pipeline) return res.status(404).json({ message: 'Pipeline not found' });
-  
-      res.json(pipeline);
-    } catch (err) {
-      res.status(500).json({ message: `Error updating step: ${step}`, error: err.message });
-    }
-  };
-  
-  export const deletePipelineByBookingId = async (req, res) => {
-    const { bookingId } = req.params;
-  
-    try {
-      const deleted = await Pipeline.findOneAndDelete({ booking: bookingId });
-      if (!deleted) {
-        return res.status(404).json({ message: 'Pipeline not found' });
-      }
-      res.status(200).json({ message: 'Pipeline deleted successfully' });
-    } catch (err) {
-      res.status(500).json({ message: 'Failed to delete pipeline', error: err.message });
-    }
-  };
-  
-
-// export const uploadStepFile = async (req, res) => {
-//     const { bookingId, step } = req.params;
-//     const file = req.file;
-  
-//     if (!file) {
-//       return res.status(400).json({ message: 'No file uploaded' });
-//     }
-  
-//     const fileUrl = `/uploads/${file.filename}`; // Relative URL for frontend use
-  
-//     const fieldMap = {
-//       artwork: 'artwork.documentUrl',
-//       po: 'po.documentUrl',
-//       invoice: 'invoice.documentUrl',
-//     };
-  
-//     const targetField = fieldMap[step];
-//     if (!targetField) {
-//       return res.status(400).json({ message: 'Invalid step for upload' });
-//     }
-  
-//     try {
-//       const update = {};
-//       console.log('Uploading file to field:', targetField);
-//       console.log('File URL:', fileUrl);
-//       const stepUpdate = {};
-
-// if (step === 'invoice') {
-//   stepUpdate['invoice.documentUrl'] = fileUrl;
-// } else if (step === 'po') {
-//   stepUpdate['po.documentUrl'] = fileUrl;
-// } else if (step === 'artwork') {
-//   stepUpdate['artwork.documentUrl'] = fileUrl;
-// } else {
-//   return res.status(400).json({ message: 'Invalid step' });
-// }
-      
-//       const pipeline = await Pipeline.findOneAndUpdate(
-//         { booking: bookingId },
-//         { $set: update },
-//         { new: true }
-//       );
-  
-//       if (!pipeline) return res.status(404).json({ message: 'Pipeline not found' });
-  
-//       res.status(200).json({ message: 'File uploaded successfully', fileUrl, pipeline });
-//     } catch (err) {
-//       res.status(500).json({ message: 'Upload failed', error: err.message });
-//     }
-//   };
-  
-
-export const uploadStepFile = async (req, res) => {
-    const { bookingId, step } = req.params;
-    const file = req.file;
-  
-    if (!file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-  
-    const fileUrl = `/uploads/${file.filename}`;
-  
-    // Ensure only allowed fields are touched
-    const stepFieldMap = {
-      artwork: 'artwork.documentUrl',
-      po: 'po.documentUrl',
-      invoice: 'invoice.documentUrl',
-    };
-  
-    const targetField = stepFieldMap[step];
-  
-    if (!targetField) {
-      return res.status(400).json({ message: 'Invalid step for upload' });
-    }
-  
-    try {
-      // 👇 this ensures deep update without overwriting other invoice fields
-      const update = {};
-      update[targetField] = fileUrl;
-  
-      const pipeline = await Pipeline.findOneAndUpdate(
-        { booking: bookingId },
-        { $set: update },
-        { new: true }
-      );
-  
-      if (!pipeline) {
-        return res.status(404).json({ message: 'Pipeline not found' });
-      }
-  
-      return res.status(200).json({
-        message: 'File uploaded successfully',
-        fileUrl,
-        pipeline,
-      });
-    } catch (err) {
-      return res.status(500).json({ message: 'Upload failed', error: err.message });
-    }
-  };
-  

@@ -64,7 +64,10 @@ const pipelineSchema = new Schema({
   campaign: { type: Schema.Types.ObjectId, ref: 'Campaign', required: true, unique: true }, // ✅ Campaign → One Pipeline
 
   spaces: [{ type: Schema.Types.ObjectId, ref: 'Space' }],  // ✅ Pipeline → Many Spaces
-
+ artwork: {
+    confirmed: { type: Boolean, default: false },
+    documentUrl: { type: String },
+  },
   bookingStatus: {
     confirmed: { type: Boolean, default: false },
     reference: { type: String },
@@ -84,7 +87,7 @@ const pipelineSchema = new Schema({
 
   payment: {
     totalAmount: Number,
-    modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc'] },
+    modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc'] ,default: undefined},
     payments: [
       {
         amount: Number,
@@ -93,6 +96,7 @@ const pipelineSchema = new Schema({
     ],
     totalPaid: Number,
     paymentDue: Number,
+    
   },
  
 

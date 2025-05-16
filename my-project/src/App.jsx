@@ -30,6 +30,7 @@ import { PipelineProvider } from './context/PipelineContext';
 import { ReactFlowProvider } from '@xyflow/react';
 import ListPipelines from './components/ListPipelines';
 import Gallery from './components/Gallery';
+import CampaignPipeline from './components/CampaignPipeline';
 export default function App() {
   return (
     <>
@@ -80,7 +81,8 @@ export default function App() {
 <div style={{ height: '100%', width: '100%' }}>
 <PipelineProvider>
   <ReactFlowProvider>
-  <BookingFlow />
+  {/* <BookingFlow /> */}
+  <CampaignPipeline/>
   </ReactFlowProvider>
 </PipelineProvider>
 </div>
@@ -90,7 +92,8 @@ export default function App() {
 <div style={{ height: '100%', width: '100%' }}>
 <PipelineProvider>
   <ReactFlowProvider>
-  <BookingFlow />
+  {/* <BookingFlow /> */}
+  <CampaignPipeline/>
   </ReactFlowProvider>
 </PipelineProvider>
 </div>

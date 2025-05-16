@@ -129,7 +129,40 @@ router.put('/:id', upload.fields([
   }
 });
 
-  
+  router.put('/:id/printingStatus', async (req, res) => {
+  try {
+    const space = await Space.findById(req.params.id);
+    if (!space) {
+      return res.status(404).json({ error: 'Space not found' });
+    }
+
+    space.printingStatus.confirmed = true;
+    await space.save();
+
+    res.json(space);
+  } catch (error) {
+    console.error('Error updating printing status:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Confirm mounting status on space (Safe isolated route)
+router.put('/:id/mountingStatus', async (req, res) => {
+  try {
+    const space = await Space.findById(req.params.id);
+    if (!space) {
+      return res.status(404).json({ error: 'Space not found' });
+    }
+
+    space.mountingStatus.confirmed = true;
+    await space.save();
+
+    res.json(space);
+  } catch (error) {
+    console.error('Error updating mounting status:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
   // DELETE - DELETE /api/space/:id
   // router.delete('/:id', async (req, res) => {
   //   try {
