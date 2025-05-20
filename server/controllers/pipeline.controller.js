@@ -21,6 +21,37 @@ export const getPipelineByCampaignId = async (req, res) => {
 /**
  * Create pipeline for Campaign (if not exists)
  */
+// export const createPipelineForCampaign = async (req, res) => {
+//   const { campaignId } = req.params;
+//   try {
+//     const campaign = await Campaign.findById(campaignId);
+//     if (!campaign) {
+//       return res.status(404).json({ error: 'Campaign not found' });
+//     }
+
+//     // Check if already exists
+//     let existingPipeline = await Pipeline.findOne({ campaign: campaignId });
+//     if (existingPipeline) {
+//       return res.status(200).json(existingPipeline);
+//     }
+
+//     // Initialize pipeline with Campaign's spaces (optional - can be empty initially if you want)
+//      const newPipeline = new Pipeline({
+//       campaign: campaignId,
+//       spaces: campaign.spaces.map(s => s.id),
+//       bookingStatus: { confirmed: false, reference: '' },
+//       po: { confirmed: false, documentUrl: '' },
+//       artwork: { confirmed: false, documentUrl: '' },
+//       invoice: { invoiceNumber: '', documentUrl: '' },
+//       payment: { payments: [], totalAmount: 0, totalPaid: 0, paymentDue: 0 },  
+//     });
+
+//     await newPipeline.save();
+//     res.status(201).json(newPipeline);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message || 'Failed to create pipeline' });
+//   }
+// };
 export const createPipelineForCampaign = async (req, res) => {
   const { campaignId } = req.params;
   try {
@@ -32,21 +63,31 @@ export const createPipelineForCampaign = async (req, res) => {
     // Check if already exists
     let existingPipeline = await Pipeline.findOne({ campaign: campaignId });
     if (existingPipeline) {
+      // ✅ Ensure campaign is linked (in case it's not)
+      if (!campaign.pipeline) {
+        campaign.pipeline = existingPipeline._id;
+        await campaign.save();
+      }
       return res.status(200).json(existingPipeline);
     }
 
-    // Initialize pipeline with Campaign's spaces (optional - can be empty initially if you want)
-     const newPipeline = new Pipeline({
+    // Create new pipeline
+    const newPipeline = new Pipeline({
       campaign: campaignId,
       spaces: campaign.spaces.map(s => s.id),
       bookingStatus: { confirmed: false, reference: '' },
       po: { confirmed: false, documentUrl: '' },
       artwork: { confirmed: false, documentUrl: '' },
       invoice: { invoiceNumber: '', documentUrl: '' },
-      payment: { payments: [], totalAmount: 0, totalPaid: 0, paymentDue: 0 },  
+      payment: { payments: [], totalAmount: 0, totalPaid: 0, paymentDue: 0 },
     });
 
     await newPipeline.save();
+
+    // ✅ Assign pipeline back to campaign
+    campaign.pipeline = newPipeline._id;
+    await campaign.save();
+
     res.status(201).json(newPipeline);
   } catch (error) {
     res.status(500).json({ error: error.message || 'Failed to create pipeline' });

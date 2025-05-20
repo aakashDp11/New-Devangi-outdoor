@@ -15,6 +15,8 @@ import pipelineRoutes from './routes/pipeline.routes.js'
 import path from "path";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import debugRoutes from './routes/debug.routes.js'
+import Campaign from './models/campign.model.js';
 // Enable CORS for all origins (or specify origin)
 dotenv.config();
 const app = express();
@@ -41,6 +43,7 @@ app.use('/api/pipeline',pipelineRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/debug', debugRoutes);
 
 export const createAdminIfNotExists = async () => {
   const existingAdmin = await User.findOne({ role: 'admin' });
@@ -75,6 +78,8 @@ function setupRoutes() {
     }
   });
 }
+
+
 
 // Main function to connect DB and start server
 async function connectAndStart() {

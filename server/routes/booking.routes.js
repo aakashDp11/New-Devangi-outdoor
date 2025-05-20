@@ -9,15 +9,33 @@ const router = express.Router();
 // CREATE - POST /api/bookings
 export const getAllBookings = async (req, res) => {
   try {
+    // const bookings = await Booking.find()
+    //   .populate({
+    //     path: 'campaigns',
+    //     populate: {
+    //       path: 'spaces.id',  // populate Space info inside Campaign
+    //       model: 'Space'
+    //     }
+    //   })
+    //   .sort({ createdAt: -1 });
     const bookings = await Booking.find()
-      .populate({
-        path: 'campaigns',
-        populate: {
-          path: 'spaces.id',  // populate Space info inside Campaign
-          model: 'Space'
-        }
-      })
-      .sort({ createdAt: -1 });
+  .populate({
+    path: 'campaigns',
+    populate: [
+      {
+        path: 'spaces.id',
+        model: 'Space',
+      },
+      {
+        path: 'pipeline',
+        model: 'Pipeline',
+        options: { strictPopulate: false } 
+      },
+    ],
+  })
+  .sort({ createdAt: -1 }).lean(false);
+// console.dir(bookings, { depth: null });
+
 
     return res.status(200).json({ bookings });
   } catch (error) {
