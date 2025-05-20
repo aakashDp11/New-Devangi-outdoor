@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { PipelineContext } from '../../context/PipelineContext';
 
-export default function POForm({ bookingId, onConfirm }) {
+export default function POForm({ campaignId, onConfirm }) {
   const [poReceived, setPoReceived] = useState(false);
   const [poFile, setPoFile] = useState(null);
   const { pipelineData, setPipelineData } = useContext(PipelineContext);
@@ -16,12 +16,12 @@ export default function POForm({ bookingId, onConfirm }) {
       if (poFile) {
         const formData = new FormData();
         formData.append('file', poFile);
-        await axios.post(`http://localhost:3000/api/pipeline/${bookingId}/po/upload`, formData, {
+        await axios.post(`http://localhost:3000/api/pipeline/campaign/${campaignId}/po/upload`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
 
-      const res = await axios.put(`http://localhost:3000/api/pipeline/${bookingId}/po`, {
+      const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/po`, {
         confirmed: true
       });
 

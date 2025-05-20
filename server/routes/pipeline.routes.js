@@ -5,7 +5,7 @@ import {
   updateBookingStatus,
   confirmArtwork,
   confirmPrintingStatus,
-  confirmMountingStatus
+  confirmMountingStatus,uploadInvoice,updateInvoice,updatePayment,uploadPoDocument,confirmPoStatus,deletePipelineAndCleanup
 } from '../controllers/pipeline.controller.js';
 import upload from '../middleware/multer.middleware.js';
 import Campaign from '../models/campign.model.js';
@@ -59,5 +59,15 @@ router.post('/campaign/:campaignId/artwork/upload', upload.single('file'), async
 });
 router.put('/campaign/:campaignId/printingStatus', confirmPrintingStatus);
 router.put('/campaign/:campaignId/mountingStatus', confirmMountingStatus);
+router.post('/campaign/:campaignId/invoice/upload', upload.single('file'), uploadInvoice);
+router.put('/campaign/:campaignId/invoice', updateInvoice);
+
+// Payment Route
+router.put('/campaign/:campaignId/payment', updatePayment);
+// PO Document Upload and Confirmation
+router.post('/campaign/:campaignId/po/upload', upload.single('file'), uploadPoDocument);
+router.put('/campaign/:campaignId/po', confirmPoStatus);
+router.delete('/campaign/:campaignId', deletePipelineAndCleanup);
+
 
 export default router;

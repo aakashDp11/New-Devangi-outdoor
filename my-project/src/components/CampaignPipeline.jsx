@@ -292,7 +292,7 @@ export default function CampaignPipeline({ campaignId }) {
   useEffect(() => {
    const fetchSpaces = async () => {
   try {
-    const res = await axios.get(`http://localhost:3000/api/campaign/${CampaignId}`);
+    const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
     console.log("Campaign data fetched:", res.data);
 
     // Extract populated space objects from 'spaces.id'

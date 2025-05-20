@@ -78,7 +78,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { PipelineContext } from '../../context/PipelineContext';
 
-export default function InvoiceForm({ bookingId, onConfirm }) {
+export default function InvoiceForm({ campaignId, onConfirm }) {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceFile, setInvoiceFile] = useState(null);
   const [isInvoiceSaved, setIsInvoiceSaved] = useState(false);
@@ -89,7 +89,7 @@ export default function InvoiceForm({ bookingId, onConfirm }) {
     const fetchInvoice = async () => {
       
       try {
-        const res = await axios.get(`http://localhost:3000/api/pipeline/${bookingId}`);
+        const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${campaignId}`);
         const invoice = res.data?.invoice || {};
 
         if (invoice.invoiceNumber) {
@@ -104,7 +104,7 @@ export default function InvoiceForm({ bookingId, onConfirm }) {
     };
 
     fetchInvoice();
-  }, [bookingId]);
+  }, [campaignId]);
 
   const handleFileChange = (e) => {
     setInvoiceFile(e.target.files[0]);
@@ -116,12 +116,12 @@ export default function InvoiceForm({ bookingId, onConfirm }) {
         const formData = new FormData();
         formData.append('file', invoiceFile);
 
-        await axios.post(`http://localhost:3000/api/pipeline/${bookingId}/invoice/upload`, formData, {
+        await axios.post(`http://localhost:3000/api/pipeline/campaign/${campaignId}/invoice/upload`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
 
-      const res = await axios.put(`http://localhost:3000/api/pipeline/${bookingId}/invoice`, {
+      const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/invoice`, {
         invoiceNumber
       });
 

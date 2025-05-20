@@ -137,7 +137,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { PipelineContext } from '../../context/PipelineContext';
 
-const PaymentStatusForm = ({ bookingId, onConfirm }) => {
+const PaymentStatusForm = ({ campaignId, onConfirm }) => {
   const [totalAmount, setTotalAmount] = useState('');
   const [isTotalAmountLocked, setIsTotalAmountLocked] = useState(false);
   const [modeOfPayment, setModeOfPayment] = useState('cash');
@@ -147,7 +147,7 @@ const PaymentStatusForm = ({ bookingId, onConfirm }) => {
   useEffect(() => {
     const fetchPipelinePayment = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/pipeline/${bookingId}`);
+        const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${campaignId}`);
         const data = res.data?.payment || {};
 
         if (data.totalAmount) {
@@ -168,7 +168,7 @@ const PaymentStatusForm = ({ bookingId, onConfirm }) => {
     };
 
     fetchPipelinePayment();
-  }, [bookingId]);
+  }, [campaignId]);
 
   const handleAddPayment = () => {
     setPayments([...payments, { amount: '', date: '' }]);
@@ -222,7 +222,7 @@ const handleSave = async () => {
         paymentDue,
       };
   
-      const res = await axios.put(`http://localhost:3000/api/pipeline/${bookingId}/payment`, payload);
+      const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/payment`, payload);
       setPipelineData(res.data);
       toast.success('Payment details saved!');
       onConfirm();

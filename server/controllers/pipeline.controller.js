@@ -123,3 +123,155 @@ export const confirmMountingStatus = async (req, res) => {
   }
 };
 
+export const uploadInvoice = async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId;
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { 'invoice.documentUrl': `/uploads/${req.file.filename}` },
+      { new: true }
+    );
+
+    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+    res.status(200).json(pipeline);
+  } catch (err) {
+    console.error('Invoice upload failed:', err);
+    res.status(500).json({ error: 'Server error during invoice upload' });
+  }
+};
+
+export const updateInvoice = async (req, res) => {
+  try {
+    const { invoiceNumber } = req.body;
+    const campaignId = req.params.campaignId;
+
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { 'invoice.invoiceNumber': invoiceNumber },
+      { new: true }
+    );
+
+    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+    res.status(200).json(pipeline);
+  } catch (err) {
+    console.error('Error updating invoice number:', err);
+    res.status(500).json({ error: 'Server error during invoice update' });
+  }
+};
+
+export const updatePayment = async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId;
+    const {
+      totalAmount,
+      modeOfPayment,
+      payments = [],
+      totalPaid,
+      paymentDue
+    } = req.body;
+
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      {
+        payment: {
+          totalAmount,
+          modeOfPayment,
+          payments,
+          totalPaid,
+          paymentDue
+        }
+      },
+      { new: true }
+    );
+
+    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+    res.status(200).json(pipeline);
+  } catch (err) {
+    console.error('Error updating payment:', err);
+    res.status(500).json({ error: 'Server error during payment update' });
+  }
+};
+
+export const uploadPoDocument = async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId;
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { 'po.documentUrl': `/uploads/${req.file.filename}` },
+      { new: true }
+    );
+
+    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+    res.status(200).json(pipeline);
+  } catch (err) {
+    console.error('Error uploading PO document:', err);
+    res.status(500).json({ error: 'Server error during PO upload' });
+  }
+};
+
+// ✅ Confirm PO received (updates po.confirmed: true)
+export const confirmPoStatus = async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId;
+    const { confirmed } = req.body;
+
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { 'po.confirmed': confirmed === true || confirmed === 'true' },
+      { new: true }
+    );
+
+    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+    res.status(200).json(pipeline);
+  } catch (err) {
+    console.error('Error confirming PO status:', err);
+    res.status(500).json({ error: 'Server error during PO confirmation' });
+  }
+};
+
+export const deletePipelineAndCleanup = async (req, res) => {
+  const { campaignId } = req.params;
+
+  try {
+    const pipeline = await Pipeline.findOne({ campaign: campaignId });
+
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found' });
+    }
+
+    // Optional cleanup: reset statuses in each space
+    if (Array.isArray(pipeline.spaces)) {
+      await Promise.all(
+        pipeline.spaces.map(async (spaceId) => {
+          await Space.findByIdAndUpdate(spaceId, {
+            $set: {
+              'printingStatus.confirmed': false,
+              'mountingStatus.confirmed': false
+            }
+          });
+        })
+      );
+    }
+
+    // Delete pipeline
+    await Pipeline.deleteOne({ _id: pipeline._id });
+
+    return res.status(200).json({ message: 'Pipeline and associated space statuses deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting pipeline:', err);
+    return res.status(500).json({ error: 'Server error during pipeline deletion' });
+  }
+};
