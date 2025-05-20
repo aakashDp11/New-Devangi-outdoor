@@ -412,6 +412,7 @@ export default function BookingDetails() {
       try {
         const res = await fetch(`http://localhost:3000/api/bookings/${id}`);
         const data = await res.json();
+        console.log(data);
         setBooking(data);
         setExistingCampaigns(data.campaigns);
       } catch (err) {
@@ -583,7 +584,7 @@ export default function BookingDetails() {
         </div>
 
         {booking.campaigns.map((campaign, idx) => (
-          <div key={idx} className="card bg-base-100 shadow-md p-4 mb-6">
+          <div key={idx} className="card bg-base-100 shadow-md p-4 mb-6 hover:pointer" onClick={()=>navigate(`/pipeline/${campaign._id}`)} >
             <h2 className="text-lg font-semibold mb-4 text-blue-700">Campaign: {campaign.campaignName}</h2>
             <div className="grid grid-cols-2 gap-4 text-sm mb-4">
               <Info label="Description" value={campaign.description} />
