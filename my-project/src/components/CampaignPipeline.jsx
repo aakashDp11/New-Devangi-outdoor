@@ -262,6 +262,8 @@ export default function CampaignPipeline({ campaignId }) {
   const { pipelineData, setPipelineData } = useContext(PipelineContext);
   const [spaces, setSpaces] = useState([]); // Local state for spaces
 const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [refreshKey, setRefreshKey] = useState(0);
+
   const { fitView } = useReactFlow();
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), []);
@@ -286,7 +288,7 @@ const [showDeleteModal, setShowDeleteModal] = useState(false);
     if (CampaignId) {
       fetchOrCreatePipeline();
     }
-  }, [CampaignId]);
+  }, [CampaignId,refreshKey]);
 
   // ✅ Fetch spaces after artwork confirmed
   useEffect(() => {
@@ -308,6 +310,7 @@ const [showDeleteModal, setShowDeleteModal] = useState(false);
       fetchSpaces();
     }
   }, [pipelineData?.artwork?.confirmed, CampaignId]);
+const triggerRefresh = () => setRefreshKey(prev => prev + 1);
 
   // ✅ Build nodes and edges
   useEffect(() => {
@@ -447,13 +450,13 @@ if (pipelineData.artwork?.confirmed && pipelineData.spaces.length > 0) {
         <div style={modalStyle}>
           <div style={modalContentStyle} className='bg-white shadow-lg rounded-lg p-6 border'>
             <div>
-              {selectedNode.id === 'booking' && <BookingStatusForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-              {selectedNode.id === 'po' && <POForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-              {selectedNode.id === 'artwork' && <ArtworkForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-              {selectedNode.id === 'invoice' && <InvoiceForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-              {selectedNode.id === 'payment' && <PaymentStatusForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-              {selectedNode.id.startsWith('print-') && <PrintingStatus spaceId={selectedNode.id.split('-')[1]} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
-              {selectedNode.id.startsWith('mount-') && <MountingStatus spaceId={selectedNode.id.split('-')[1]} onConfirm={() => { setSelectedNode(null); fitView(); }} />}
+              {selectedNode.id === 'booking' && <BookingStatusForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView();triggerRefresh(); }} />}
+              {selectedNode.id === 'po' && <POForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView();triggerRefresh(); }} />}
+              {selectedNode.id === 'artwork' && <ArtworkForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView();triggerRefresh(); }} />}
+              {selectedNode.id === 'invoice' && <InvoiceForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView();triggerRefresh(); }} />}
+              {selectedNode.id === 'payment' && <PaymentStatusForm campaignId={CampaignId} onConfirm={() => { setSelectedNode(null); fitView();triggerRefresh(); }} />}
+              {selectedNode.id.startsWith('print-') && <PrintingStatus spaceId={selectedNode.id.split('-')[1]} onConfirm={() => { setSelectedNode(null); fitView();triggerRefresh(); }} />}
+              {selectedNode.id.startsWith('mount-') && <MountingStatus spaceId={selectedNode.id.split('-')[1]} onConfirm={() => { setSelectedNode(null); fitView();triggerRefresh(); }} />}
             </div>
 
             <div className="mt-4 justify-center flex">
