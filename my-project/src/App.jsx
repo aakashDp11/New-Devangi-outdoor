@@ -28,9 +28,10 @@ import PipelineBoard from './components/PipelineBoard';
 import BookingFlow from './components/BookingPipeline';
 import { PipelineProvider } from './context/PipelineContext';
 import { ReactFlowProvider } from '@xyflow/react';
-import ListPipelines from './components/ListPipelines';
+// import ListPipelines from './components/ListPipelines';
 import Gallery from './components/Gallery';
 import CampaignPipeline from './components/CampaignPipeline';
+import FinancePage from './components/FinancePage';
 export default function App() {
   return (
     <>
@@ -71,7 +72,7 @@ export default function App() {
       <Route path="/booking/:id" element={<BookingDetails/>} />
       <Route path="/proposal/:id/edit" element={<EditProposal />} />
       <Route path="/booking-dashboard1" element={<BookingsDashboard1/>} />
-      <Route path="/finances" element={<ListPipelines/>} />
+      <Route path="/finances" element={<FinancePage/>} />
       <Route path="/home" element={<HomePage/>}/>
       <Route path='/login' element={<Login/>}/>
       <Route path='/create-user' element={<Register/>}/>

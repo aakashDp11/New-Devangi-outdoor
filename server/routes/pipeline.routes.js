@@ -11,22 +11,43 @@ import upload from '../middleware/multer.middleware.js';
 import Campaign from '../models/campign.model.js';
 const router = express.Router();
 import Pipeline from '../models/pipeline.model.js';
+import moment from 'moment';
 router.get('/campaign/:campaignId', getPipelineByCampaignId);
-// router.get('/campaign/:campaignId', async (req, res) => {
-//   try {
-//     const campaign = await Campaign.findById(req.params.campaignId)
-//       .populate('spaces.id');  // ✅ Ensure spaces are populated
+router.get('/finance', async (req, res) => {
+  try {
+    const pipelines = await Pipeline.find({}).select('po invoice createdAt');
 
-//     if (!campaign) {
-//       return res.status(404).json({ error: 'Campaign not found' });
-//     }
+    const grouped = {};
 
-//     res.json(campaign);
-//   } catch (error) {
-//     console.error('Error fetching campaign:', error);
-//     res.status(500).json({ error: error.message });
-//   }
-// });
+    pipelines.forEach((p) => {
+      const createdAt = moment(p.createdAt);
+      const year = createdAt.year();
+      const month = createdAt.format('MMMM');
+
+      if (!grouped[year]) grouped[year] = {};
+      if (!grouped[year][month]) grouped[year][month] = { purchaseOrders: [], invoices: [] };
+
+      if (p.po?.documentUrl) {
+        grouped[year][month].purchaseOrders.push({
+          documentName: p.po.reference || 'PO Document',
+          fileUrl: p.po.documentUrl,
+        });
+      }
+
+      if (p.invoice?.invoiceNumber) {
+        grouped[year][month].invoices.push({
+          documentName: p.invoice.invoiceNumber,
+          fileUrl: p.invoice.documentUrl || null,
+        });
+      }
+    });
+
+    res.json(grouped);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch finance data' });
+  }
+});
 
 router.post('/campaign/:campaignId', createPipelineForCampaign);
 

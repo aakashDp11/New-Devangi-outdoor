@@ -36,7 +36,7 @@ const PaginationLink = ({ children, isActive = false, onClick }) => (
   </button>
 );
 
-export default function ListPipelines() {
+export default function finances() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [search, setSearch] = useState('');
@@ -109,20 +109,11 @@ export default function ListPipelines() {
               <CardContent className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 {/* Booking Info */}
                 <div className="flex-1 flex flex-col gap-1">
-                  <div className="text-sm font-semibold break-words">{item.companyName}</div>
-                  <div className="text-xs text-gray-600">Client: {item.clientName || 'No Client'}</div>
-                  <div className="text-xs text-gray-600">Campaign: {item.campaignName || 'No Campaign'}</div>
+                  <div className="text-sm font-semibold break-words">Year 2025</div>
+
                 </div>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 items-center">
-                  <span className="text-xs px-2 py-1 rounded bg-green-200">
-                    {item.clientType || 'Client Type'}
-                  </span>
-                  <span className="text-xs px-2 py-1 rounded bg-purple-100">
-                    {item.industry || 'Industry'}
-                  </span>
-                </div>
+
               </CardContent>
             </Card>
           ))}
