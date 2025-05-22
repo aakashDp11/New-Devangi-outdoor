@@ -28,14 +28,15 @@ export default function ProposalDetails() {
   const navigate = useNavigate();
   const [proposal, setProposal] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const { setBasicInfo, setOrderInfo, setSelectedSpaces, selectedSpaces,setBookingDates,proposalId,setProposalId } = useBookingForm();
-
+  const { setBasicInfo, setOrderInfo,orderInfo, setSelectedSpaces, selectedSpaces,setBookingDates,proposalId,setProposalId } = useBookingForm();
+// console.log("order info is",orderInfo);
 
   useEffect(() => {
     const fetchProposal = async () => {
       try {
         const response = await fetch(`http://localhost:3000/api/proposals/${id}`);
         const data = await response.json();
+        console.log("Proposal data is",data);
         setProposal(data);
       } catch (error) {
         console.error('Error fetching proposal:', error);

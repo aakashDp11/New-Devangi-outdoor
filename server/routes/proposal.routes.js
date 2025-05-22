@@ -1,15 +1,68 @@
 import express from 'express';
 import Proposal from '../models/proposal.model.js';
-
+import Campaign from '../models/campign.model.js';
 const router = express.Router();
 
 // Create Proposal
+// router.post('/', async (req, res) => {
+//   try {
+//     console.log("Proposal body is",req.body);
+//     console.log("Spaces of proposal are",req.body.campaigns[0].selectedSpaces);
+//     const proposal = new Proposal(req.body);
+//     await proposal.save();
+//     res.status(201).json(proposal);
+//   } catch (err) {
+//     res.status(400).json({ error: err.message });
+//   }
+// });
+
 router.post('/', async (req, res) => {
   try {
-    const proposal = new Proposal(req.body);
+    const {
+      companyName,
+      clientName,
+      clientEmail,
+      clientPanNumber,
+      clientGstNumber,
+      clientContactNumber,
+      brandDisplayName,
+      clientType,
+      industry,
+      description,
+      spaces,
+      campaigns
+    } = req.body;
+
+    // Save campaigns first and get their ObjectIds
+    const savedCampaignIds = await Promise.all(
+      campaigns.map(async (campaignData) => {
+        const campaign = new Campaign(campaignData);
+        await campaign.save();
+        return campaign._id;
+      })
+    );
+const spaceIds = campaigns[0]?.selectedSpaces?.map(space => space.id) || [];
+    // Create the proposal using campaign IDs
+    const proposal = new Proposal({
+      companyName,
+      clientName,
+      clientEmail,
+      clientPanNumber,
+      clientGstNumber,
+      clientContactNumber,
+      brandDisplayName,
+      clientType,
+      industry,
+      description,
+      spaces:spaceIds
+      
+    });
+
     await proposal.save();
+
     res.status(201).json(proposal);
   } catch (err) {
+    console.error(err);
     res.status(400).json({ error: err.message });
   }
 });

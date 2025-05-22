@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 
+const { Schema, model } = mongoose;
+
 const ProposalSchema = new mongoose.Schema({
   companyName: { type: String, required: true },
   clientName: { type: String },
@@ -12,13 +14,14 @@ const ProposalSchema = new mongoose.Schema({
   clientContactNumber: { type: Number },
   brandDisplayName: { type: String },
   clientType: { type: String },
-  campaignName: { type: String },
+  // campaigns: [{ type: Schema.Types.ObjectId, ref: 'Campaign' }],
   industry: {
     type: String,
     enum: ['Automotive', 'Clothing and Apparel', 'Ecommerce', 'Edtech', 'Entertainment', 'FMCG']
   },
   description: { type: String },
   spaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Space' }]
+
 
 }, {
   timestamps: true
