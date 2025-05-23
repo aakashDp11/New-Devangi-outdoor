@@ -305,6 +305,19 @@ export default function BookingDetails() {
           </div>
         </div>
       )}
+      {showDeletePopup && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div className="bg-white p-6 rounded shadow-lg w-96">
+      <h2 className="text-xl font-bold mb-4">Confirm Deletion</h2>
+      <p className="mb-4 text-sm text-gray-700">Are you sure you want to delete this booking? This action cannot be undone.</p>
+      <div className="flex justify-end gap-4">
+        <button className="btn btn-outline" onClick={() => setShowDeletePopup(false)}>Cancel</button>
+        <button className="btn btn-error" onClick={handleDelete}>Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

@@ -9,15 +9,7 @@ const router = express.Router();
 // CREATE - POST /api/bookings
 export const getAllBookings = async (req, res) => {
   try {
-    // const bookings = await Booking.find()
-    //   .populate({
-    //     path: 'campaigns',
-    //     populate: {
-    //       path: 'spaces.id',  // populate Space info inside Campaign
-    //       model: 'Space'
-    //     }
-    //   })
-    //   .sort({ createdAt: -1 });
+
     const bookings = await Booking.find()
   .populate({
     path: 'campaigns',
@@ -43,8 +35,118 @@ export const getAllBookings = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Failed to fetch bookings' });
   }
 };
+// export const createBooking = async (req, res) => {
+//   console.log("Create booking data is",req.body);
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+
+//   try {
+//     const {
+//       companyName,
+//       clientName,
+//       clientEmail,
+//       clientPanNumber,
+//       clientGstNumber,
+//       clientContactNumber,
+//       brandDisplayName,
+//       clientType,
+//       companyLogo,
+//       campaigns = []
+//     } = req.body;
+// const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
+
+//     // ✅ Validate basic info
+//     if (!companyName) {
+//       throw new Error('Company Name is required');
+//     }
+
+//     // ✅ Save Booking (empty campaigns ref for now)
+//     const newBooking = new Booking({
+//       companyName,
+//       clientName,
+//       clientEmail,
+//       clientPanNumber,
+//       clientGstNumber,
+//       clientContactNumber,
+//       brandDisplayName,
+//       clientType,
+//       companyLogo,
+//       campaigns: []
+//     });
+
+//     await newBooking.save({ session });
+
+//     const createdCampaigns = [];
+
+//     // ✅ Process each campaign
+//     for (const campaignData of parsedCampaigns) {
+//       const { campaignName, industry, description, selectedSpaces = [], campaignImages = [] } = campaignData;
+
+//       // ✅ Update Space inventories
+//       for (const selected of selectedSpaces) {
+//         const space = await Space.findById(selected.id).session(session);
+//         if (!space) throw new Error(`Space not found: ${selected.id}`);
+
+//         // Validate available units
+//         const availableUnits = space.unit - space.occupiedUnits;
+//         if (selected.selectedUnits > availableUnits) {
+//           throw new Error(`Not enough units available for space: ${space.spaceName}`);
+//         }
+
+//         // Update occupied units
+//         space.occupiedUnits += selected.selectedUnits;
+
+//         // Update availability status
+//         if (space.occupiedUnits >= space.unit) {
+//           space.availability = 'Completely booked';
+//         } else if (space.occupiedUnits === 0) {
+//           space.availability = 'Completely available';
+//         } else {
+//           space.availability = 'Partialy available';
+//         }
+
+//         await space.save({ session });
+//       }
+
+//       // ✅ Create Campaign document
+//       const newCampaign = new Campaign({
+//         campaignName,
+//         description,
+//         campaignImages,
+//         spaces: selectedSpaces.map(s => ({
+//           id: s.id,
+//           selectedUnits: s.selectedUnits
+//         })),
+//         pipeline: null, // will be linked later if needed
+//       });
+
+//       await newCampaign.save({ session });
+//       createdCampaigns.push(newCampaign._id);
+//     }
+
+//     // ✅ Update Booking with created campaigns
+//     newBooking.campaigns = createdCampaigns;
+//     await newBooking.save({ session });
+
+//     await session.commitTransaction();
+//     session.endSession();
+
+//     return res.status(201).json({ message: 'Booking created successfully', bookingId: newBooking._id });
+
+//   } catch (error) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     console.error(error);
+//     return res.status(500).json({ error: error.message || 'Failed to create booking' });
+//   }
+// };
+
+
+
 export const createBooking = async (req, res) => {
-  console.log("Create booking data is",req.body);
+  console.log("Create booking data is", req.body);
+  console.log("Uploaded file info:", req.file); // Debug uploaded logo
+
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -53,30 +155,35 @@ export const createBooking = async (req, res) => {
       companyName,
       clientName,
       clientEmail,
-      clientPanNumber,
-      clientGstNumber,
-      clientContactNumber,
-      brandDisplayName,
+      clientPan, // correct to match frontend
+      clientGst,
+      clientContact,
+      brandName,
       clientType,
       campaigns = []
     } = req.body;
-const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
+
+    const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
+
+    // ✅ Get uploaded logo path from multer
+    const companyLogo = req.file ? `/uploads/${req.file.filename}` : '';
 
     // ✅ Validate basic info
     if (!companyName) {
       throw new Error('Company Name is required');
     }
 
-    // ✅ Save Booking (empty campaigns ref for now)
+    // ✅ Save Booking (without campaign refs for now)
     const newBooking = new Booking({
       companyName,
       clientName,
       clientEmail,
-      clientPanNumber,
-      clientGstNumber,
-      clientContactNumber,
-      brandDisplayName,
+      clientPanNumber: clientPan,
+      clientGstNumber: clientGst,
+      clientContactNumber: clientContact,
+      brandDisplayName: brandName,
       clientType,
+      companyLogo,
       campaigns: []
     });
 
@@ -86,23 +193,26 @@ const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : 
 
     // ✅ Process each campaign
     for (const campaignData of parsedCampaigns) {
-      const { campaignName, industry, description, selectedSpaces = [], campaignImages = [] } = campaignData;
+      const {
+        campaignName,
+        industry,
+        description,
+        selectedSpaces = [],
+        campaignImages = []
+      } = campaignData;
 
       // ✅ Update Space inventories
       for (const selected of selectedSpaces) {
         const space = await Space.findById(selected.id).session(session);
         if (!space) throw new Error(`Space not found: ${selected.id}`);
 
-        // Validate available units
         const availableUnits = space.unit - space.occupiedUnits;
         if (selected.selectedUnits > availableUnits) {
-          throw new Error(`Not enough units available for space: ${space.spaceName}`);
+          throw new Error(`Not enough units for space: ${space.spaceName}`);
         }
 
-        // Update occupied units
         space.occupiedUnits += selected.selectedUnits;
 
-        // Update availability status
         if (space.occupiedUnits >= space.unit) {
           space.availability = 'Completely booked';
         } else if (space.occupiedUnits === 0) {
@@ -118,34 +228,39 @@ const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : 
       const newCampaign = new Campaign({
         campaignName,
         description,
+        industry,
         campaignImages,
         spaces: selectedSpaces.map(s => ({
           id: s.id,
           selectedUnits: s.selectedUnits
         })),
-        pipeline: null, // will be linked later if needed
+        pipeline: null
       });
 
       await newCampaign.save({ session });
       createdCampaigns.push(newCampaign._id);
     }
 
-    // ✅ Update Booking with created campaigns
+    // ✅ Final Booking update with campaigns
     newBooking.campaigns = createdCampaigns;
     await newBooking.save({ session });
 
     await session.commitTransaction();
     session.endSession();
 
-    return res.status(201).json({ message: 'Booking created successfully', bookingId: newBooking._id });
+    return res.status(201).json({
+      message: 'Booking created successfully',
+      bookingId: newBooking._id
+    });
 
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    console.error(error);
+    console.error("Booking creation error:", error);
     return res.status(500).json({ error: error.message || 'Failed to create booking' });
   }
 };
+
 export const updateBooking = async (req, res) => {
   const { id:bookingId } = req.params;
   const {
@@ -319,7 +434,7 @@ export const getBookingById = async (req, res) => {
   }
 };
 router.get('/',getAllBookings);
-router.post('/',upload.array('campaignImages', 10),  // Limit to 10 images
+router.post('/',upload.single('companyLogo'),  // Limit to 10 images
   createBooking
 );
 // router.post('/', upload.array('campaignImages', 10), async (req, res) => {
