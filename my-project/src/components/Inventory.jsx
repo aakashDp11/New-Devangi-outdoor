@@ -166,6 +166,30 @@ export default function InventoryDashboard() {
     return () => clearTimeout(timeout);
   }, [paginatedData]); // Re-animate on pagination change
   const totalPages = Math.ceil(filteredData.length / perPage);
+const handleFileChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await fetch('http://localhost:3000/api/spaces/upload-excel', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      toast.success(`Successfully uploaded ${result.count} inventories`);
+    } else {
+      toast.error(result.error || 'Upload failed');
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    toast.error('Something went wrong while uploading');
+  }
+};
 
   return (
     <div className="min-h-screen h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
@@ -181,15 +205,32 @@ export default function InventoryDashboard() {
             <Button onClick={() => navigate('/add-space')} className="bg-black text-xs text-white w-full md:w-auto transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110">
               + Add Space
             </Button>
-            <Button
+           
+<input
+  type="file"
+  accept=".xlsx"
+  id="excel-upload"
+  onChange={handleFileChange}
+  className="hidden"
+/>
+<label
+  htmlFor="excel-upload"
+  className="cursor-pointer px-4 py-2 rounded bg-black text-white hover: transition text-xs w-full md:w-auto transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
+>
+  Upload Excel
+</label>
+
+
+ <Button
   onClick={handleDownloadExcel}
   className="bg-black text-xs text-white w-full md:w-auto transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
 >
   Download Excel
 </Button>
-
           </div>
         </div>
+        
+
 
         <div className="mt-6 text-sm flex flex-col md:flex-row justify-between gap-4 items-stretch md:items-center">
           <Input

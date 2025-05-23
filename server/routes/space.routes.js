@@ -2,6 +2,8 @@ import express from 'express';
 import Space from '../models/space.model.js';
 import upload from '../middleware/multer.middleware.js';
 import { createSpace } from '../controllers/spaceController.js';
+import excelUpload from '../middleware/excelUpload.middleware.js';
+import * as XLSX from 'xlsx';
 const router = express.Router();
 
 const cpUpload = upload.fields([
@@ -51,9 +53,181 @@ router.get('/available', async (req, res) => {
   }
 });
 
+const ENUMS = {
+  spaceType: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk'],
+  category: ['Retail', 'Transit'],
+  mediaType: ['Static', 'Digital'],
+  audience: ['Youth', 'Working Professionals'],
+  demographics: ['Urban', 'Rural'],
+  illuminations: ['Front lit', 'Back lit'],
+  availability: ['Completely available', 'Partialy available', 'Completely booked'],
+  zone: ['East', 'West', 'North', 'South'],
+  ownership: ['Owned', 'Leased', 'Traded'],
+  tier: ['Tier 1', 'Tier 2'],
+};
+
+// Normalize Excel header names to camelCase schema keys
+const MODEL_KEYS = [
+  'spaceName', 'landlord', 'peerMediaOwner', 'spaceType', 'traded', 'category',
+  'mediaType', 'price', 'footfall', 'audience', 'demographics', 'description',
+  'illuminations', 'unit', 'occupiedUnits', 'width', 'height', 'additionalTags',
+  'previousBrands', 'tags', 'address', 'city', 'state', 'latitude', 'longitude',
+  'landmark', 'zone', 'ownership', 'tier', 'faciaTowards', 'overlappingBooking',
+  'availability', 'dates'
+];
+
+const normalizedMap = {};
+MODEL_KEYS.forEach(key => {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+  normalizedMap[normalized] = key;
+});
+
+// Helper functions
+const parseNumber = (val) => {
+  const n = Number(val);
+  return isNaN(n) ? undefined : n;
+};
+
+const enumFix = (val, validValues) => {
+  if (!val) return undefined;
+  const normalized = val.toString().toLowerCase().trim();
+  return validValues.find(v => v.toLowerCase() === normalized);
+};
+
+router.post('/upload-excel', excelUpload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No Excel file uploaded.' });
+  }
+
+  try {
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    const createdSpaces = [];
+    const failedRows = [];
+
+    for (let i = 0; i < rawRows.length; i++) {
+      const row = rawRows[i];
+      const formattedRow = {};
+
+      for (const [header, value] of Object.entries(row)) {
+        const normalizedHeader = header.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const modelKey = normalizedMap[normalizedHeader];
+        if (!modelKey) continue;
+
+        if (['price', 'footfall', 'unit', 'occupiedUnits', 'width', 'height'].includes(modelKey)) {
+          formattedRow[modelKey] = parseNumber(value);
+        } else if (modelKey === 'dates') {
+          formattedRow[modelKey] = typeof value === 'string'
+            ? value.split(',').map(d => d.trim())
+            : [];
+        } else if (modelKey === 'traded' || modelKey === 'overlappingBooking') {
+          formattedRow[modelKey] = value?.toString().toLowerCase() === 'true';
+        } else if (ENUMS[modelKey]) {
+          formattedRow[modelKey] = enumFix(value, ENUMS[modelKey]);
+        } else {
+          formattedRow[modelKey] = value?.toString().trim();
+        }
+      }
+
+      // Add fallback for spaceName
+      if (!formattedRow.spaceName) {
+        formattedRow.spaceName = `Unnamed Space ${i + 1}`;
+      }
+
+      try {
+        const space = new Space(formattedRow);
+        await space.save();
+        createdSpaces.push(space);
+      } catch (err) {
+        console.warn(`Row ${i + 2} skipped:`, err.message);
+        failedRows.push({ row: i + 2, error: err.message });
+      }
+    }
+
+    return res.status(207).json({
+      message: 'Upload complete with flexible column and enum handling',
+      createdCount: createdSpaces.length,
+      skippedCount: failedRows.length,
+      failedRows
+    });
+
+  } catch (error) {
+    console.error('Excel upload error:', error);
+    return res.status(500).json({
+      error: 'Something went wrong during Excel processing.',
+      details: error.message
+    });
+  }
+});
 
 
+// router.post('/upload-excel', excelUpload.single('file'), async (req, res) => {
+//   if (!req.file) {
+//     return res.status(400).json({ error: 'No Excel file uploaded.' });
+//   }
 
+//   try {
+//     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+//     const sheet = workbook.Sheets[workbook.SheetNames[0]];
+//     const rows = XLSX.utils.sheet_to_json(sheet);
+
+//     const createdSpaces = [];
+//     const failedRows = [];
+
+//     const parseNumber = (val) => {
+//       const num = Number(val);
+//       return isNaN(num) ? undefined : num;
+//     };
+
+//     for (let i = 0; i < rows.length; i++) {
+//       const row = rows[i];
+
+//       const spaceData = {
+//         spaceName: row.spaceName?.toString().trim() || `Unnamed Space ${i + 1}`,
+//         spaceType: row.spaceType || 'Billboard',
+//         category: row.category || 'Retail',
+//         mediaType: row.mediaType || 'Static',
+//         price: parseNumber(row.price),
+//         footfall: parseNumber(row.footfall),
+//         unit: parseNumber(row.unit),
+//         occupiedUnits: parseNumber(row.occupiedUnits),
+//         address: row.address,
+//         city: row.city,
+//         state: row.state,
+//         zone: row.zone,
+//         audience: row.audience,
+//         demographics: row.demographics,
+//         availability: row.availability || 'Completely available',
+//         dates: typeof row.dates === 'string' ? row.dates.split(',').map(d => d.trim()) : [],
+//       };
+
+//       try {
+//         const space = new Space(spaceData);
+//         await space.save();
+//         createdSpaces.push(space);
+//       } catch (err) {
+//         console.warn(`Row ${i + 2} skipped:`, err.message);
+//         failedRows.push({ row: i + 2, error: err.message });
+//       }
+//     }
+
+//     return res.status(207).json({
+//       message: 'Upload complete with soft validation',
+//       createdCount: createdSpaces.length,
+//       skippedCount: failedRows.length,
+//       failedRows,
+//     });
+
+//   } catch (error) {
+//     console.error('Excel upload error:', error);
+//     return res.status(500).json({
+//       error: 'Something went wrong during Excel processing.',
+//       details: error.message
+//     });
+//   }
+// });
 router.get('/', async (req, res) => {
     try {
       const spaces = await Space.find();
