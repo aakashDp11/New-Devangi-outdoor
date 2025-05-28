@@ -64,7 +64,7 @@ export default function BookingsDashboard1() {
           <h1 className="text-2xl font-semibold">Bookings</h1>
           <button
             onClick={() => navigate('/create-booking')}
-            className="bg-black text-white text-sm px-3 py-2 rounded hover:scale-105 transition"
+            className="bg-black text-white text-xs px-3 py-2 rounded hover:scale-105 transition"
           >
             + Create Order
           </button>
@@ -95,15 +95,21 @@ export default function BookingsDashboard1() {
                   onClick={() => navigate(`/booking/${item._id}`)}
                 >
                   <td>
+  
   {item.companyLogo ? (
-    <div className="avatar">
-      <div className="mask mask-squircle w-8 h-8 overflow-hidden">
-        <img src={item.companyLogo} alt="Client logo" className="w-full h-full object-contain" />
-      </div>
+  <div className="avatar">
+    <div className="mask mask-squircle w-8 h-8 overflow-hidden">
+      <img
+        src={item.companyLogo}
+        alt="Client logo"
+        className="w-full h-full object-contain"
+      />
     </div>
-  ) : (
-    <span>No Image</span>
-  )}
+  </div>
+) : (
+  <span>No Image</span>
+)}
+
 </td>
 
                   <td>{item._id}</td>

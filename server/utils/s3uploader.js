@@ -31,7 +31,7 @@ export const uploadToS3 = async (localFilePath, s3Key) => {
       Key: s3Key,
       Body: fileContent,
       ContentType: contentType,
-      ContentDisposition: `attachment; filename="${fileName}"`,
+    
     };
 
     const data = await s3.upload(params).promise();

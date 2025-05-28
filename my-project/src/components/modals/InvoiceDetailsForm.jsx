@@ -1,82 +1,9 @@
 
-// import React, { useState, useContext } from 'react';
-// import axios from 'axios';
-// import { PipelineContext } from '../../context/PipelineContext';
-
-// export default function InvoiceForm({ bookingId, onConfirm }) {
-//   const [invoiceNumber, setInvoiceNumber] = useState('');
-//   const [invoiceFile, setInvoiceFile] = useState(null);
-//   const { pipelineData, setPipelineData } = useContext(PipelineContext);
-
-//   const handleFileChange = (e) => {
-//     setInvoiceFile(e.target.files[0]);
-//   };
-
-//   const handleSave = async () => {
-//     try {
-//       if (invoiceFile) {
-//         const formData = new FormData();
-//         formData.append('file', invoiceFile);
-
-//         // Upload invoice file
-//         await axios.post(`http://localhost:3000/api/pipeline/${bookingId}/invoice/upload`, formData, {
-//           headers: { 'Content-Type': 'multipart/form-data' }
-//         });
-//       }
-
-//       // Save invoice number
-//       const res = await axios.put(`http://localhost:3000/api/pipeline/${bookingId}/invoice`, {
-//         invoiceNumber
-//       });
-
-//       setPipelineData(res.data);
-//       onConfirm();
-//     } catch (err) {
-//       console.error('Failed to save invoice details:', err);
-//     }
-//   };
-
-//   return (
-//     <div className="max-w-xl mx-auto mt-10 bg-white shadow-lg rounded-lg p-6 border">
-//       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Invoice Details</h2>
-
-//       <div className="mb-4">
-//         <label className="block text-sm text-gray-700 mb-1">Invoice Number:</label>
-//         <input
-//           type="text"
-//           placeholder="Enter Invoice No"
-//           value={invoiceNumber}
-//           onChange={(e) => setInvoiceNumber(e.target.value)}
-//           className="w-full px-3 py-2 text-sm border rounded-md"
-//         />
-//       </div>
-
-//       <div className="mb-6">
-//         <label className="block text-xs text-gray-700 font-medium mb-2">
-//           Upload Invoice Document:
-//         </label>
-//         <input
-//           type="file"
-//           onChange={handleFileChange}
-//           className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-//         />
-//       </div>
-
-//       <div className="flex gap-4">
-//         <button
-//           onClick={handleSave}
-//           className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition"
-//         >
-//           Save
-//         </button>
-//       </div>
-//     </div>
-//   );
-// }
 
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { PipelineContext } from '../../context/PipelineContext';
+import { toast } from 'sonner';
 
 export default function InvoiceForm({ campaignId, onConfirm }) {
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -109,9 +36,23 @@ export default function InvoiceForm({ campaignId, onConfirm }) {
   const handleFileChange = (e) => {
     setInvoiceFile(e.target.files[0]);
   };
+  const handleDownload = async () => {
+  const response = await fetch(invoiceUrl);
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = invoiceUrl.split('/').pop(); // get filename from URL
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
 
   const handleSave = async () => {
     try {
+       if (!invoiceFile) {
+      toast.error("Please upload an invoice file before saving.");
+      return;
+    }
       if (invoiceFile) {
         const formData = new FormData();
         formData.append('file', invoiceFile);
@@ -155,13 +96,19 @@ export default function InvoiceForm({ campaignId, onConfirm }) {
       >
         View Invoice
       </a>
-      <a
+      {/* <a
         href={invoiceUrl}
         download
         className="text-sm text-green-700 underline hover:text-green-800"
       >
         ⬇ Download
-      </a>
+      </a> */}
+      <button
+      onClick={handleDownload}
+      className="text-sm text-green-700 underline hover:text-green-800"
+    >
+      ⬇ Download
+    </button>
     </div>
   </div>
 )}

@@ -78,7 +78,7 @@ const upload = multer({
     files: 10,
     fields: 50,
   },
-  fileFilter,
+  // fileFilter,
 });
 
 export default upload;

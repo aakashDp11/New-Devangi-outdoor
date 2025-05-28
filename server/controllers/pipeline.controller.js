@@ -1,7 +1,7 @@
 import Pipeline from '../models/pipeline.model.js';
 import Campaign from '../models/campign.model.js';
 import Space from '../models/space.model.js';
-
+import { uploadToS3 } from '../utils/s3uploader.js';
 /**
  * Get pipeline by Campaign ID
  */
@@ -18,40 +18,7 @@ export const getPipelineByCampaignId = async (req, res) => {
   }
 };
 
-/**
- * Create pipeline for Campaign (if not exists)
- */
-// export const createPipelineForCampaign = async (req, res) => {
-//   const { campaignId } = req.params;
-//   try {
-//     const campaign = await Campaign.findById(campaignId);
-//     if (!campaign) {
-//       return res.status(404).json({ error: 'Campaign not found' });
-//     }
 
-//     // Check if already exists
-//     let existingPipeline = await Pipeline.findOne({ campaign: campaignId });
-//     if (existingPipeline) {
-//       return res.status(200).json(existingPipeline);
-//     }
-
-//     // Initialize pipeline with Campaign's spaces (optional - can be empty initially if you want)
-//      const newPipeline = new Pipeline({
-//       campaign: campaignId,
-//       spaces: campaign.spaces.map(s => s.id),
-//       bookingStatus: { confirmed: false, reference: '' },
-//       po: { confirmed: false, documentUrl: '' },
-//       artwork: { confirmed: false, documentUrl: '' },
-//       invoice: { invoiceNumber: '', documentUrl: '' },
-//       payment: { payments: [], totalAmount: 0, totalPaid: 0, paymentDue: 0 },  
-//     });
-
-//     await newPipeline.save();
-//     res.status(201).json(newPipeline);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message || 'Failed to create pipeline' });
-//   }
-// };
 export const createPipelineForCampaign = async (req, res) => {
   const { campaignId } = req.params;
   try {
@@ -167,17 +134,30 @@ export const confirmMountingStatus = async (req, res) => {
 export const uploadInvoice = async (req, res) => {
   try {
     const campaignId = req.params.campaignId;
-    if (!req.file) {
+
+    if (!req.file || !req.file.path) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // ✅ Upload to S3
+    let fileUrl = '';
+    try {
+      fileUrl = await uploadToS3(req.file.path, req.file.filename);
+    } catch (uploadErr) {
+      console.error('S3 upload failed:', uploadErr);
+      return res.status(500).json({ error: 'Failed to upload invoice to S3' });
+    }
+
+    // ✅ Update pipeline document with invoice URL
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
-      { 'invoice.documentUrl': `/uploads/${req.file.filename}` },
+      { 'invoice.documentUrl': fileUrl },
       { new: true }
     );
 
-    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found for this campaign' });
+    }
 
     res.status(200).json(pipeline);
   } catch (err) {
@@ -185,6 +165,28 @@ export const uploadInvoice = async (req, res) => {
     res.status(500).json({ error: 'Server error during invoice upload' });
   }
 };
+
+// export const uploadInvoice = async (req, res) => {
+//   try {
+//     const campaignId = req.params.campaignId;
+//     if (!req.file) {
+//       return res.status(400).json({ error: 'No file uploaded' });
+//     }
+
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: campaignId },
+//       { 'invoice.documentUrl': `/uploads/${req.file.filename}` },
+//       { new: true }
+//     );
+
+//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+//     res.status(200).json(pipeline);
+//   } catch (err) {
+//     console.error('Invoice upload failed:', err);
+//     res.status(500).json({ error: 'Server error during invoice upload' });
+//   }
+// };
 
 export const updateInvoice = async (req, res) => {
   try {
