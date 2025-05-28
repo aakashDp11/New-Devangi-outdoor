@@ -3,6 +3,7 @@ import Space from '../models/space.model.js';
 import upload from '../middleware/multer.middleware.js';
 import { createSpace } from '../controllers/spaceController.js';
 import excelUpload from '../middleware/excelUpload.middleware.js';
+import Campaign from '../models/campign.model.js';
 import * as XLSX from 'xlsx';
 const router = express.Router();
 
@@ -20,7 +21,40 @@ function parseDate(dateString) {
   const [day, month, year] = dateString.split('-').map(Number);
   return new Date(2000 + year, month - 1, day); // year is like 25 => 2025
 }
+router.get('/active-spaces', async (req, res) => {
+  try {
+    const { from, to } = req.query;
 
+    if (!from || !to) {
+      return res.status(400).json({ error: 'Both from and to dates are required in YYYY-MM-DD format.' });
+    }
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    toDate.setDate(toDate.getDate() + 1); // include full day
+
+    const campaigns = await Campaign.find({
+      createdAt: {
+        $gte: fromDate,
+        $lt: toDate
+      }
+    });
+
+    const bookedSpaceIds = new Set();
+    campaigns.forEach(campaign => {
+      (campaign.spaces || []).forEach(space => {
+        if (space?.id) {
+          bookedSpaceIds.add(String(space.id));
+        }
+      });
+    });
+
+    res.json({ bookedSpaceIds: [...bookedSpaceIds] });
+  } catch (error) {
+    console.error('Error fetching active campaign spaces:', error);
+    res.status(500).json({ error: 'Server error while fetching active campaign spaces.' });
+  }
+});
 router.get('/available', async (req, res) => {
   try {
     const { start, end } = req.query;

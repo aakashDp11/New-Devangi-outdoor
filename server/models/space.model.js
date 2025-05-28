@@ -167,9 +167,13 @@ const spaceSchema = new Schema({
   availability: {
     type: String,
     default: 'Completely available',
-  }, // removed enum
+  }, 
 
-  dates: [{ type: String }], // removed match
+  dates: [{ type: String }], 
+  campaignDates: [{
+  startDate: { type: String,  },
+  endDate: { type: String,  }
+}],
 }, {
   timestamps: true
 });

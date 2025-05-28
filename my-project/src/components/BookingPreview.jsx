@@ -43,6 +43,8 @@ console.log("orderInfo",orderInfo);
         campaignName: c.campaignName,
         industry: c.industry,
         description: c.description,
+        startDate: c.startDate,
+  endDate: c.endDate,
         selectedSpaces: c.selectedSpaces.map(s => ({ id: s.id, selectedUnits: s.selectedUnits }))
       }))));
 

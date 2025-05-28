@@ -41,6 +41,8 @@ const campaignSchema = new Schema({
     documentUrl: { type: String },
   },
   pipeline: { type: Schema.Types.ObjectId, ref: 'Pipeline', unique: true,sparse: true },  
+  startDate: { type: String,  },
+  endDate: { type: String,  }
 }, {
   timestamps: true
 });

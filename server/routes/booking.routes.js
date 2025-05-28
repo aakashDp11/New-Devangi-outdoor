@@ -39,6 +39,8 @@ export const getAllBookings = async (req, res) => {
 
 
 
+
+
 // export const createBooking = async (req, res) => {
 //   console.log("Create booking data is", req.body);
 //   console.log("Uploaded file info:", req.file); // Debug uploaded logo
@@ -51,7 +53,7 @@ export const getAllBookings = async (req, res) => {
 //       companyName,
 //       clientName,
 //       clientEmail,
-//       clientPan, // correct to match frontend
+//       clientPan,
 //       clientGst,
 //       clientContact,
 //       brandName,
@@ -61,15 +63,22 @@ export const getAllBookings = async (req, res) => {
 
 //     const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
 
-//     // ✅ Get uploaded logo path from multer
-//     const companyLogo = req.file ? `/uploads/${req.file.filename}` : '';
+//     // ✅ Upload logo to S3 if provided
+//     let companyLogo = '';
+//     if (req.file?.path) {
+//       try {
+//         companyLogo = await uploadToS3(req.file.path, req.file.filename); // returns public S3 URL
+//       } catch (uploadErr) {
+//         throw new Error(`Logo upload failed: ${uploadErr.message}`);
+//       }
+//     }
 
-//     // ✅ Validate basic info
+//     // ✅ Validate required fields
 //     if (!companyName) {
 //       throw new Error('Company Name is required');
 //     }
 
-//     // ✅ Save Booking (without campaign refs for now)
+//     // ✅ Create Booking
 //     const newBooking = new Booking({
 //       companyName,
 //       clientName,
@@ -109,23 +118,22 @@ export const getAllBookings = async (req, res) => {
 
 //         space.occupiedUnits += selected.selectedUnits;
 
-//         if (space.occupiedUnits >= space.unit) {
-//           space.availability = 'Completely booked';
-//         } else if (space.occupiedUnits === 0) {
-//           space.availability = 'Completely available';
-//         } else {
-//           space.availability = 'Partialy available';
-//         }
+//         space.availability =
+//           space.occupiedUnits >= space.unit
+//             ? 'Completely booked'
+//             : space.occupiedUnits === 0
+//               ? 'Completely available'
+//               : 'Partialy available';
 
 //         await space.save({ session });
 //       }
 
-//       // ✅ Create Campaign document
+//       // ✅ Create Campaign
 //       const newCampaign = new Campaign({
 //         campaignName,
 //         description,
 //         industry,
-//         campaignImages,
+//         campaignImages, // If these are files too, let me know — we’ll add S3 upload here too
 //         spaces: selectedSpaces.map(s => ({
 //           id: s.id,
 //           selectedUnits: s.selectedUnits
@@ -137,7 +145,7 @@ export const getAllBookings = async (req, res) => {
 //       createdCampaigns.push(newCampaign._id);
 //     }
 
-//     // ✅ Final Booking update with campaigns
+//     // ✅ Link campaigns to booking
 //     newBooking.campaigns = createdCampaigns;
 //     await newBooking.save({ session });
 
@@ -159,7 +167,7 @@ export const getAllBookings = async (req, res) => {
 
 export const createBooking = async (req, res) => {
   console.log("Create booking data is", req.body);
-  console.log("Uploaded file info:", req.file); // Debug uploaded logo
+  console.log("Uploaded file info:", req.file);
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -179,22 +187,19 @@ export const createBooking = async (req, res) => {
 
     const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
 
-    // ✅ Upload logo to S3 if provided
     let companyLogo = '';
     if (req.file?.path) {
       try {
-        companyLogo = await uploadToS3(req.file.path, req.file.filename); // returns public S3 URL
+        companyLogo = await uploadToS3(req.file.path, req.file.filename);
       } catch (uploadErr) {
         throw new Error(`Logo upload failed: ${uploadErr.message}`);
       }
     }
 
-    // ✅ Validate required fields
     if (!companyName) {
       throw new Error('Company Name is required');
     }
 
-    // ✅ Create Booking
     const newBooking = new Booking({
       companyName,
       clientName,
@@ -212,17 +217,17 @@ export const createBooking = async (req, res) => {
 
     const createdCampaigns = [];
 
-    // ✅ Process each campaign
     for (const campaignData of parsedCampaigns) {
       const {
         campaignName,
         industry,
         description,
         selectedSpaces = [],
-        campaignImages = []
+        campaignImages = [],
+        startDate,
+        endDate
       } = campaignData;
 
-      // ✅ Update Space inventories
       for (const selected of selectedSpaces) {
         const space = await Space.findById(selected.id).session(session);
         if (!space) throw new Error(`Space not found: ${selected.id}`);
@@ -241,27 +246,37 @@ export const createBooking = async (req, res) => {
               ? 'Completely available'
               : 'Partialy available';
 
+        // ✅ Add campaignDates per selected unit
+        if (!Array.isArray(space.campaignDates)) {
+          space.campaignDates = [];
+        }
+
+        for (let i = 0; i < selected.selectedUnits; i++) {
+          space.campaignDates.push({ startDate, endDate });
+        }
+
         await space.save({ session });
       }
 
-      // ✅ Create Campaign
+      // ✅ Create Campaign with start/end date
       const newCampaign = new Campaign({
         campaignName,
         description,
         industry,
-        campaignImages, // If these are files too, let me know — we’ll add S3 upload here too
+        campaignImages,
         spaces: selectedSpaces.map(s => ({
           id: s.id,
           selectedUnits: s.selectedUnits
         })),
-        pipeline: null
+        startDate,
+        endDate,
+        // pipeline: null
       });
 
       await newCampaign.save({ session });
       createdCampaigns.push(newCampaign._id);
     }
 
-    // ✅ Link campaigns to booking
     newBooking.campaigns = createdCampaigns;
     await newBooking.save({ session });
 
@@ -280,6 +295,7 @@ export const createBooking = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Failed to create booking' });
   }
 };
+
 export const updateBooking = async (req, res) => {
   const { id:bookingId } = req.params;
   const {
