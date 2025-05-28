@@ -166,27 +166,7 @@ export const uploadInvoice = async (req, res) => {
   }
 };
 
-// export const uploadInvoice = async (req, res) => {
-//   try {
-//     const campaignId = req.params.campaignId;
-//     if (!req.file) {
-//       return res.status(400).json({ error: 'No file uploaded' });
-//     }
 
-//     const pipeline = await Pipeline.findOneAndUpdate(
-//       { campaign: campaignId },
-//       { 'invoice.documentUrl': `/uploads/${req.file.filename}` },
-//       { new: true }
-//     );
-
-//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
-
-//     res.status(200).json(pipeline);
-//   } catch (err) {
-//     console.error('Invoice upload failed:', err);
-//     res.status(500).json({ error: 'Server error during invoice upload' });
-//   }
-// };
 
 export const updateInvoice = async (req, res) => {
   try {
@@ -242,20 +222,56 @@ export const updatePayment = async (req, res) => {
   }
 };
 
+// export const uploadPoDocument = async (req, res) => {
+//   try {
+//     const campaignId = req.params.campaignId;
+//     if (!req.file) {
+//       return res.status(400).json({ error: 'No file uploaded' });
+//     }
+
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: campaignId },
+//       { 'po.documentUrl': `/uploads/${req.file.filename}` },
+//       { new: true }
+//     );
+
+//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+//     res.status(200).json(pipeline);
+//   } catch (err) {
+//     console.error('Error uploading PO document:', err);
+//     res.status(500).json({ error: 'Server error during PO upload' });
+//   }
+// };
+
+
 export const uploadPoDocument = async (req, res) => {
   try {
     const campaignId = req.params.campaignId;
-    if (!req.file) {
+
+    if (!req.file || !req.file.path) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // ✅ Upload to S3
+    let fileUrl = '';
+    try {
+      fileUrl = await uploadToS3(req.file.path, req.file.filename); // returns public S3 URL
+    } catch (uploadErr) {
+      console.error('S3 upload failed:', uploadErr);
+      return res.status(500).json({ error: 'Failed to upload PO document to S3' });
+    }
+
+    // ✅ Save public S3 URL to pipeline.po.documentUrl
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
-      { 'po.documentUrl': `/uploads/${req.file.filename}` },
+      { 'po.documentUrl': fileUrl },
       { new: true }
     );
 
-    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found' });
+    }
 
     res.status(200).json(pipeline);
   } catch (err) {
