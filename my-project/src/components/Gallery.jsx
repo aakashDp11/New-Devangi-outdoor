@@ -288,12 +288,7 @@ export default function Gallery() {
           <div className='text-xs'>
             <button className="border border-gray-300 px-3 py-1 rounded mr-2">Filter</button>
           </div>
-          <button
-            onClick={() => navigate('/create-booking')}
-            className="bg-black text-xs text-white px-3 py-2 rounded transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
-          >
-            + Create Order
-          </button>
+          
         </div>
 
         <div className={`mt-6 grid grid-cols-1 gap-4 w-full transform transition-all duration-700 ease-out ${
@@ -314,7 +309,7 @@ export default function Gallery() {
                       return url ? (
                         <img
                           key={`${cIdx}-${pIdx}`}
-                          src={`http://localhost:3000${url}`}
+                          src={url}
                           alt={`Artwork ${campaign.campaignName || 'Campaign'}`}
                           className="rounded w-full h-32 object-cover"
                           onError={(e) => {
@@ -346,27 +341,46 @@ export default function Gallery() {
 
                 {/* Download Artwork Images */}
                 <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      (item.campaigns || []).forEach((campaign) => {
-                        const pipelines = Array.isArray(campaign.pipeline) ? campaign.pipeline : [campaign.pipeline];
-                        pipelines.forEach((pipe) => {
-                          const artworkUrl = pipe?.artwork?.documentUrl;
-                          if (artworkUrl) {
-                            const link = document.createElement('a');
-                            link.href = `http://localhost:3000${artworkUrl}`;
-                            link.download = artworkUrl.split('/').pop();
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          }
-                        });
-                      });
-                    }}
-                    className="text-xs px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition"
-                  >
-                    Download Images
-                  </button>
+               <button
+  onClick={async () => {
+    for (const campaign of item.campaigns || []) {
+      const pipelines = Array.isArray(campaign.pipeline)
+        ? campaign.pipeline
+        : [campaign.pipeline];
+
+      for (const pipe of pipelines) {
+        const artworkUrl = pipe?.artwork?.documentUrl;
+        if (artworkUrl) {
+          try {
+            const response = await fetch(artworkUrl, {
+              mode: 'cors', // Ensure CORS is respected
+            });
+
+            if (!response.ok) {
+              throw new Error(`Failed to fetch: ${artworkUrl}`);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = artworkUrl.split('/').pop() || 'artwork.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          } catch (err) {
+            console.error('Download failed:', err.message);
+          }
+        }
+      }
+    }
+  }}
+  className="text-xs px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 transition"
+>
+  Download Images
+</button>
+
                 </div>
               </CardContent>
             </Card>
