@@ -10,9 +10,9 @@ import { toast } from 'sonner';
 export default function CreateOrderBasicInfo() {
   const navigate = useNavigate();
   const { basicInfo, setBasicInfo, proposalId } = useBookingForm();
-  const [step, setStep] = useState('Order');
+  const [step, setStep] = useState('Basic');
   const [completedSteps, setCompletedSteps] = useState(['Basic']);
-  const stepOrder = ['Basic', 'Order', 'Spaces'];
+  const stepOrder = ['Basic', 'Order'];
 
   return (
     <div className="bg-white text-xs">
@@ -22,7 +22,7 @@ export default function CreateOrderBasicInfo() {
           <h1 className="text-2xl font-semibold">{proposalId ? "Edit Proposal" : "Create Order"}</h1>
         </div>
 
-        <div className="flex gap-6 mb-6 text-sm font-medium">
+        {/* <div className="flex gap-6 mb-6 text-sm font-medium">
           {stepOrder.map((label) => (
             <div
               key={label}
@@ -34,12 +34,26 @@ export default function CreateOrderBasicInfo() {
             >
               {label === 'Basic'
                 ? 'Basic Information'
-                : label === 'Order'
-                ? 'Order Information'
-                : 'Select Spaces'}
+                :  'Order Information'
+                }
             </div>
           ))}
-        </div>
+        </div> */}
+        <div className="flex gap-6 mb-6 text-sm font-medium">
+  {stepOrder.map((label) => (
+    <div
+      key={label}
+      className={
+        step === label
+          ? 'text-black border-b-2 border-black pb-1 flex items-center gap-1'
+          : 'text-gray-500 pb-1 flex items-center gap-1'
+      }
+    >
+      {label === 'Basic' ? 'Basic Information' : 'Order Information'}
+    </div>
+  ))}
+</div>
+
 
         <div className="grid grid-cols-2 text-xs gap-6">
           <div>
@@ -201,8 +215,11 @@ export default function CreateOrderBasicInfo() {
         </div>
 
         <div className="mt-8 text-sm flex">
-          <button className="px-1 py-0 border rounded mr-auto transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110">Cancel</button>
-          <div className="px-4 py-2 ">
+          <div className='px-0 py-2 mr-auto'>
+
+          <button className="px-3 py-1 border rounded mr-auto transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110">Cancel</button>
+          </div>
+          <div className="px-4 py-2  ml-auto ">
             <button
               onClick={() => navigate('/create-booking-orderInfo')}
               className="px-3 py-1 bg-black text-white rounded transition delay-150 duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"

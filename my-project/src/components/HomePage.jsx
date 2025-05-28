@@ -76,9 +76,9 @@
 //         bookingsRes.json(),
 //         proposalsRes.json(),
 //       ]);
-// console.log("Booking data is",bookingsData);
-// console.log("Proposal data is",proposalsData);
+
 //       setBookings(bookingsData.bookings);
+//       console.log(bookingsData.bookings);
 //       setProposals(proposalsData);
 //     } catch (err) {
 //       console.error('Failed to fetch data', err);
@@ -92,7 +92,6 @@
 //     const rangeStart = getRangeStart(now);
 
 //     const data = {};
-//     console.log("Bookings data is",bookings);
 //     bookings.forEach((b) => {
 //       const createdAt = dayjs(b.createdAt);
 //       if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
@@ -159,71 +158,47 @@
 //     };
 //   };
 
-
-
 //   const getPaymentStats = () => {
-//   let totalReceived = 0;
-//   let totalDue = 0;
+//     let totalReceived = 0;
+//     let totalDue = 0;
 
-//   bookings.forEach(b => {
-//     b.campaigns?.forEach(campaign => {
-//       const pipeline = campaign.pipeline;
-//       if (pipeline && pipeline.payment) {
-//         totalReceived += pipeline.payment.totalPaid || 0;
-//         totalDue += pipeline.payment.paymentDue || 0;
-//       }
+//     bookings.forEach((b) => {
+//       b.campaigns?.forEach((campaign) => {
+//         const pipeline = campaign.pipeline;
+//         if (pipeline && pipeline.payment) {
+//           totalReceived += pipeline.payment.totalPaid || 0;
+//           totalDue += pipeline.payment.paymentDue || 0;
+//         }
+//       });
 //     });
-//   });
 
-//   return { totalReceived, totalDue };
-// };
-
-//   // const getPipelineStatusCounts = () => {
-//   //   const counts = {
-//   //     bookingConfirmed: 0,
-//   //     artworkReceived: 0,
-//   //     printingStatus: 0,
-//   //     mountingStatus: 0,
-//   //     advertisingLive: 0,
-//   //   };
-
-//   //   bookings.forEach(b => {
-//   //     const pipeline = b.pipeline;
-//   //     if (pipeline) {
-//   //       if (pipeline.bookingStatus?.confirmed) counts.bookingConfirmed++;
-//   //       if (pipeline.artwork?.confirmed) counts.artworkReceived++;
-//   //       if (pipeline.printingStatus?.confirmed) counts.printingStatus++;
-//   //       if (pipeline.mountingStatus?.confirmed) counts.mountingStatus++;
-//   //       if (pipeline.advertisingLive?.started) counts.advertisingLive++;
-//   //     }
-//   //   });
-
-//   //   return counts;
-//   // };
-// const getPipelineStatusCounts = () => {
-//   const counts = {
-//     bookingConfirmed: 0,
-//     artworkReceived: 0,
-//     printingStatus: 0,
-//     mountingStatus: 0,
-//     advertisingLive: 0,
+//     return { totalReceived, totalDue };
 //   };
 
-//   bookings.forEach(b => {
-//     b.campaigns?.forEach(campaign => {
-//       const pipeline = campaign.pipeline;
-//       if (pipeline) {
-//         if (pipeline.bookingStatus?.confirmed) counts.bookingConfirmed++;
-//         if (pipeline.artwork?.confirmed) counts.artworkReceived++;
-//         if (pipeline.printingStatus?.confirmed) counts.printingStatus++;
-//         if (pipeline.mountingStatus?.confirmed) counts.mountingStatus++;
-//         if (pipeline.advertisingLive?.started) counts.advertisingLive++;
-//       }
-//     });
-//   });
+//   const getPipelineStatusCounts = () => {
+//     const counts = {
+//       bookingConfirmed: 0,
+//       artworkReceived: 0,
+//       printingStatus: 0,
+//       mountingStatus: 0,
+//       advertisingLive: 0,
+//     };
 
-//   return counts;
-// };
+//     bookings.forEach((b) => {
+//       b.campaigns?.forEach((campaign) => {
+//         const pipeline = campaign.pipeline;
+//         if (pipeline) {
+//           if (pipeline.bookingStatus?.confirmed) counts.bookingConfirmed++;
+//           if (pipeline.artwork?.confirmed) counts.artworkReceived++;
+//           if (pipeline.printingStatus?.confirmed) counts.printingStatus++;
+//           if (pipeline.mountingStatus?.confirmed) counts.mountingStatus++;
+//           if (pipeline.advertisingLive?.started) counts.advertisingLive++;
+//         }
+//       });
+//     });
+
+//     return counts;
+//   };
 
 //   const { totalReceived, totalDue } = getPaymentStats();
 //   const pipelineCounts = getPipelineStatusCounts();
@@ -232,9 +207,8 @@
 //     labels: ['Received', 'Due'],
 //     datasets: [
 //       {
-//         data: [totalReceived, totalDue],
+//         data: [totalReceived || 0.01, totalDue || 0.01], // Avoid zero-only pie chart
 //         backgroundColor: ['rgba(34, 197, 94, 0.7)', 'rgba(239, 68, 68, 0.7)'],
-//         // backgroundColor: ['rgba(249, 115, 22, 0.7)', 'rgba(0, 0, 0, 0.7)'],
 //         borderWidth: 1,
 //       },
 //     ],
@@ -266,20 +240,12 @@
 //   };
 
 //   return (
-//     <div className="min-h-screen w-[102%] bg-white text-black flex flex-col lg:flex-row">
+//     <div className="min-h-screen w-full bg-white text-black flex flex-col lg:flex-row">
 //       <Navbar />
-//       <main className="flex-1 mt-4 overflow-y-auto px-4 md:px-8 py-6 ml-0 lg:ml-64">
+//       <main className="flex-1 mt-4 overflow-y-auto px-4 md:px-8 py-6 ml-0 lg:ml-[20%]">
 //         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
 //           <h1 className="text-3xl md:text-3xl ml-[1%] font-semibold">Dashboard</h1>
-//           <select
-//             className="border px-3 py-2 rounded text-sm bg-white shadow-sm"
-//             value={range}
-//             onChange={(e) => setRange(e.target.value)}
-//           >
-//             <option value="week">This Week</option>
-//             <option value="month">This Month</option>
-//             <option value="threeMonths">Last 3 Months</option>
-//           </select>
+       
 //         </div>
 
 //         <div className="flex flex-col lg:flex-row justify-center items-center gap-10 mt-[5%] flex-wrap">
@@ -293,10 +259,30 @@
 //             </>
 //           ) : (
 //             <>
-//             {/* Payment Pie Chart */}
-          
-//               {/* Bookings Bar Chart */}
-//               <Card className="max-w-[500px] shadow-md">
+//              <Card className="max-w-[300px] mr-auto  shadow-md mt-4">
+//                 <CardContent>
+//                   <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
+//                   <div className="w-full h-[300px]">
+//                     <Pie data={pieChartData} options={pieOptions} />
+//                   </div>
+//                 </CardContent>
+//               </Card>
+//               <div className='w-full'>
+//                 <div className='flex'>
+//  <select
+//             className="border px-3 py-2 ml-auto  rounded text-xs bg-white shadow-sm"
+//             value={range}
+//             onChange={(e) => setRange(e.target.value)}
+//           >
+//             <option value="week">This Week</option>
+//             <option value="month">This Month</option>
+//             <option value="threeMonths">Last 3 Months</option>
+//           </select>
+//               </div>
+           
+//             <div className='flex w-full mt-[3%]'>
+              
+//  <Card className="max-w-[400px] mr-auto shadow-md">
 //                 <CardContent>
 //                   <h2 className="text-sm font-medium mb-2">Bookings</h2>
 //                   <div className="w-full h-[400px]">
@@ -305,8 +291,7 @@
 //                 </CardContent>
 //               </Card>
 
-//               {/* Proposals Bar Chart */}
-//               <Card className="max-w-[500px] shadow-md">
+//               <Card className="max-w-[400px] ml-auto shadow-md">
 //                 <CardContent>
 //                   <h2 className="text-sm font-medium mb-2">Proposals</h2>
 //                   <div className="w-full h-[400px]">
@@ -314,16 +299,9 @@
 //                   </div>
 //                 </CardContent>
 //               </Card>
-//               <Card className="max-w-[300px] shadow-md mt-4">
-//                 <CardContent>
-//                   <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
-//                   <div className="w-full h-[300px]">
-//                     <Pie data={pieChartData} options={pieOptions} />
-//                   </div>
-//                 </CardContent>
-//               </Card>
-
-//               {/* Pipeline Status Horizontal Bar Chart */}
+//             </div>
+//             </div>
+// <div className='flex w-full'>
 //               <Card className="max-w-[600px] shadow-md mt-28">
 //                 <CardContent>
 //                   <h2 className="text-sm font-medium mb-2">Pipeline Status Overview</h2>
@@ -332,8 +310,7 @@
 //                   </div>
 //                 </CardContent>
 //               </Card>
-
-              
+//               </div>
 //             </>
 //           )}
 //         </div>
@@ -342,7 +319,7 @@
 //   );
 // };
 
-// // Reusable Chart Options
+// // Chart options
 // const chartOptions = {
 //   responsive: true,
 //   maintainAspectRatio: false,
@@ -380,6 +357,7 @@
 // };
 
 // export default BookingGraphDashboard;
+
 
 import { Bar, Line, Pie } from 'react-chartjs-2';
 import dayjs from 'dayjs';
@@ -447,7 +425,6 @@ const BookingGraphDashboard = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-
       const [bookingsRes, proposalsRes] = await Promise.all([
         fetch('http://localhost:3000/api/bookings'),
         fetch('http://localhost:3000/api/proposals'),
@@ -459,7 +436,6 @@ const BookingGraphDashboard = () => {
       ]);
 
       setBookings(bookingsData.bookings);
-      console.log(bookingsData.bookings);
       setProposals(proposalsData);
     } catch (err) {
       console.error('Failed to fetch data', err);
@@ -556,6 +532,32 @@ const BookingGraphDashboard = () => {
     return { totalReceived, totalDue };
   };
 
+ const getAvailabilityStats = () => {
+  const availabilityCounts = {
+    completelyAvailable: 0,
+    partiallyAvailable: 0,
+    completelyBooked: 0,
+  };
+
+  bookings.forEach((b) => {
+    b.campaigns?.forEach((campaign) => {
+      campaign.spaces?.forEach((space) => {
+        const availability = space.availability?.toLowerCase() || 'completely available';
+        if (availability.includes('partial')) {
+          availabilityCounts.partiallyAvailable++;
+        } else if (availability.includes('booked')) {
+          availabilityCounts.completelyBooked++;
+        } else {
+          availabilityCounts.completelyAvailable++;
+        }
+      });
+    });
+  });
+
+  return availabilityCounts;
+};
+
+
   const getPipelineStatusCounts = () => {
     const counts = {
       bookingConfirmed: 0,
@@ -582,18 +584,39 @@ const BookingGraphDashboard = () => {
   };
 
   const { totalReceived, totalDue } = getPaymentStats();
+  const availabilityStats = getAvailabilityStats();
   const pipelineCounts = getPipelineStatusCounts();
 
   const pieChartData = {
     labels: ['Received', 'Due'],
     datasets: [
       {
-        data: [totalReceived || 0.01, totalDue || 0.01], // Avoid zero-only pie chart
+        data: [totalReceived || 0.01, totalDue || 0.01],
         backgroundColor: ['rgba(34, 197, 94, 0.7)', 'rgba(239, 68, 68, 0.7)'],
         borderWidth: 1,
       },
     ],
   };
+
+ const availabilityPieData = {
+  labels: ['Completely available', 'Partially available', 'Completely booked'],
+  datasets: [
+    {
+      data: [
+        availabilityStats.completelyAvailable || 0.01,
+        availabilityStats.partiallyAvailable || 0.01,
+        availabilityStats.completelyBooked || 0.01,
+      ],
+      backgroundColor: [
+        'rgba(34, 197, 94, 0.7)',   // green
+        'rgba(251, 191, 36, 0.7)',  // yellow
+        'rgba(239, 68, 68, 0.7)',   // red
+      ],
+      borderWidth: 1,
+    },
+  ],
+};
+
 
   const pipelineChartData = {
     labels: [
@@ -621,33 +644,57 @@ const BookingGraphDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen w-[102%] bg-white text-black flex flex-col lg:flex-row">
+    <div className="min-h-screen w-full bg-white text-black flex flex-col ">
       <Navbar />
-      <main className="flex-1 mt-4 overflow-y-auto px-4 md:px-8 py-6 ml-0 lg:ml-64">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+      <main className="flex-1 mt-4 w-full  px-4 md:px-8 py-6 ml-0 lg:ml-[35%]">
+        <div className="flex flex-col md:flex-row  mb-4 gap-4">
           <h1 className="text-3xl md:text-3xl ml-[1%] font-semibold">Dashboard</h1>
-          <select
-            className="border px-3 py-2 rounded text-sm bg-white shadow-sm"
-            value={range}
-            onChange={(e) => setRange(e.target.value)}
-          >
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="threeMonths">Last 3 Months</option>
-          </select>
         </div>
 
-        <div className="flex flex-col lg:flex-row justify-center items-center gap-10 mt-[5%] flex-wrap">
+        <div className="flex flex-row w-full lg:flex-row  gap-[30%]  mt-6">
           {loading ? (
             <>
-              <ShimmerCard />
-              <ShimmerCard />
-              <ShimmerCard />
               <ShimmerCard />
               <ShimmerCard />
             </>
           ) : (
             <>
+              <Card className="max-w-[300px] shadow-md mt-4">
+                <CardContent>
+                  <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
+                  <div className="w-full h-[300px]">
+                    <Pie data={pieChartData} options={pieOptions} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="max-w-[300px] shadow-md mt-4">
+                <CardContent>
+                  <h2 className="text-sm font-medium mb-2">Space Availability</h2>
+                  <div className="w-full h-[300px]">
+                    <Pie data={availabilityPieData} options={pieOptions} />
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
+
+        {!loading && (
+          <div className="mt-14 flex flex-col w-full">
+            <div className="flex mb-3 w-full">
+              <select
+                className="border ml-auto px-3 py-2 rounded text-xs bg-white shadow-sm"
+                value={range}
+                onChange={(e) => setRange(e.target.value)}
+              >
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="threeMonths">Last 3 Months</option>
+              </select>
+            </div>
+
+            <div className="flex w-full flex-row gap-[25%]">
               <Card className="max-w-[500px] shadow-md">
                 <CardContent>
                   <h2 className="text-sm font-medium mb-2">Bookings</h2>
@@ -665,17 +712,10 @@ const BookingGraphDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
 
-              <Card className="max-w-[300px] shadow-md mt-4">
-                <CardContent>
-                  <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
-                  <div className="w-full h-[300px]">
-                    <Pie data={pieChartData} options={pieOptions} />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="max-w-[600px] shadow-md mt-28">
+            <div className="mt-10">
+              <Card className="w-full shadow-md">
                 <CardContent>
                   <h2 className="text-sm font-medium mb-2">Pipeline Status Overview</h2>
                   <div className="w-full h-[400px]">
@@ -683,15 +723,15 @@ const BookingGraphDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
 };
 
-// Chart options
+// Chart Options
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,

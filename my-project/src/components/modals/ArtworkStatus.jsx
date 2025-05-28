@@ -149,7 +149,7 @@ export default function ArtworkForm({ campaignId, onConfirm }) {
         const artwork = res.data?.artwork || {};
         if (artwork.confirmed && artwork.documentUrl) {
           setIsArtworkSaved(true);
-          setArtworkUrl(`http://localhost:3000${artwork.documentUrl}`);
+          setArtworkUrl(`${artwork.documentUrl}`);
         }
       } catch (err) {
         console.error('Failed to fetch artwork data:', err);
@@ -162,6 +162,16 @@ export default function ArtworkForm({ campaignId, onConfirm }) {
   const handleFileChange = (e) => {
     setArtworkFile(e.target.files[0]);
   };
+const handleDownload = async () => {
+  const response = await fetch(artworkUrl);
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = artworkUrl.split('/').pop(); // get filename from URL
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
 
   const handleSave = async () => {
     try {
@@ -209,13 +219,13 @@ export default function ArtworkForm({ campaignId, onConfirm }) {
               >
                 View Artwork
               </a>
-              <a
-                href={artworkUrl}
-                download
-                className="text-sm text-green-700 underline hover:text-green-800"
-              >
-                ⬇ Download
-              </a>
+           
+              <button
+      onClick={handleDownload}
+      className="text-sm text-green-700 underline hover:text-green-800"
+    >
+      ⬇ Download
+    </button>
             </div>
           )}
         </div>

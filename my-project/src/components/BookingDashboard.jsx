@@ -97,8 +97,8 @@ export default function BookingsDashboard1() {
                   <td>
   {item.companyLogo ? (
     <div className="avatar">
-      <div className="mask mask-squircle w-12 h-12">
-        <img src={`http://localhost:3000${item.companyLogo}`} alt="Client logo" />
+      <div className="mask mask-squircle w-8 h-8 overflow-hidden">
+        <img src={item.companyLogo} alt="Client logo" className="w-full h-full object-contain" />
       </div>
     </div>
   ) : (

@@ -87,6 +87,12 @@ export default function BookingDetails() {
     });
     setShowEditPopup(true);
   };
+  const formatLabel = (key) => {
+  return key
+    .replace(/([A-Z])/g, ' $1')     // insert space before capital letters
+    .replace(/^./, str => str.toUpperCase()); // capitalize the first letter
+};
+
 
   const handleUpdate = async () => {
     try {
@@ -178,21 +184,30 @@ export default function BookingDetails() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Booking Details</h1>
           <div className="space-x-2">
-            <button className="btn btn-primary btn-sm" onClick={handleOpenEdit}>Edit Booking</button>
-            <button className="btn btn-error btn-sm" onClick={() => setShowDeletePopup(true)}>Delete Booking</button>
+            {/* <button className="btn btn-primary btn-sm" onClick={handleOpenEdit}>Edit Booking</button> */}
+            <button className="bg-red-600 text-white px-2 py-1 text-xs rounded hover:bg-red-700" onClick={() => setShowDeletePopup(true)}>Delete Booking</button>
           </div>
         </div>
 
         <div className="card bg-base-100 shadow-md p-4 mb-6">
           <h2 className="text-lg font-semibold mb-4">Client Information</h2>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          {/* <div className="grid grid-cols-2 gap-4 text-sm">
             {Object.entries(booking).filter(([key]) =>
               ['companyName', 'clientName', 'clientEmail', 'clientContactNumber', 'clientPanNumber', 'clientGstNumber', 'brandDisplayName', 'clientType'].includes(key)
             ).map(([key, value]) => (
               <Info key={key} label={key} value={value} />
             ))}
             <Info label="Created At" value={new Date(booking.createdAt).toLocaleString()} />
-          </div>
+          </div> */}
+          <div className="grid grid-cols-2 gap-4 text-sm">
+  {Object.entries(booking).filter(([key]) =>
+    ['companyName', 'clientName', 'clientEmail', 'clientContactNumber', 'clientPanNumber', 'clientGstNumber', 'brandDisplayName', 'clientType'].includes(key)
+  ).map(([key, value]) => (
+    <Info key={key} label={formatLabel(key)} value={value} />
+  ))}
+  <Info label="Created At" value={new Date(booking.createdAt).toLocaleString()} />
+</div>
+
         </div>
 
         {booking.campaigns.map((campaign, idx) => (

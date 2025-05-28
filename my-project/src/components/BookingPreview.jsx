@@ -11,7 +11,7 @@ export default function BookingPreview() {
   const [loading, setLoading] = useState(false);
 
   const { basicInfo, orderInfo, resetForm, proposalId, setProposalId } = useBookingForm();
-  const stepOrder = ['Basic', 'Order', 'Spaces'];
+  const stepOrder = ['Basic', 'Order'];
 console.log("basicInfo",basicInfo);
 console.log("orderInfo",orderInfo);
   const computeTotalPrice = () => {
@@ -123,7 +123,7 @@ console.log("FormData before submission is",formData);
   };
 
   return (
-    <div className="p-6 w-[90%] text-xs md:ml-64 min-h-screen">
+    <div className="p-6 w-[80%] text-xs md:ml-64 min-h-screen">
       <Navbar />
       <div className="max-w-screen-xl mx-auto">
         <h2 className="text-2xl font-semibold mb-6">Review & Confirm Booking</h2>

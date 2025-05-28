@@ -8,10 +8,13 @@ import {
   confirmMountingStatus,uploadInvoice,updateInvoice,updatePayment,uploadPoDocument,confirmPoStatus,deletePipelineAndCleanup
 } from '../controllers/pipeline.controller.js';
 import upload from '../middleware/multer.middleware.js';
+import { uploadToS3 } from '../utils/s3uploader.js';
 import Campaign from '../models/campign.model.js';
 const router = express.Router();
 import Pipeline from '../models/pipeline.model.js';
 import moment from 'moment';
+
+
 router.get('/campaign/:campaignId', getPipelineByCampaignId);
 router.get('/finance', async (req, res) => {
   try {
@@ -53,15 +56,47 @@ router.post('/campaign/:campaignId', createPipelineForCampaign);
 
 router.put('/campaign/:campaignId/bookingStatus', updateBookingStatus);
 router.put('/campaign/:campaignId/artwork', confirmArtwork);
+// router.post('/campaign/:campaignId/artwork/upload', upload.single('file'), async (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ error: 'No file uploaded' });
+//     }
+
+//     const fileUrl = `/uploads/${req.file.filename}`; // Adjust path if needed
+
+//     // ✅ Save the document URL to pipeline.artwork.documentUrl
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: req.params.campaignId },
+//       { 'artwork.documentUrl': fileUrl },
+//       { new: true }
+//     );
+
+//     if (!pipeline) {
+//       return res.status(404).json({ error: 'Pipeline not found for the campaign' });
+//     }
+
+//     res.status(200).json({ message: 'Artwork uploaded', documentUrl: fileUrl, pipeline });
+//   } catch (error) {
+//     console.error('Artwork upload error:', error);
+//     res.status(500).json({ error: error.message || 'Failed to upload artwork' });
+//   }
+// });
 router.post('/campaign/:campaignId/artwork/upload', upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.file || !req.file.path) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const fileUrl = `/uploads/${req.file.filename}`; // Adjust path if needed
+    // ✅ Upload file to S3
+    let fileUrl = '';
+    try {
+      fileUrl = await uploadToS3(req.file.path, req.file.filename);
+    } catch (uploadErr) {
+      console.error('S3 upload failed:', uploadErr);
+      return res.status(500).json({ error: 'Failed to upload artwork to S3' });
+    }
 
-    // ✅ Save the document URL to pipeline.artwork.documentUrl
+    // ✅ Update pipeline document
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: req.params.campaignId },
       { 'artwork.documentUrl': fileUrl },
@@ -73,6 +108,7 @@ router.post('/campaign/:campaignId/artwork/upload', upload.single('file'), async
     }
 
     res.status(200).json({ message: 'Artwork uploaded', documentUrl: fileUrl, pipeline });
+
   } catch (error) {
     console.error('Artwork upload error:', error);
     res.status(500).json({ error: error.message || 'Failed to upload artwork' });

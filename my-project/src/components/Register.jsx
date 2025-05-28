@@ -24,12 +24,12 @@ function Register() {
   };
 
   return (
-    <div className='flex'>
+    <div className='flex mx-auto'>
 <Navbar/>
    
-    <div className='w-[88rem] ml-[45%]'>
+    <div className='w-[88rem] ml-[45%] mt-[10%]'>
       <h2 className="text-xl font-bold ml-[12%] mb-8">Create User</h2>
-     <img className='w-[30%] ml-[5%] mb-[5%]' src={logo1}/>
+     {/* <img className='w-[30%] ml-[5%] mb-[5%]' src={logo1}/> */}
       <form onSubmit={handleRegister} className="flex mt-[5%] w-[40%] flex-col gap-2">
       <input
           type="text"
