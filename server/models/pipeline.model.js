@@ -67,15 +67,22 @@ const pipelineSchema = new Schema({
  artwork: {
     confirmed: { type: Boolean, default: false },
     documentUrl: { type: String },
+    recievedDate:{type:String}
   },
   bookingStatus: {
     confirmed: { type: Boolean, default: false },
     reference: { type: String },
+    bookingDate:{ type: String },
+    memberName:{ type: String },
   },
 
   po: {
     confirmed: { type: Boolean, default: false },
     documentUrl: { type: String },
+    poNumber: { type: String },
+    poDate:{type: String},
+    poValue:Number
+
   },
 
  
@@ -83,17 +90,27 @@ const pipelineSchema = new Schema({
   invoice: {
     invoiceNumber: { type: String },
     documentUrl: { type: String },
+    invoiceDate: {type:String},
+    invoiceValue:Number
   },
 
   payment: {
     totalAmount: Number,
     modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc'] ,default: undefined},
+    // payments: [
+    //   {
+    //     amount: Number,
+    //     date: Date,
+    //   },
+    // ],
     payments: [
-      {
-        amount: Number,
-        date: Date,
-      },
-    ],
+  {
+    amount: Number,
+    date: Date,
+    modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc'] },
+  },
+],
+
     totalPaid: Number,
     paymentDue: Number,
     

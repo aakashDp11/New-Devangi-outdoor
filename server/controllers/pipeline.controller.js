@@ -66,12 +66,12 @@ export const createPipelineForCampaign = async (req, res) => {
  */
 export const updateBookingStatus = async (req, res) => {
   const { campaignId } = req.params;
-  const { confirmed, reference } = req.body;
+  const { confirmed, reference,bookingDate,memberName } = req.body;
 
   try {
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
-      { bookingStatus: { confirmed, reference } },
+      { bookingStatus: { confirmed, reference,bookingDate,memberName } },
       { new: true }
     );
     res.json(pipeline);
@@ -83,16 +83,42 @@ export const updateBookingStatus = async (req, res) => {
 /**
  * Confirm Artwork
  */
+// export const confirmArtwork = async (req, res) => {
+//   const { campaignId } = req.params;
+//   try {
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: campaignId },
+//       { 'artwork.confirmed': true },
+//       { new: true }
+//     );
+//     res.json(pipeline);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message || 'Failed to confirm artwork' });
+//   }
+// };
 export const confirmArtwork = async (req, res) => {
   const { campaignId } = req.params;
+  const { receivedDate } = req.body;
+
   try {
+    const updateData = {
+      'artwork.confirmed': true,
+      ...(receivedDate && { 'artwork.receivedDate': receivedDate }),
+    };
+
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
-      { 'artwork.confirmed': true },
+      updateData,
       { new: true }
     );
-    res.json(pipeline);
+
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found' });
+    }
+
+    res.status(200).json(pipeline);
   } catch (error) {
+    console.error('Error confirming artwork:', error);
     res.status(500).json({ error: error.message || 'Failed to confirm artwork' });
   }
 };
@@ -168,14 +194,21 @@ export const uploadInvoice = async (req, res) => {
 
 
 
+
 export const updateInvoice = async (req, res) => {
   try {
-    const { invoiceNumber } = req.body;
+    const { invoiceNumber, invoiceDate, invoiceValue } = req.body;
     const campaignId = req.params.campaignId;
+
+    const updateData = {
+      ...(invoiceNumber && { 'invoice.invoiceNumber': invoiceNumber }),
+      ...(invoiceDate && { 'invoice.invoiceDate': invoiceDate }),
+      ...(invoiceValue && { 'invoice.invoiceValue': invoiceValue }),
+    };
 
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
-      { 'invoice.invoiceNumber': invoiceNumber },
+      updateData,
       { new: true }
     );
 
@@ -183,44 +216,45 @@ export const updateInvoice = async (req, res) => {
 
     res.status(200).json(pipeline);
   } catch (err) {
-    console.error('Error updating invoice number:', err);
+    console.error('Error updating invoice details:', err);
     res.status(500).json({ error: 'Server error during invoice update' });
   }
 };
 
-export const updatePayment = async (req, res) => {
-  try {
-    const campaignId = req.params.campaignId;
-    const {
-      totalAmount,
-      modeOfPayment,
-      payments = [],
-      totalPaid,
-      paymentDue
-    } = req.body;
 
-    const pipeline = await Pipeline.findOneAndUpdate(
-      { campaign: campaignId },
-      {
-        payment: {
-          totalAmount,
-          modeOfPayment,
-          payments,
-          totalPaid,
-          paymentDue
-        }
-      },
-      { new: true }
-    );
+// export const updatePayment = async (req, res) => {
+//   try {
+//     const campaignId = req.params.campaignId;
+//     const {
+//       totalAmount,
+//       modeOfPayment,
+//       payments = [],
+//       totalPaid,
+//       paymentDue
+//     } = req.body;
 
-    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: campaignId },
+//       {
+//         payment: {
+//           totalAmount,
+//           modeOfPayment,
+//           payments,
+//           totalPaid,
+//           paymentDue
+//         }
+//       },
+//       { new: true }
+//     );
 
-    res.status(200).json(pipeline);
-  } catch (err) {
-    console.error('Error updating payment:', err);
-    res.status(500).json({ error: 'Server error during payment update' });
-  }
-};
+//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+//     res.status(200).json(pipeline);
+//   } catch (err) {
+//     console.error('Error updating payment:', err);
+//     res.status(500).json({ error: 'Server error during payment update' });
+//   }
+// };
 
 // export const uploadPoDocument = async (req, res) => {
 //   try {
@@ -244,6 +278,37 @@ export const updatePayment = async (req, res) => {
 //   }
 // };
 
+export const updatePayment = async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId;
+    const {
+      totalAmount,
+      payments = [],
+      totalPaid,
+      paymentDue
+    } = req.body;
+
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      {
+        payment: {
+          totalAmount,
+          payments,
+          totalPaid,
+          paymentDue
+        }
+      },
+      { new: true }
+    );
+
+    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+    res.status(200).json(pipeline);
+  } catch (err) {
+    console.error('Error updating payment:', err);
+    res.status(500).json({ error: 'Server error during payment update' });
+  }
+};
 
 export const uploadPoDocument = async (req, res) => {
   try {
@@ -281,18 +346,33 @@ export const uploadPoDocument = async (req, res) => {
 };
 
 // ✅ Confirm PO received (updates po.confirmed: true)
+
 export const confirmPoStatus = async (req, res) => {
   try {
     const campaignId = req.params.campaignId;
-    const { confirmed } = req.body;
+    const {
+      confirmed,
+      poNumber,
+      poDate,
+      poValue
+    } = req.body;
+
+    const updateData = {
+      'po.confirmed': confirmed === true || confirmed === 'true',
+      ...(poNumber && { 'po.poNumber': poNumber }),
+      ...(poDate && { 'po.poDate': poDate }),
+      ...(poValue && { 'po.poValue': poValue }),
+    };
 
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
-      { 'po.confirmed': confirmed === true || confirmed === 'true' },
+      updateData,
       { new: true }
     );
 
-    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found' });
+    }
 
     res.status(200).json(pipeline);
   } catch (err) {
@@ -300,6 +380,7 @@ export const confirmPoStatus = async (req, res) => {
     res.status(500).json({ error: 'Server error during PO confirmation' });
   }
 };
+
 
 export const deletePipelineAndCleanup = async (req, res) => {
   const { campaignId } = req.params;

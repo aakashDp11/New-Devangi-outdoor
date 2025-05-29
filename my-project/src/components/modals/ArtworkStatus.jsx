@@ -1,11 +1,154 @@
 
+// import React, { useState, useEffect, useContext } from 'react';
+// import axios from 'axios';
+// import { PipelineContext } from '../../context/PipelineContext';
+
+// export default function ArtworkForm({ campaignId, onConfirm }) {
+//   const [artworkReceived, setArtworkReceived] = useState(false);
+//   const [artworkFile, setArtworkFile] = useState(null);
+//   const [isArtworkSaved, setIsArtworkSaved] = useState(false);
+//   const [artworkUrl, setArtworkUrl] = useState('');
+//   const { pipelineData, setPipelineData } = useContext(PipelineContext);
+
+//   useEffect(() => {
+//     const fetchArtwork = async () => {
+//       try {
+//         const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${campaignId}`);
+//         const artwork = res.data?.artwork || {};
+//         if (artwork.confirmed && artwork.documentUrl) {
+//           setIsArtworkSaved(true);
+//           setArtworkUrl(`${artwork.documentUrl}`);
+//         }
+//       } catch (err) {
+//         console.error('Failed to fetch artwork data:', err);
+//       }
+//     };
+
+//     fetchArtwork();
+//   }, [campaignId]);
+
+//   const handleFileChange = (e) => {
+//     setArtworkFile(e.target.files[0]);
+//   };
+// const handleDownload = async () => {
+//   const response = await fetch(artworkUrl);
+//   const blob = await response.blob();
+//   const url = window.URL.createObjectURL(blob);
+//   const a = document.createElement('a');
+//   a.href = url;
+//   a.download = artworkUrl.split('/').pop(); // get filename from URL
+//   a.click();
+//   window.URL.revokeObjectURL(url);
+// };
+
+//   const handleSave = async () => {
+//     try {
+//       if (artworkReceived && artworkFile) {
+//         const formData = new FormData();
+//         formData.append('file', artworkFile);
+
+//         // ✅ Upload artwork document on campaign pipeline
+//         await axios.post(`http://localhost:3000/api/pipeline/campaign/${campaignId}/artwork/upload`, formData, {
+//           headers: { 'Content-Type': 'multipart/form-data' }
+//         });
+
+//         // ✅ Confirm artwork on campaign pipeline
+//         const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/artwork`, {
+//           confirmed: true
+//         });
+
+//         setPipelineData(res.data);
+//         setIsArtworkSaved(true);
+//         setArtworkUrl(res.data.artwork?.documentUrl ? `http://localhost:3000${res.data.artwork.documentUrl}` : '');
+
+//         onConfirm();
+//       } else {
+//         alert('Please upload artwork if received.');
+//       }
+//     } catch (err) {
+//       console.error('Error saving artwork:', err);
+//     }
+//   };
+
+//   return (
+//     <div className="max-w-xl mx-auto mt-10  rounded-lg p-6 ">
+//       <h2 className="text-2xl font-semibold mb-4 text-gray-800">Artwork Received</h2>
+
+//       {isArtworkSaved ? (
+//         <div className="space-y-4">
+//           <p className="text-sm text-green-700 font-semibold">✅ Artwork received and saved.</p>
+//           {artworkUrl && (
+//             <div className="flex gap-4 items-center">
+//               <a
+//                 href={artworkUrl}
+//                 target="_blank"
+//                 rel="noopener noreferrer"
+//                 className="text-blue-600 underline text-sm"
+//               >
+//                 View Artwork
+//               </a>
+           
+//               <button
+//       onClick={handleDownload}
+//       className="text-sm text-green-700 underline hover:text-green-800"
+//     >
+//       ⬇ Download
+//     </button>
+//             </div>
+//           )}
+//         </div>
+//       ) : (
+//         <>
+//           <div className="flex text-xs items-center space-x-3 mb-4">
+//             <input
+//               id="artworkCheckbox"
+//               type="checkbox"
+//               checked={artworkReceived}
+//               onChange={() => setArtworkReceived(!artworkReceived)}
+//               className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+//             />
+//             <label htmlFor="artworkCheckbox" className="text-gray-700 text-sm">
+//               Yes?
+//             </label>
+//           </div>
+
+//           {artworkReceived && (
+//             <div className="mb-6">
+//               <label className="block text-xs text-gray-700 font-medium mb-2">
+//                 Upload artwork Document:
+//               </label>
+//               <input
+//                 type="file"
+//                 onChange={handleFileChange}
+//                 className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+//               />
+//             </div>
+//           )}
+
+//           {artworkReceived && (
+//             <div className="flex gap-4">
+//               <button
+//                 onClick={handleSave}
+//                 className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition"
+//               >
+//                 Save
+//               </button>
+//             </div>
+//           )}
+//         </>
+//       )}
+//     </div>
+//   );
+// }
+
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { PipelineContext } from '../../context/PipelineContext';
 
-export default function ArtworkForm({ campaignId, onConfirm }) {
+export default function ArtworkForm({ campaignId, onConfirm,onClose }) {
   const [artworkReceived, setArtworkReceived] = useState(false);
   const [artworkFile, setArtworkFile] = useState(null);
+  const [receivedDate, setReceivedDate] = useState('');
   const [isArtworkSaved, setIsArtworkSaved] = useState(false);
   const [artworkUrl, setArtworkUrl] = useState('');
   const { pipelineData, setPipelineData } = useContext(PipelineContext);
@@ -15,9 +158,10 @@ export default function ArtworkForm({ campaignId, onConfirm }) {
       try {
         const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${campaignId}`);
         const artwork = res.data?.artwork || {};
-        if (artwork.confirmed && artwork.documentUrl) {
+        if (artwork.confirmed) {
           setIsArtworkSaved(true);
-          setArtworkUrl(`${artwork.documentUrl}`);
+          setReceivedDate(artwork.receivedDate || '');
+          setArtworkUrl(artwork.documentUrl || '');
         }
       } catch (err) {
         console.error('Failed to fetch artwork data:', err);
@@ -30,76 +174,84 @@ export default function ArtworkForm({ campaignId, onConfirm }) {
   const handleFileChange = (e) => {
     setArtworkFile(e.target.files[0]);
   };
-const handleDownload = async () => {
-  const response = await fetch(artworkUrl);
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = artworkUrl.split('/').pop(); // get filename from URL
-  a.click();
-  window.URL.revokeObjectURL(url);
-};
+
+  const handleDownload = async () => {
+    const response = await fetch(artworkUrl);
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = artworkUrl.split('/').pop();
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   const handleSave = async () => {
     try {
-      if (artworkReceived && artworkFile) {
-        const formData = new FormData();
-        formData.append('file', artworkFile);
-
-        // ✅ Upload artwork document on campaign pipeline
-        await axios.post(`http://localhost:3000/api/pipeline/campaign/${campaignId}/artwork/upload`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-
-        // ✅ Confirm artwork on campaign pipeline
-        const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/artwork`, {
-          confirmed: true
-        });
-
-        setPipelineData(res.data);
-        setIsArtworkSaved(true);
-        setArtworkUrl(res.data.artwork?.documentUrl ? `http://localhost:3000${res.data.artwork.documentUrl}` : '');
-
-        onConfirm();
-      } else {
-        alert('Please upload artwork if received.');
+      if (!artworkReceived || !artworkFile) {
+        alert('Please upload artwork and select received date.');
+        return;
       }
+
+      const formData = new FormData();
+      formData.append('file', artworkFile);
+
+      await axios.post(`http://localhost:3000/api/pipeline/campaign/${campaignId}/artwork/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/artwork`, {
+        confirmed: true,
+        receivedDate,
+      });
+
+      setPipelineData(res.data);
+      setIsArtworkSaved(true);
+      setArtworkUrl(res.data.artwork?.documentUrl || '');
+      onConfirm();
     } catch (err) {
       console.error('Error saving artwork:', err);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto mt-10  rounded-lg p-6 ">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800">Artwork Received</h2>
+    <div className="max-w-xl mx-auto mt-10 bg-white  ">
+      <h2 className="text-2xl font-semibold mb-4 text-gray-800 text-center">Artwork Status</h2>
 
       {isArtworkSaved ? (
-        <div className="space-y-4">
-          <p className="text-sm text-green-700 font-semibold">✅ Artwork received and saved.</p>
+        <div className="space-y-4 text-sm text-gray-700">
+          <p className="text-green-700 font-medium">✅ Artwork received and saved.</p>
+          {receivedDate && (
+            <div>
+              <label className="block font-medium">Received Date:</label>
+              <p>{receivedDate}</p>
+            </div>
+          )}
           {artworkUrl && (
-            <div className="flex gap-4 items-center">
-              <a
-                href={artworkUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline text-sm"
-              >
-                View Artwork
-              </a>
-           
-              <button
-      onClick={handleDownload}
-      className="text-sm text-green-700 underline hover:text-green-800"
-    >
-      ⬇ Download
-    </button>
+            <div>
+              <label className="block font-medium">Artwork File:</label>
+              <div className="flex gap-4 items-center">
+                <a href={artworkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                  View Artwork
+                </a>
+                <button onClick={handleDownload} className="text-green-700 underline hover:text-green-800">
+                  ⬇ Download
+                </button>
+              </div>
+              <div className='flex mt-4'>
+          <button
+  onClick={onClose}
+  className="w-[40%] mx-auto text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400 transition duration-200"
+>
+  Close
+</button>
+</div>
             </div>
           )}
         </div>
       ) : (
         <>
-          <div className="flex text-xs items-center space-x-3 mb-4">
+          <div className="flex items-center space-x-3 mb-4 text-sm">
             <input
               id="artworkCheckbox"
               type="checkbox"
@@ -107,34 +259,59 @@ const handleDownload = async () => {
               onChange={() => setArtworkReceived(!artworkReceived)}
               className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
             />
-            <label htmlFor="artworkCheckbox" className="text-gray-700 text-sm">
-              Yes?
+            <label htmlFor="artworkCheckbox" className="text-gray-700 font-medium">
+              I have received the artwork
             </label>
           </div>
 
           {artworkReceived && (
-            <div className="mb-6">
-              <label className="block text-xs text-gray-700 font-medium mb-2">
-                Upload artwork Document:
-              </label>
-              <input
-                type="file"
-                onChange={handleFileChange}
-                className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-              />
-            </div>
-          )}
+            <div className="space-y-4">
+              {/* Received Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Received Date</label>
+                <input
+                  type="date"
+                  value={receivedDate}
+                  onChange={(e) => setReceivedDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-          {artworkReceived && (
-            <div className="flex gap-4">
-              <button
+              {/* Upload Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Upload Artwork File</label>
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                />
+              </div>
+
+             <div className='flex'>
+ <button
+  onClick={onClose}
+  className="w-[40%] mr-auto text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400 transition duration-200"
+>
+  Close
+</button>
+<button
                 onClick={handleSave}
-                className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition"
+                className="w-[40%] text-xs bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700 transition duration-200"
               >
-                Save
+                Save 
               </button>
+              </div>
             </div>
           )}
+          {!artworkReceived && <div className='flex mt-4 w-full'>
+  <button
+  onClick={onClose}
+  className=" mx-auto text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400 transition duration-200"
+>
+  Close
+</button>
+</div> }
+          
         </>
       )}
     </div>

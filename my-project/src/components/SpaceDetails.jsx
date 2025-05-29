@@ -85,7 +85,7 @@ export default function SpaceDetails() {
   {space.mainPhoto && (
     <div className="h-48 overflow-hidden rounded-md bg-gray-100">
       <img
-        src={`http://localhost:3000/uploads/${space.mainPhoto}`}
+        src={`${space.mainPhoto}`}
         alt="Main Photo"
         className="w-full h-full object-cover"
       />
@@ -96,7 +96,7 @@ export default function SpaceDetails() {
   {space.longShot && (
     <div className="h-48 overflow-hidden rounded-md bg-gray-100">
       <img
-        src={`http://localhost:3000/uploads/${space.longShot}`}
+        src={`${space.longShot}`}
         alt="Long Shot"
         className="w-full h-full object-cover"
       />
@@ -107,7 +107,7 @@ export default function SpaceDetails() {
   {space.closeShot && (
     <div className="h-48 overflow-hidden rounded-md bg-gray-100">
       <img
-        src={`http://localhost:3000/uploads/${space.closeShot}`}
+        src={`${space.closeShot}`}
         alt="Close Shot"
         className="w-full h-full object-cover"
       />
@@ -119,7 +119,7 @@ export default function SpaceDetails() {
     space.otherPhotos.map((photo, index) => (
       <div key={index} className="h-48 overflow-hidden rounded-md bg-gray-100">
         <img
-          src={`http://localhost:3000/uploads/${photo}`}
+          src={`${photo}`}
           alt={`Other Photo ${index + 1}`}
           className="w-full h-full object-cover"
         />
