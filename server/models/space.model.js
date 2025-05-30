@@ -156,10 +156,12 @@ const spaceSchema = new Schema({
 
   printingStatus: {
     confirmed: { type: Boolean, default: false },
+    printingDate:{type: String}
   },
 
   mountingStatus: {
     confirmed: { type: Boolean, default: false },
+    printingDate:{type: String}
   },
 
   otherPhotos: [String],

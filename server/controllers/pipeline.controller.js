@@ -126,16 +126,42 @@ export const confirmArtwork = async (req, res) => {
 /**
  * Confirm Printing Status
  */
+// export const confirmPrintingStatus = async (req, res) => {
+//   const { campaignId } = req.params;
+//   try {
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: campaignId },
+//       { 'printingStatus.confirmed': true },
+//       { new: true }
+//     );
+//     res.json(pipeline);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message || 'Failed to confirm printing status' });
+//   }
+// };
 export const confirmPrintingStatus = async (req, res) => {
   const { campaignId } = req.params;
+  const { printingDate } = req.body;
+
   try {
+    const updateData = {
+      'printingStatus.confirmed': true,
+      ...(printingDate && { 'printingStatus.printingDate': printingDate }),
+    };
+
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
-      { 'printingStatus.confirmed': true },
+      updateData,
       { new: true }
     );
-    res.json(pipeline);
+
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found' });
+    }
+
+    res.status(200).json(pipeline);
   } catch (error) {
+    console.error('Error confirming printing status:', error);
     res.status(500).json({ error: error.message || 'Failed to confirm printing status' });
   }
 };

@@ -141,31 +141,7 @@ if (pipelineData.artwork?.confirmed && pipelineData.spaces.length > 0) {
   console.log('Now inside dynamic space rendering block', pipelineData, spaces);
 }
 
-    // if (pipelineData.artwork?.confirmed && spaces.length > 0) {
-    //     console.log("Pipeline data after artwork is",pipelineData);
-    //   spaces.forEach((space, index) => {
-    //     const inventoryId = `inventory-${space._id}`;
-    //     const printId = `print-${space._id}`;
-    //     const mountId = `mount-${space._id}`;
-
-    //     dynamicNodes.push(
-    //       { id: inventoryId, data: { label: space.spaceName }, position: { x: 650, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#bfdbfe', borderColor: '#3b82f6' } },
-    //       { id: printId, data: { label: 'Printing status' }, position: { x: 850, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#ede9fe', borderColor: '#8b5cf6' } },
-    //       { id: mountId, data: { label: 'Mounting status' }, position: { x: 1050, y: 100 + index * 200 }, style: { ...baseNodeStyle, background: '#fecaca', borderColor: '#ef4444' } },
-    //     );
-
-    //     dynamicEdges.push(
-    //       { id: `e-artwork-${space._id}`, source: 'artwork', target: inventoryId, markerEnd: 'arrowclosed' },
-    //       { id: `e-${space._id}-print`, source: inventoryId, target: printId, markerEnd: 'arrowclosed' },
-    //     );
-
-    //     if (space.printingStatus?.confirmed) {
-    //       dynamicEdges.push(
-    //         { id: `e-print-${space._id}-mount`, source: printId, target: mountId, markerEnd: 'arrowclosed' },
-    //       );
-    //     }
-    //   });
-    // }
+    
     if (pipelineData.artwork?.confirmed && pipelineData.spaces.length > 0) {
   pipelineData.spaces.forEach((space, index) => {
     const inventoryId = `inventory-${space._id}`;
@@ -236,9 +212,7 @@ if (pipelineData.artwork?.confirmed && pipelineData.spaces.length > 0) {
               {selectedNode.id.startsWith('mount-') && <MountingStatus spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); fitView();triggerRefresh(); }} />}
             </div>
 
-            {/* <div className="mt-4 justify-center flex">
-              <button className="bg-gray-200 py-2 rounded hover:bg-gray-300 text-sm" onClick={() => setSelectedNode(null)}>Close</button>
-            </div> */}
+            
           </div>
         </div>
       )}
