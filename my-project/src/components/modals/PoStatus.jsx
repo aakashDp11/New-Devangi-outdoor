@@ -164,7 +164,7 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
 </button>
 <button
                 onClick={handleSave}
-                className="w-[40%] text-sm bg-blue-600 text-white py-2 rounded-xl hover:bg-green-700 transition"
+                className="w-[40%] text-sm bg-blue-600 text-white py-2 rounded-xl  transition"
               >
                 Save PO
               </button>

@@ -1,397 +1,10 @@
 
-
-// import { Bar, Line, Pie } from 'react-chartjs-2';
-// import dayjs from 'dayjs';
-// import Navbar from './Navbar';
-// import { useState, useEffect } from 'react';
-
-// import {
-//   Chart as ChartJS,
-//   CategoryScale,
-//   LinearScale,
-//   BarElement,
-//   LineElement,
-//   PointElement,
-//   LineController,
-//   BarController,
-//   ArcElement,
-//   Title,
-//   Tooltip,
-//   Legend,
-// } from 'chart.js';
-
-// ChartJS.register(
-//   CategoryScale,
-//   LinearScale,
-//   BarElement,
-//   LineElement,
-//   PointElement,
-//   LineController,
-//   BarController,
-//   ArcElement,
-//   Title,
-//   Tooltip,
-//   Legend
-// );
-
-// const Card = ({ children, className = '', ...props }) => (
-//   <div className={`bg-white border shadow-sm rounded-xl w-full ${className}`} {...props}>
-//     {children}
-//   </div>
-// );
-
-// const CardContent = ({ children, className = '' }) => (
-//   <div className={`p-4 ${className}`}>{children}</div>
-// );
-
-// const ShimmerCard = () => (
-//   <div className="bg-gray-200 animate-pulse rounded-xl w-full h-[400px] max-w-[500px]" />
-// );
-
-// const BookingGraphDashboard = () => {
-//   const [bookings, setBookings] = useState([]);
-//   const [proposals, setProposals] = useState([]);
-//   const [range, setRange] = useState('month');
-//   const [graphData, setGraphData] = useState({ labels: [], datasets: [] });
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-//     fetchData();
-//   }, []);
-
-//   useEffect(() => {
-//     if (bookings.length) processBookingData();
-//   }, [range, bookings]);
-
-//   const fetchData = async () => {
-//     try {
-//       setLoading(true);
-
-//       const [bookingsRes, proposalsRes] = await Promise.all([
-//         fetch('http://localhost:3000/api/bookings'),
-//         fetch('http://localhost:3000/api/proposals'),
-//       ]);
-
-//       const [bookingsData, proposalsData] = await Promise.all([
-//         bookingsRes.json(),
-//         proposalsRes.json(),
-//       ]);
-
-//       setBookings(bookingsData.bookings);
-//       console.log(bookingsData.bookings);
-//       setProposals(proposalsData);
-//     } catch (err) {
-//       console.error('Failed to fetch data', err);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const processBookingData = () => {
-//     const now = dayjs();
-//     const rangeStart = getRangeStart(now);
-
-//     const data = {};
-//     bookings.forEach((b) => {
-//       const createdAt = dayjs(b.createdAt);
-//       if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
-//       const label = createdAt.format('DD MMM');
-//       data[label] = (data[label] || 0) + 1;
-//     });
-
-//     const labels = Object.keys(data).sort((a, b) =>
-//       dayjs(a, 'DD MMM').unix() - dayjs(b, 'DD MMM').unix()
-//     );
-
-//     setGraphData({
-//       labels,
-//       datasets: [
-//         {
-//           label: 'Number of Bookings',
-//           data: labels.map((l) => data[l]),
-//           backgroundColor: 'rgba(0, 0, 0, 0.7)',
-//           borderRadius: 8,
-//           maxBarThickness: 40,
-//           categoryPercentage: 0.6,
-//           barPercentage: 0.5,
-//         },
-//       ],
-//     });
-//   };
-
-//   const getRangeStart = (now) => {
-//     const weekStart = now.startOf('week');
-//     const monthStart = now.startOf('month');
-//     const threeMonthsAgo = now.subtract(3, 'month').startOf('month');
-//     return range === 'week' ? weekStart : range === 'month' ? monthStart : threeMonthsAgo;
-//   };
-
-//   const getProposalGraphData = () => {
-//     const now = dayjs();
-//     const rangeStart = getRangeStart(now);
-
-//     const data = {};
-//     proposals.forEach((p) => {
-//       const createdAt = dayjs(p.createdAt);
-//       if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
-//       const label = createdAt.format('DD MMM');
-//       data[label] = (data[label] || 0) + 1;
-//     });
-
-//     const labels = Object.keys(data).sort((a, b) =>
-//       dayjs(a, 'DD MMM').unix() - dayjs(b, 'DD MMM').unix()
-//     );
-
-//     return {
-//       labels,
-//       datasets: [
-//         {
-//           label: 'Number of Proposals',
-//           data: labels.map((l) => data[l]),
-//           backgroundColor: 'rgba(249, 115, 22, 0.7)',
-//           borderRadius: 8,
-//           maxBarThickness: 40,
-//           categoryPercentage: 0.6,
-//           barPercentage: 0.5,
-//         },
-//       ],
-//     };
-//   };
-
-//   const getPaymentStats = () => {
-//     let totalReceived = 0;
-//     let totalDue = 0;
-
-//     bookings.forEach((b) => {
-//       b.campaigns?.forEach((campaign) => {
-//         const pipeline = campaign.pipeline;
-//         if (pipeline && pipeline.payment) {
-//           totalReceived += pipeline.payment.totalPaid || 0;
-//           totalDue += pipeline.payment.paymentDue || 0;
-//         }
-//       });
-//     });
-
-//     return { totalReceived, totalDue };
-//   };
-
-//   const getPipelineStatusCounts = () => {
-//     const counts = {
-//       bookingConfirmed: 0,
-//       artworkReceived: 0,
-//       printingStatus: 0,
-//       mountingStatus: 0,
-//       advertisingLive: 0,
-//     };
-
-//     bookings.forEach((b) => {
-//       b.campaigns?.forEach((campaign) => {
-//         const pipeline = campaign.pipeline;
-//         if (pipeline) {
-//           if (pipeline.bookingStatus?.confirmed) counts.bookingConfirmed++;
-//           if (pipeline.artwork?.confirmed) counts.artworkReceived++;
-//           if (pipeline.printingStatus?.confirmed) counts.printingStatus++;
-//           if (pipeline.mountingStatus?.confirmed) counts.mountingStatus++;
-//           if (pipeline.advertisingLive?.started) counts.advertisingLive++;
-//         }
-//       });
-//     });
-
-//     return counts;
-//   };
-
-//   const { totalReceived, totalDue } = getPaymentStats();
-//   const pipelineCounts = getPipelineStatusCounts();
-
-//   const pieChartData = {
-//     labels: ['Received', 'Due'],
-//     datasets: [
-//       {
-//         data: [totalReceived || 0.01, totalDue || 0.01], // Avoid zero-only pie chart
-//         backgroundColor: ['rgba(34, 197, 94, 0.7)', 'rgba(239, 68, 68, 0.7)'],
-//         borderWidth: 1,
-//       },
-//     ],
-//   };
-
-//   const pipelineChartData = {
-//     labels: [
-//       'Booking Confirmed',
-//       'Artwork Received',
-//       'Printing Status',
-//       'Mounting Status',
-//       'Advertisement Live',
-//     ],
-//     datasets: [
-//       {
-//         label: 'Completed',
-//         data: [
-//           pipelineCounts.bookingConfirmed,
-//           pipelineCounts.artworkReceived,
-//           pipelineCounts.printingStatus,
-//           pipelineCounts.mountingStatus,
-//           pipelineCounts.advertisingLive,
-//         ],
-//         backgroundColor: 'rgba(59, 130, 246, 0.7)',
-//         borderRadius: 8,
-//         barThickness: 20,
-//       },
-//     ],
-//   };
-
-//   return (
-//     <div className="min-h-screen w-full bg-white text-black flex flex-col lg:flex-row">
-//       <Navbar />
-//       <main className="flex-1 mt-4 overflow-y-auto px-4 md:px-8 py-6 ml-0 lg:ml-[20%]">
-//         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-//           <h1 className="text-3xl md:text-3xl ml-[1%] font-semibold">Dashboard</h1>
-       
-//         </div>
-
-//         <div className="flex flex-col lg:flex-row justify-center items-center gap-10 mt-[5%] flex-wrap">
-//           {loading ? (
-//             <>
-//               <ShimmerCard />
-//               <ShimmerCard />
-//               <ShimmerCard />
-//               <ShimmerCard />
-//               <ShimmerCard />
-//             </>
-//           ) : (
-//             <>
-//              <Card className="max-w-[300px] mr-auto  shadow-md mt-4">
-//                 <CardContent>
-//                   <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
-//                   <div className="w-full h-[300px]">
-//                     <Pie data={pieChartData} options={pieOptions} />
-//                   </div>
-//                 </CardContent>
-//               </Card>
-//               <div className='w-full'>
-//                 <div className='flex'>
-//  <select
-//             className="border px-3 py-2 ml-auto  rounded text-xs bg-white shadow-sm"
-//             value={range}
-//             onChange={(e) => setRange(e.target.value)}
-//           >
-//             <option value="week">This Week</option>
-//             <option value="month">This Month</option>
-//             <option value="threeMonths">Last 3 Months</option>
-//           </select>
-//               </div>
-           
-//             <div className='flex w-full mt-[3%]'>
-              
-//  <Card className="max-w-[400px] mr-auto shadow-md">
-//                 <CardContent>
-//                   <h2 className="text-sm font-medium mb-2">Bookings</h2>
-//                   <div className="w-full h-[400px]">
-//                     <Bar data={graphData} options={chartOptions} />
-//                   </div>
-//                 </CardContent>
-//               </Card>
-
-//               <Card className="max-w-[400px] ml-auto shadow-md">
-//                 <CardContent>
-//                   <h2 className="text-sm font-medium mb-2">Proposals</h2>
-//                   <div className="w-full h-[400px]">
-//                     <Bar data={getProposalGraphData()} options={chartOptions} />
-//                   </div>
-//                 </CardContent>
-//               </Card>
-//             </div>
-//             </div>
-// <div className='flex w-full'>
-//               <Card className="max-w-[600px] shadow-md mt-28">
-//                 <CardContent>
-//                   <h2 className="text-sm font-medium mb-2">Pipeline Status Overview</h2>
-//                   <div className="w-full h-[400px]">
-//                     <Bar data={pipelineChartData} options={pipelineOptions} />
-//                   </div>
-//                 </CardContent>
-//               </Card>
-//               </div>
-//             </>
-//           )}
-//         </div>
-//       </main>
-//     </div>
-//   );
-// };
-
-// // Chart options
-// const chartOptions = {
-//   responsive: true,
-//   maintainAspectRatio: false,
-//   plugins: { legend: { display: true, position: 'top' } },
-//   scales: {
-//     y: { beginAtZero: true, suggestedMax: 10, ticks: { stepSize: 1 } },
-//     x: {
-//       ticks: { autoSkip: false, maxRotation: 45, minRotation: 20 },
-//     },
-//   },
-// };
-
-// const pieOptions = {
-//   responsive: true,
-//   plugins: {
-//     legend: { display: true, position: 'top' },
-//     tooltip: {
-//       callbacks: {
-//         label: function (context) {
-//           const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
-//           const percentage = ((context.parsed / total) * 100).toFixed(2);
-//           return `${context.label}: ${context.parsed} (${percentage}%)`;
-//         },
-//       },
-//     },
-//   },
-// };
-
-// const pipelineOptions = {
-//   indexAxis: 'y',
-//   responsive: true,
-//   maintainAspectRatio: false,
-//   plugins: { legend: { display: false } },
-//   scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
-// };
-
-// export default BookingGraphDashboard;
-
-
-import { Bar, Line, Pie } from 'react-chartjs-2';
 import dayjs from 'dayjs';
 import Navbar from './Navbar';
 import { useState, useEffect } from 'react';
-
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  LineController,
-  BarController,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  LineController,
-  BarController,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import { BarChart } from '@mui/x-charts/BarChart';
+import { PieChart } from '@mui/x-charts/PieChart';
+import { Grid } from '@mui/material';
 
 const Card = ({ children, className = '', ...props }) => (
   <div className={`bg-white border shadow-sm rounded-xl w-full ${className}`} {...props}>
@@ -411,7 +24,8 @@ const BookingGraphDashboard = () => {
   const [bookings, setBookings] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [range, setRange] = useState('month');
-  const [graphData, setGraphData] = useState({ labels: [], datasets: [] });
+  const [muiBookingData, setMuiBookingData] = useState({ xLabels: [], yData: [] });
+  const [muiProposalData, setMuiProposalData] = useState({ xLabels: [], yData: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -420,7 +34,8 @@ const BookingGraphDashboard = () => {
 
   useEffect(() => {
     if (bookings.length) processBookingData();
-  }, [range, bookings]);
+    if (proposals.length) processProposalData();
+  }, [range, bookings, proposals]);
 
   const fetchData = async () => {
     try {
@@ -434,7 +49,8 @@ const BookingGraphDashboard = () => {
         bookingsRes.json(),
         proposalsRes.json(),
       ]);
-
+// console.log("bookings data",bookingsData);
+// console.log('📦 Proposals API:', proposalsData);
       setBookings(bookingsData.bookings);
       setProposals(proposalsData);
     } catch (err) {
@@ -444,75 +60,113 @@ const BookingGraphDashboard = () => {
     }
   };
 
-  const processBookingData = () => {
-    const now = dayjs();
-    const rangeStart = getRangeStart(now);
+//   const getRangeStart = (now) => {
+//     const weekStart = now.startOf('week');
+//     const monthStart = now.startOf('month');
+//     const threeMonthsAgo = now.subtract(3, 'month').startOf('month');
+//     return range === 'week' ? weekStart : range === 'month' ? monthStart : threeMonthsAgo;
+//   };
 
-    const data = {};
-    bookings.forEach((b) => {
-      const createdAt = dayjs(b.createdAt);
-      if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
-      const label = createdAt.format('DD MMM');
-      data[label] = (data[label] || 0) + 1;
-    });
+//   const processBookingData = () => {
+//     const now = dayjs();
+//     const rangeStart = getRangeStart(now);
 
-    const labels = Object.keys(data).sort((a, b) =>
-      dayjs(a, 'DD MMM').unix() - dayjs(b, 'DD MMM').unix()
-    );
+//     const data = {};
+//     bookings.forEach((b) => {
+//       const createdAt = dayjs(b.createdAt);
+//       console.log('Booking CreatedAt:', bookings.map(b => b.createdAt));
+// console.log('Proposal CreatedAt:', proposals.map(p => p.createdAt));
 
-    setGraphData({
-      labels,
-      datasets: [
-        {
-          label: 'Number of Bookings',
-          data: labels.map((l) => data[l]),
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          borderRadius: 8,
-          maxBarThickness: 40,
-          categoryPercentage: 0.6,
-          barPercentage: 0.5,
-        },
-      ],
-    });
-  };
+//       if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
+//       const label = createdAt.format('DD MMM');
+//       data[label] = (data[label] || 0) + 1;
+//     });
 
-  const getRangeStart = (now) => {
+//     const sortedLabels = Object.keys(data).sort((a, b) =>
+//       dayjs(a, 'DD MMM').unix() - dayjs(b, 'DD MMM').unix()
+//     );
+
+//     setMuiBookingData({
+//       xLabels: sortedLabels,
+//       yData: sortedLabels.map((label) => data[label]),
+//     });
+//   };
+
+//   const processProposalData = () => {
+//     const now = dayjs();
+//     const rangeStart = getRangeStart(now);
+
+//     const data = {};
+//     proposals.forEach((p) => {
+//       const createdAt = dayjs(p.createdAt);
+//       if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
+//       const label = createdAt.format('DD MMM');
+//       data[label] = (data[label] || 0) + 1;
+//     });
+
+//     const sortedLabels = Object.keys(data).sort((a, b) =>
+//       dayjs(a, 'DD MMM').unix() - dayjs(b, 'DD MMM').unix()
+//     );
+
+//     setMuiProposalData({
+//       xLabels: sortedLabels,
+//       yData: sortedLabels.map((label) => data[label]),
+//     });
+//   };
+
+
+
+const getRangeStart = (now) => {
     const weekStart = now.startOf('week');
     const monthStart = now.startOf('month');
     const threeMonthsAgo = now.subtract(3, 'month').startOf('month');
     return range === 'week' ? weekStart : range === 'month' ? monthStart : threeMonthsAgo;
   };
 
-  const getProposalGraphData = () => {
+  const processBookingData = () => {
     const now = dayjs();
     const rangeStart = getRangeStart(now);
+    const dataMap = new Map();
 
-    const data = {};
+    bookings.forEach((b) => {
+      const createdAt = dayjs(b.createdAt);
+      if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
+      const key = createdAt.format('YYYY-MM-DD');
+      dataMap.set(key, (dataMap.get(key) || 0) + 1);
+    });
+
+    const sortedKeys = Array.from(dataMap.keys()).sort((a, b) => dayjs(a).unix() - dayjs(b).unix());
+
+    const xLabels = sortedKeys.map((key) => dayjs(key).format('DD MMM'));
+    const yData = sortedKeys.map((key) => dataMap.get(key));
+
+    console.log("✅ Processed Booking XLabels:", xLabels);
+    console.log("✅ Processed Booking YData:", yData);
+
+    setMuiBookingData({ xLabels, yData });
+  };
+
+  const processProposalData = () => {
+    const now = dayjs();
+    const rangeStart = getRangeStart(now);
+    const dataMap = new Map();
+
     proposals.forEach((p) => {
       const createdAt = dayjs(p.createdAt);
       if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
-      const label = createdAt.format('DD MMM');
-      data[label] = (data[label] || 0) + 1;
+      const key = createdAt.format('YYYY-MM-DD');
+      dataMap.set(key, (dataMap.get(key) || 0) + 1);
     });
 
-    const labels = Object.keys(data).sort((a, b) =>
-      dayjs(a, 'DD MMM').unix() - dayjs(b, 'DD MMM').unix()
-    );
+    const sortedKeys = Array.from(dataMap.keys()).sort((a, b) => dayjs(a).unix() - dayjs(b).unix());
 
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Number of Proposals',
-          data: labels.map((l) => data[l]),
-          backgroundColor: 'rgba(249, 115, 22, 0.7)',
-          borderRadius: 8,
-          maxBarThickness: 40,
-          categoryPercentage: 0.6,
-          barPercentage: 0.5,
-        },
-      ],
-    };
+    const xLabels = sortedKeys.map((key) => dayjs(key).format('DD MMM'));
+    const yData = sortedKeys.map((key) => dataMap.get(key));
+
+    console.log("✅ Processed Proposal XLabels:", xLabels);
+    console.log("✅ Processed Proposal YData:", yData);
+
+    setMuiProposalData({ xLabels, yData });
   };
 
   const getPaymentStats = () => {
@@ -532,29 +186,101 @@ const BookingGraphDashboard = () => {
     return { totalReceived, totalDue };
   };
 
- const getAvailabilityStats = () => {
+
+//  const getAvailabilityStats = () => {
+//   const availabilityCounts = {
+//     completelyAvailable: 0,
+//     partiallyAvailable: 0,
+//     completelyBooked: 0,
+//   };
+
+//   bookings.forEach((booking) => {
+//     booking.campaigns?.forEach((campaign) => {
+//       campaign.spaces?.forEach((spaceWrapper) => {
+//         const space = spaceWrapper.id;
+
+//         if (!space || typeof space !== 'object') return;
+
+//         const totalUnits = space.unit || 0;
+//         const occupied = space.occupiedUnits || 0;
+
+//         if (occupied >= totalUnits) {
+//           availabilityCounts.completelyBooked++;
+//         } else if (occupied > 0) {
+//           availabilityCounts.partiallyAvailable++;
+//         } else {
+//           availabilityCounts.completelyAvailable++;
+//         }
+//       });
+//     });
+//   });
+
+//   return availabilityCounts;
+// };
+
+const getAvailabilityStats = () => {
   const availabilityCounts = {
     completelyAvailable: 0,
     partiallyAvailable: 0,
     completelyBooked: 0,
   };
 
-  bookings.forEach((b) => {
-    b.campaigns?.forEach((campaign) => {
-      campaign.spaces?.forEach((space) => {
-        const availability = space.availability?.toLowerCase() || 'completely available';
-        if (availability.includes('partial')) {
-          availabilityCounts.partiallyAvailable++;
-        } else if (availability.includes('booked')) {
+  const spaceMap = new Map(); // Avoid duplicate counts
+
+  bookings.forEach((booking) => {
+    booking.campaigns?.forEach((campaign) => {
+      campaign.spaces?.forEach((spaceWrapper) => {
+        const space = spaceWrapper.id;
+        const spaceId = space?._id;
+        if (!space || spaceMap.has(spaceId)) return;
+
+        const totalUnits = space.unit || 0;
+        const occupiedUnits = space.occupiedUnits || 0;
+
+        if (occupiedUnits >= totalUnits) {
           availabilityCounts.completelyBooked++;
+        } else if (occupiedUnits > 0) {
+          availabilityCounts.partiallyAvailable++;
         } else {
           availabilityCounts.completelyAvailable++;
         }
+
+        spaceMap.set(spaceId, true); // Mark this space as processed
       });
     });
   });
 
   return availabilityCounts;
+};
+const getUnitUtilizationStats = () => {
+  let totalUnits = 0;
+  let totalBooked = 0;
+
+  const spaceMap = new Map();
+
+  bookings.forEach((booking) => {
+    booking.campaigns?.forEach((campaign) => {
+      campaign.spaces?.forEach((spaceWrapper) => {
+        const space = spaceWrapper.id;
+        const spaceId = space?._id;
+
+        if (!space || spaceMap.has(spaceId)) return;
+
+        const units = space.unit || 0;
+        const occupied = space.occupiedUnits || 0;
+
+        totalUnits += units;
+        totalBooked += occupied;
+
+        spaceMap.set(spaceId, true);
+      });
+    });
+  });
+
+  return {
+    bookedUnits: totalBooked,
+    freeUnits: totalUnits - totalBooked,
+  };
 };
 
 
@@ -583,75 +309,67 @@ const BookingGraphDashboard = () => {
     return counts;
   };
 
+
   const { totalReceived, totalDue } = getPaymentStats();
   const availabilityStats = getAvailabilityStats();
   const pipelineCounts = getPipelineStatusCounts();
 
-  const pieChartData = {
-    labels: ['Received', 'Due'],
-    datasets: [
-      {
-        data: [totalReceived || 0.01, totalDue || 0.01],
-        backgroundColor: ['rgba(34, 197, 94, 0.7)', 'rgba(239, 68, 68, 0.7)'],
-        borderWidth: 1,
-      },
-    ],
-  };
+  const paymentPieData = [
+    { id: 0, value: totalReceived || 0.01, label: 'Received' },
+    { id: 1, value: totalDue || 0.01, label: 'Due' },
+  ];
 
- const availabilityPieData = {
-  labels: ['Completely available', 'Partially available', 'Completely booked'],
-  datasets: [
-    {
-      data: [
-        availabilityStats.completelyAvailable || 0.01,
-        availabilityStats.partiallyAvailable || 0.01,
-        availabilityStats.completelyBooked || 0.01,
-      ],
-      backgroundColor: [
-        'rgba(34, 197, 94, 0.7)',   // green
-        'rgba(251, 191, 36, 0.7)',  // yellow
-        'rgba(239, 68, 68, 0.7)',   // red
-      ],
-      borderWidth: 1,
-    },
+  const availabilityPieData = [
+    { id: 0, value: availabilityStats.completelyAvailable || 0.01, label: 'Completely available' },
+    { id: 1, value: availabilityStats.partiallyAvailable || 0.01, label: 'Partially available' },
+    { id: 2, value: availabilityStats.completelyBooked || 0.01, label: 'Completely booked' },
+  ];
+  const pipelineBarData = {
+  labels: [
+    'Booking Confirmed',
+    'Artwork Received',
+    'Printing Status',
+    'Mounting Status',
+    'Advertisement Live',
+  ],
+  values: [
+    pipelineCounts.bookingConfirmed,
+    pipelineCounts.artworkReceived,
+    pipelineCounts.printingStatus,
+    pipelineCounts.mountingStatus,
+    pipelineCounts.advertisingLive,
   ],
 };
-
-
-  const pipelineChartData = {
-    labels: [
-      'Booking Confirmed',
-      'Artwork Received',
-      'Printing Status',
-      'Mounting Status',
-      'Advertisement Live',
-    ],
-    datasets: [
-      {
-        label: 'Completed',
-        data: [
-          pipelineCounts.bookingConfirmed,
-          pipelineCounts.artworkReceived,
-          pipelineCounts.printingStatus,
-          pipelineCounts.mountingStatus,
-          pipelineCounts.advertisingLive,
-        ],
-        backgroundColor: 'rgba(59, 130, 246, 0.7)',
-        borderRadius: 8,
-        barThickness: 20,
-      },
-    ],
-  };
+const unitUtilizationStats = getUnitUtilizationStats();
+const unitUtilizationPieData = [
+  { id: 0, value: unitUtilizationStats.bookedUnits || 0.01, label: 'Booked Units' },
+  { id: 1, value: unitUtilizationStats.freeUnits || 0.01, label: 'Free Units' },
+];
 
   return (
-    <div className="min-h-screen w-full bg-white text-black flex flex-col ">
+    <div className="min-h-screen bg-[#fafafb] h-screen w-screen bg-white text-black flex flex-col  ">
+      
       <Navbar />
-      <main className="flex-1 mt-4 w-full  px-4 md:px-8 py-6 ml-0 lg:ml-[35%]">
-        <div className="flex flex-col md:flex-row  mb-4 gap-4">
-          <h1 className="text-3xl md:text-3xl ml-[1%] font-semibold">Dashboard</h1>
+      <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
+        <div className="flex flex-col md:flex-row mb-4 gap-4">
+          <h1 className="text-3xl font-sans md:text-3xl ml-[1%] font-semibold">Dashboard</h1>
         </div>
+{/* <div className='flex w-full gap-[10%]'>
+<Card className=" shadow-md mt-4">
+  <CardContent>
+<h2 className="text-sm font-medium ">Active Bookings</h2>
+  </CardContent>
+</Card>
+<Card className=" shadow-md mt-4">
+  <CardContent>
+<h2 className="text-sm font-medium mb-2">Total Inventories</h2>
+  </CardContent>
+</Card>
 
-        <div className="flex flex-row w-full lg:flex-row  gap-[30%]  mt-6">
+
+      </div> */}
+        <div className="flex flex-row w-full gap-[5%] mt-6">
+          
           {loading ? (
             <>
               <ShimmerCard />
@@ -659,25 +377,107 @@ const BookingGraphDashboard = () => {
             </>
           ) : (
             <>
-              <Card className="max-w-[300px] shadow-md mt-4">
+            
+              <Card className="max-w-[270px] h-[30%] shadow-md mt-4">
                 <CardContent>
                   <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
-                  <div className="w-full h-[300px]">
-                    <Pie data={pieChartData} options={pieOptions} />
+                  <div className='flex mt-4'>
+                    <div className='ml-auto text-[0.8rem]'>
+                       <p><strong>Received:</strong> ₹{totalReceived.toLocaleString()}</p>
+        <p><strong>Due:</strong> ₹{totalDue.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div className="w-full ">
+                    <PieChart
+                      series={[{ data: paymentPieData, innerRadius: 40 }]}
+                      height={200}
+                      width={150}
+                    />
+                    
+                  
+    </div>
+                </CardContent>
+              </Card>
+             
+              <Card className="max-w-[275px] h-[30%] shadow-md mt-4">
+  <CardContent>
+    <h2 className="text-sm font-medium mb-2">Unit Utilization</h2>
+    <div className="w-full">
+      <div className='flex mt-4'>
+        <div className="ml-auto text-[0.8rem]">
+        <p><strong>Booked Units:</strong> {unitUtilizationStats.bookedUnits}</p>
+        <p><strong>Free Units:</strong> {unitUtilizationStats.freeUnits}</p>
+      </div>
+      </div>
+      <PieChart
+        series={[{ data: unitUtilizationPieData, innerRadius: 40 }]}
+        height={200}
+        width={150}
+      />
+      
+    </div>
+  </CardContent>
+</Card>
+
+
+              <Card className="max-w-[320px] h-[30%] shadow-md mt-4">
+                <CardContent>
+                  <h2 className="text-sm font-medium mb-2">Space Availability</h2>
+                  <div className="w-full ">
+                     <div className='flex mt-4'>
+        <div className="ml-auto text-[0.7rem]">
+        <p><strong>Completely Available:</strong> {availabilityStats.completelyAvailable}</p>
+        <p><strong>Partially Available:</strong> {availabilityStats.partiallyAvailable}</p>
+        <p><strong>Completely Booked:</strong> {availabilityStats.completelyBooked}</p>
+      </div>
+      </div>
+                    <PieChart
+                      series={[{ data: availabilityPieData, innerRadius: 40 }]}
+                      height={190}
+                      width={150}
+                    />
+                    
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="max-w-[300px] shadow-md mt-4">
-                <CardContent>
-                  <h2 className="text-sm font-medium mb-2">Space Availability</h2>
-                  <div className="w-full h-[300px]">
-                    <Pie data={availabilityPieData} options={pieOptions} />
-                  </div>
-                </CardContent>
-              </Card>
+               
+ 
+
             </>
           )}
+        </div>
+
+        <div className='flex w-[80%] mt-[10%]'>
+           <Card className="w-full shadow-md mt-4">
+    <CardContent>
+      <h2 className="text-sm font-medium mb-2">Campaign Status Overview</h2>
+      <div className="w-full h-[400px]">
+       
+        <BarChart
+  xAxis={[{
+    scaleType: 'band',
+    data: pipelineBarData.labels,
+    barGapRatio: 0.5,
+    categoryGapRatio: 0.8,
+  }]}
+  series={[{
+    data: pipelineBarData.values,
+    label: 'Completed',
+  }]}
+  height={400}
+  borderRadius={10}
+  slotProps={{
+    bar: {
+      width: 30, // ✅ Thinner bars for better centering
+      cornerradius: 10,
+    },
+  }}
+/>
+
+      </div>
+    </CardContent>
+  </Card>
         </div>
 
         {!loading && (
@@ -694,36 +494,79 @@ const BookingGraphDashboard = () => {
               </select>
             </div>
 
-            <div className="flex w-full flex-row gap-[25%]">
-              <Card className="max-w-[500px] shadow-md">
+            <div className="flex w-full gap-[10%] ">
+              <Card className="w-full shadow-md">
                 <CardContent>
                   <h2 className="text-sm font-medium mb-2">Bookings</h2>
                   <div className="w-full h-[400px]">
-                    <Bar data={graphData} options={chartOptions} />
+                  
+                    <BarChart
+  xAxis={[
+    {
+      scaleType: 'band',
+      data: muiBookingData.xLabels,
+      categoryGapRatio: 0.8, // ✅ Add this for spacing and centering
+      barGapRatio: 0.2,       // ✅ Add this for space between bars
+    },
+  ]}
+  series={[
+    {
+      data: muiBookingData.yData,
+      label: 'Number of Bookings',
+    },
+  ]}
+  height={400}
+  borderRadius={10}
+  slotProps={{
+    bar: {
+      width: 30,      // ✅ Let MUI auto-calculate width for even spacing
+      // cornerRadius: 10,
+    },
+  }}
+/>
+
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="max-w-[500px] shadow-md">
+              <Card className="w-full shadow-md">
                 <CardContent>
                   <h2 className="text-sm font-medium mb-2">Proposals</h2>
                   <div className="w-full h-[400px]">
-                    <Bar data={getProposalGraphData()} options={chartOptions} />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                   
+                    <BarChart
+  xAxis={[
+    {
+      scaleType: 'band',
+      data: muiProposalData.xLabels,
+      categoryGapRatio: 0.9,
+      barGapRatio: 0.2,
+    },
+  ]}
+  series={[
+    {
+      data: muiProposalData.yData,
+      label: 'Number of Proposals',
+    },
+  ]}
+  height={400}
+  borderRadius={10}
+  slotProps={{
+    bar: {
+      width: 30,
+      // cornerRadius: 10,
+    },
+  }}
+/>
 
-            <div className="mt-10">
-              <Card className="w-full shadow-md">
-                <CardContent>
-                  <h2 className="text-sm font-medium mb-2">Pipeline Status Overview</h2>
-                  <div className="w-full h-[400px]">
-                    <Bar data={pipelineChartData} options={pipelineOptions} />
                   </div>
                 </CardContent>
               </Card>
+              
+              
+
             </div>
+           
           </div>
         )}
       </main>
@@ -731,41 +574,11 @@ const BookingGraphDashboard = () => {
   );
 };
 
-// Chart Options
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: true, position: 'top' } },
-  scales: {
-    y: { beginAtZero: true, suggestedMax: 10, ticks: { stepSize: 1 } },
-    x: {
-      ticks: { autoSkip: false, maxRotation: 45, minRotation: 20 },
-    },
-  },
-};
-
-const pieOptions = {
-  responsive: true,
-  plugins: {
-    legend: { display: true, position: 'top' },
-    tooltip: {
-      callbacks: {
-        label: function (context) {
-          const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
-          const percentage = ((context.parsed / total) * 100).toFixed(2);
-          return `${context.label}: ${context.parsed} (${percentage}%)`;
-        },
-      },
-    },
-  },
-};
-
-const pipelineOptions = {
-  indexAxis: 'y',
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
-};
-
 export default BookingGraphDashboard;
+
+
+
+
+
+
+

@@ -1,6 +1,6 @@
 
 
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
@@ -9,11 +9,29 @@ import { useBookingForm } from '../context/BookingFormContext';
 export default function BookingPreview() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+const [users, setUsers] = useState([]);
+const [assignedUser, setAssignedUser] = useState(null);
 
   const { basicInfo, orderInfo, resetForm, proposalId, setProposalId } = useBookingForm();
   const stepOrder = ['Basic', 'Order'];
 console.log("basicInfo",basicInfo);
 console.log("orderInfo",orderInfo);
+useEffect(() => {
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/users');
+      const data = await res.json();
+      setUsers(data);
+      const foundUser = data.find(u => u._id === basicInfo.user);
+      setAssignedUser(foundUser);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    }
+  };
+
+  fetchUsers();
+}, [basicInfo.user]);
+
   const computeTotalPrice = () => {
     return orderInfo.campaigns.reduce((total, campaign) => {
       const campaignTotal = campaign.selectedSpaces?.reduce(
@@ -140,11 +158,30 @@ console.log("FormData before submission is",formData);
         </div>
 
         {/* Basic Info */}
-        <div className="grid grid-cols-2 gap-6 mb-10">
+        {/* <div className="grid grid-cols-2 gap-6 mb-10">
           {Object.entries(basicInfo).filter(([key]) => key !== 'companyLogo').map(([key, value]) => (
             <PreviewField key={key} label={key.replace(/([A-Z])/g, ' $1')} value={value} />
           ))}
-        </div>
+        </div> */}
+        {/* Basic Info (excluding user & logo) */}
+<div className="grid grid-cols-2 gap-6 mb-10">
+  {Object.entries(basicInfo)
+    .filter(([key]) => key !== 'companyLogo' && key !== 'user' && key !== 'campaignImages')
+    .map(([key, value]) => (
+      <PreviewField
+        key={key}
+        label={key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+        value={value}
+      />
+    ))}
+</div>
+
+        {assignedUser && (
+  <div className="mb-6 grid grid-cols-2">
+    <PreviewField label="Assigned User" value={`${assignedUser.name} (${assignedUser.email})`} />
+  </div>
+)}
+
 
         {/* Campaign Images */}
         {basicInfo.companyLogo && (

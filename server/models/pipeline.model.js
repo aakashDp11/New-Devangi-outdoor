@@ -97,12 +97,7 @@ const pipelineSchema = new Schema({
   payment: {
     totalAmount: Number,
     modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc'] ,default: undefined},
-    // payments: [
-    //   {
-    //     amount: Number,
-    //     date: Date,
-    //   },
-    // ],
+    
     payments: [
   {
     amount: Number,

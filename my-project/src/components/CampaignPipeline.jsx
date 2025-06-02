@@ -44,7 +44,13 @@ const [refreshKey, setRefreshKey] = useState(0);
   const { fitView } = useReactFlow();
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), []);
-  const onNodeClick = (_, node) => setSelectedNode(node);
+  // const onNodeClick = (_, node) => setSelectedNode(node);
+  const onNodeClick = (_, node) => {
+  if (!node.id.startsWith('inventory-')) {
+    setSelectedNode(node);
+  }
+};
+
 
   // ✅ Fetch pipeline (create if missing)
   useEffect(() => {

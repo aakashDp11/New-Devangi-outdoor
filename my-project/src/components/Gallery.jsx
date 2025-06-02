@@ -79,7 +79,7 @@ export default function Gallery() {
   }, [paginatedData]);
 
   return (
-    <div className="min-h-screen h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen bg-[#fafafb] h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
       <Navbar />
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">

@@ -75,7 +75,7 @@ const [isAnimated, setIsAnimated] = useState(false);
   const totalPages = Math.ceil(filteredData.length / perPage);
 
   return (
-    <div className="min-h-screen h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen bg-[#fafafb] h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
       {/* Sidebar */}
       <Navbar />
 

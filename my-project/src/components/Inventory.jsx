@@ -580,7 +580,7 @@ export default function InventoryDashboard() {
   }, [paginatedData]);
 
   return (
-    <div className="min-h-screen h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen bg-[#fafafb] h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
       <Navbar />
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -621,7 +621,7 @@ export default function InventoryDashboard() {
           {paginatedData.map((item, index) => (
             <Card
               key={item._id}
-              className={`hover:shadow-md cursor-pointer transform transition-all duration-700 ease-out ${isAnimated ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}
+              className={`hover:shadow-md hover:border-2  hover:scale-100 cursor-pointer transform transition-all duration-700 ease-out ${isAnimated ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}
               style={{ transitionDelay: `${index * 100}ms` }}
               onClick={() => navigate(`/space/${item._id}`)}
             >

@@ -20,6 +20,12 @@ const bookingSchema = new Schema({
     type: String,
     enum: ['Automotive', 'Clothing & Apparel', 'Ecommerce', 'EdTech', 'Entertainment', 'FMCG']
   },
+  user: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User',
+  required: true  // optional: if every booking must have a user
+},
+
 
    campaignImages: [String],
   campaigns: [{ type: Schema.Types.ObjectId, ref: 'Campaign' }],  // ✅ One booking → many campaigns
