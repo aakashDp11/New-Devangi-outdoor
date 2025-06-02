@@ -42,138 +42,33 @@ export const getAllBookings = async (req, res) => {
 
 
 
+export const getCampaignById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('id of campaign is', id);
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid campaign ID' });
+    }
 
-// export const createBooking = async (req, res) => {
-//   console.log("Create booking data is", req.body);
-//   console.log("Uploaded file info:", req.file);
+    // Optional: validate campaign exists first
+    const campaign = await Campaign.findById(id).lean();
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
 
-//   const session = await mongoose.startSession();
-//   session.startTransaction();
+    // Ensure campaign is associated with a booking
+    const booking = await Booking.findOne({ campaigns: id }).lean();
+    if (!booking) {
+      return res.status(404).json({ error: 'Campaign is not linked to any booking' });
+    }
 
-//   try {
-//     const {
-//       companyName,
-//       clientName,
-//       clientEmail,
-//       clientPan,
-//       clientGst,
-//       clientContact,
-//       brandName,
-//       clientType,
-//       campaigns = []
-//     } = req.body;
-
-//     const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
-
-//     let companyLogo = '';
-//     if (req.file?.path) {
-//       try {
-//         companyLogo = await uploadToS3(req.file.path, req.file.filename);
-//       } catch (uploadErr) {
-//         throw new Error(`Logo upload failed: ${uploadErr.message}`);
-//       }
-//     }
-
-//     if (!companyName) {
-//       throw new Error('Company Name is required');
-//     }
-
-//     const newBooking = new Booking({
-//       companyName,
-//       clientName,
-//       clientEmail,
-//       clientPanNumber: clientPan,
-//       clientGstNumber: clientGst,
-//       clientContactNumber: clientContact,
-//       brandDisplayName: brandName,
-//       clientType,
-//       companyLogo,
-//       campaigns: []
-//     });
-
-//     await newBooking.save({ session });
-
-//     const createdCampaigns = [];
-
-//     for (const campaignData of parsedCampaigns) {
-//       const {
-//         campaignName,
-//         industry,
-//         description,
-//         selectedSpaces = [],
-//         campaignImages = [],
-//         startDate,
-//         endDate
-//       } = campaignData;
-
-//       for (const selected of selectedSpaces) {
-//         const space = await Space.findById(selected.id).session(session);
-//         if (!space) throw new Error(`Space not found: ${selected.id}`);
-
-//         const availableUnits = space.unit - space.occupiedUnits;
-//         if (selected.selectedUnits > availableUnits) {
-//           throw new Error(`Not enough units for space: ${space.spaceName}`);
-//         }
-
-//         space.occupiedUnits += selected.selectedUnits;
-
-//         space.availability =
-//           space.occupiedUnits >= space.unit
-//             ? 'Completely booked'
-//             : space.occupiedUnits === 0
-//               ? 'Completely available'
-//               : 'Partialy available';
-
-//         // ✅ Add campaignDates per selected unit
-//         if (!Array.isArray(space.campaignDates)) {
-//           space.campaignDates = [];
-//         }
-
-//         for (let i = 0; i < selected.selectedUnits; i++) {
-//           space.campaignDates.push({ startDate, endDate });
-//         }
-
-//         await space.save({ session });
-//       }
-
-//       // ✅ Create Campaign with start/end date
-//       const newCampaign = new Campaign({
-//         campaignName,
-//         description,
-//         industry,
-//         campaignImages,
-//         spaces: selectedSpaces.map(s => ({
-//           id: s.id,
-//           selectedUnits: s.selectedUnits
-//         })),
-//         startDate,
-//         endDate,
-//         // pipeline: null
-//       });
-
-//       await newCampaign.save({ session });
-//       createdCampaigns.push(newCampaign._id);
-//     }
-
-//     newBooking.campaigns = createdCampaigns;
-//     await newBooking.save({ session });
-
-//     await session.commitTransaction();
-//     session.endSession();
-
-//     return res.status(201).json({
-//       message: 'Booking created successfully',
-//       bookingId: newBooking._id
-//     });
-
-//   } catch (error) {
-//     await session.abortTransaction();
-//     session.endSession();
-//     console.error("Booking creation error:", error);
-//     return res.status(500).json({ error: error.message || 'Failed to create booking' });
-//   }
-// };
+    return res.status(200).json(campaign);
+  } catch (error) {
+    console.error('Error fetching campaign by ID:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
 
 
 export const createBooking = async (req, res) => {
@@ -462,30 +357,7 @@ export const deleteBooking = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Failed to delete booking' });
   }
 };
-// export const getBookingById = async (req, res) => {
-//   const { id:bookingId } = req.params;
 
-//   try {
-//     const booking = await Booking.findById(bookingId)
-//       .populate({
-//         path: 'campaigns',
-//         populate: {
-//           path: 'spaces.id',  // populates Space inside Campaign
-//           model: 'Space'
-//         }
-//       });
-
-//     if (!booking) {
-//       return res.status(404).json({ error: 'Booking not found' });
-//     }
-
-//     return res.status(200).json(booking);
-
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
-//   }
-// };
 export const getBookingById = async (req, res) => {
   const { id: bookingId } = req.params;
 
@@ -516,6 +388,11 @@ export const getBookingById = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
   }
 };
+router.get('/campaign/:id', getCampaignById);
+
+// routes/spaces.js
+
+
 
 router.get('/',getAllBookings);
 router.post('/',upload.single('companyLogo'),  // Limit to 10 images

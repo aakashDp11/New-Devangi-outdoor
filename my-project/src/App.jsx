@@ -32,6 +32,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 import Gallery from './components/Gallery';
 import CampaignPipeline from './components/CampaignPipeline';
 import FinancePage from './components/FinancePage';
+import CampaignDetails from './components/CampaignDetails';
 export default function App() {
   return (
     <>
@@ -61,6 +62,16 @@ export default function App() {
   <Route path="/create-booking" element={<CreateBookingOrderForm />} />
   <Route path="/create-booking-orderInfo" element={<BookingFormOrderInfo />} />
   <Route path="/create-booking-addSpaces" element={<BookingFormAddSpaces />} />
+  <Route path="/campaign-details/:id" element={
+    <div className="">
+      <PipelineProvider>
+<ReactFlowProvider>
+
+      <CampaignDetails />
+</ReactFlowProvider>
+      </PipelineProvider>
+    </div>
+    } />
   <Route path="/booking-preview" element={<BookingPreview />} />
       <Route path='/booking-fullForm' element={<BookingFormWizard/>}/>
       <Route path="/proposal/:id" element={<ProposalDetails />} />
@@ -83,6 +94,7 @@ export default function App() {
 <PipelineProvider>
   <ReactFlowProvider>
   {/* <BookingFlow /> */}
+  
   <CampaignPipeline/>
   </ReactFlowProvider>
 </PipelineProvider>

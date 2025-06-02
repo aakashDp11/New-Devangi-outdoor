@@ -282,7 +282,39 @@ router.get('/', async (req, res) => {
       res.status(500).json({ error: 'Failed to fetch space', details: error.message });
     }
   });
-  
+  router.put('/:id/add-tag', async (req, res) => {
+  const { tag } = req.body;
+  try {
+    const space = await Space.findById(req.params.id);
+    if (!space) return res.status(404).json({ message: 'Not found' });
+
+    space.tags = space.tags ? `${space.tags}, ${tag}` : tag;
+    await space.save();
+    res.status(200).json(space);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /api/spaces/:id/remove-tag
+router.put('/:id/remove-tag', async (req, res) => {
+  const { tag } = req.body;
+  try {
+    const space = await Space.findById(req.params.id);
+    if (!space) return res.status(404).json({ message: 'Not found' });
+
+    const tagList = (space.tags || '')
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t && t !== tag);
+
+    space.tags = tagList.join(', ');
+    await space.save();
+    res.status(200).json(space);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
   // UPDATE - PUT /api/space/:id
   // router.put('/:id', async (req, res) => {
   //   try {

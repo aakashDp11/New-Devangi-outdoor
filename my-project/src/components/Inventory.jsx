@@ -1,8 +1,4 @@
 
-
-
-
-
 // import React, { useState, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom';
 // import Navbar from './Navbar';
@@ -48,19 +44,20 @@
 //   const navigate = useNavigate();
 //   const [spaces, setSpaces] = useState([]);
 //   const [search, setSearch] = useState('');
-//   const [selectedDate, setSelectedDate] = useState('');
+//   const [startDate, setStartDate] = useState('');
+//   const [endDate, setEndDate] = useState('');
 //   const [selectedRegion, setSelectedRegion] = useState('');
 //   const [availability, setAvailability] = useState('');
 //   const [currentPage, setCurrentPage] = useState(1);
 //   const [isAnimated, setIsAnimated] = useState(false);
 //   const [showUploadModal, setShowUploadModal] = useState(false);
 //   const [selectedFile, setSelectedFile] = useState(null);
+//   const [bookedSpaceIds, setBookedSpaceIds] = useState([]);
 
 //   const fetchSpaces = async () => {
 //     try {
-//       const response = await fetch('http://localhost:3000/api/spaces');
-//       const data = await response.json();
-//       console.log(data);
+//       const res = await fetch('http://localhost:3000/api/spaces');
+//       const data = await res.json();
 //       data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 //       setSpaces(data);
 //     } catch (error) {
@@ -68,9 +65,28 @@
 //     }
 //   };
 
+//   const fetchBookedSpaces = async () => {
+//     if (!startDate || !endDate) {
+//       setBookedSpaceIds([]);
+//       return;
+//     }
+//     try {
+//       const res = await fetch(`http://localhost:3000/api/spaces/active-spaces?from=${startDate}&to=${endDate}`);
+//       const data = await res.json();
+//       setBookedSpaceIds(data.bookedSpaceIds || []);
+//     } catch (error) {
+//       console.error('Failed to fetch booked space IDs:', error);
+//       setBookedSpaceIds([]);
+//     }
+//   };
+
 //   useEffect(() => {
 //     fetchSpaces();
 //   }, []);
+
+//   useEffect(() => {
+//     fetchBookedSpaces();
+//   }, [startDate, endDate]);
 
 //   const handleDownloadExcel = () => {
 //     if (filteredData.length === 0) return;
@@ -108,7 +124,6 @@
 
 //   const handleConfirmUpload = async () => {
 //     if (!selectedFile) return;
-
 //     const formData = new FormData();
 //     formData.append('file', selectedFile);
 
@@ -123,7 +138,7 @@
 //         toast.success(`Successfully uploaded ${result.count} inventories`);
 //         setShowUploadModal(false);
 //         setSelectedFile(null);
-//         await fetchSpaces(); // ✅ refresh data
+//         await fetchSpaces();
 //       } else {
 //         toast.error(result.error || 'Upload failed');
 //       }
@@ -133,40 +148,124 @@
 //     }
 //   };
 
+//   // const filteredData = spaces.filter((item) => {
+//   //   const matchesSearch =
+//   //     item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
+//   //     item.city?.toLowerCase().includes(search.toLowerCase()) ||
+//   //     item.state?.toLowerCase().includes(search.toLowerCase()) ||
+//   //     item.zone?.toLowerCase().includes(search.toLowerCase()) ||
+//   //     item.address?.toLowerCase().includes(search.toLowerCase());
+
+//   //   const matchesRegion =
+//   //     !selectedRegion ||
+//   //     item.city?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
+//   //     item.state?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
+//   //     item.zone?.toLowerCase().includes(selectedRegion.toLowerCase());
+
+//   //   const matchesAvailability =
+//   //     availability === '' || item.availability === availability;
+
+//   //   const isBooked = bookedSpaceIds.includes(item._id?.toString());
+
+
+//   //   const matchesDateRange = (() => {
+//   //     if (!startDate || !endDate) return true;
+
+//   //     const start = new Date(startDate);
+//   //     const end = new Date(endDate);
+//   //     if (start > end) return false;
+
+//   //     const requiredDates = [];
+//   //     let current = new Date(start);
+//   //     while (current <= end) {
+//   //       requiredDates.push(current.toDateString());
+//   //       current.setDate(current.getDate() + 1);
+//   //     }
+
+//   //     const availableDates = (item.dates || []).map(dateStr => {
+//   //       const [day, month, year] = dateStr.split('-');
+//   //       const fullYear = year.length === 2 ? `20${year}` : year;
+//   //       return new Date(`${fullYear}-${month}-${day}`).toDateString();
+//   //     });
+
+//   //     return requiredDates.every(date => availableDates.includes(date));
+//   //   })();
+
+//   //   return matchesSearch && matchesRegion && matchesAvailability && matchesDateRange && !isBooked;
+//   // });
+
 //   const filteredData = spaces.filter((item) => {
-//     const matchesSearch =
-//       item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
-//       item.city?.toLowerCase().includes(search.toLowerCase()) ||
-//       item.state?.toLowerCase().includes(search.toLowerCase()) ||
-//       item.zone?.toLowerCase().includes(search.toLowerCase()) ||
-//       item.address?.toLowerCase().includes(search.toLowerCase());
+//   const idStr = item._id?.toString();
 
-//     const matchesRegion =
-//       !selectedRegion ||
-//       item.city?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
-//       item.state?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
-//       item.zone?.toLowerCase().includes(selectedRegion.toLowerCase());
+//   const matchesSearch =
+//     item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
+//     item.city?.toLowerCase().includes(search.toLowerCase()) ||
+//     item.state?.toLowerCase().includes(search.toLowerCase()) ||
+//     item.zone?.toLowerCase().includes(search.toLowerCase()) ||
+//     item.address?.toLowerCase().includes(search.toLowerCase());
 
-//     const matchesAvailability =
-//       availability === '' || item.availability === availability;
+//   const matchesRegion =
+//     !selectedRegion ||
+//     item.city?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
+//     item.state?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
+//     item.zone?.toLowerCase().includes(selectedRegion.toLowerCase());
 
-//     const matchesDate = !selectedDate || (() => {
-//       if (!item.dates || item.dates.length === 0) return false;
-//       const parsedDates = item.dates.map(dateStr => {
-//         const [day, month, year] = dateStr.split('-');
+//   const matchesAvailability =
+//     availability === '' || item.availability === availability;
+
+//   const isBooked = bookedSpaceIds.includes(idStr);
+
+//   const matchesDateRange = (() => {
+//     if (!startDate || !endDate) return true;
+
+//     const start = new Date(startDate);
+//     const end = new Date(endDate);
+//     if (start > end) return false;
+
+//     const requiredDates = [];
+//     let current = new Date(start);
+//     while (current <= end) {
+//       requiredDates.push(current.toDateString());
+//       current.setDate(current.getDate() + 1);
+//     }
+
+//     const availableDates = (item.dates || []).map(dateStr => {
+//       const parts = dateStr.split('-');
+//       let date;
+//       if (parts[0].length === 4) {
+//         // YYYY-MM-DD
+//         date = new Date(dateStr);
+//       } else {
+//         // DD-MM-YYYY
+//         const [day, month, year] = parts;
 //         const fullYear = year.length === 2 ? `20${year}` : year;
-//         return new Date(`${fullYear}-${month}-${day}`);
-//       });
-//       const minDate = new Date(Math.min(...parsedDates));
-//       const maxDate = new Date(Math.max(...parsedDates));
-//       const [selectedYear, selectedMonth] = selectedDate.split('-').map(Number);
-//       const selectedMonthDate = new Date(selectedYear, selectedMonth - 1);
-//       return selectedMonthDate >= new Date(minDate.getFullYear(), minDate.getMonth()) &&
-//              selectedMonthDate <= new Date(maxDate.getFullYear(), maxDate.getMonth());
-//     })();
+//         date = new Date(`${fullYear}-${month}-${day}`);
+//       }
+//       return date.toDateString();
+//     });
 
-//     return matchesSearch && matchesRegion && matchesAvailability && matchesDate;
-//   });
+//     const isValid = requiredDates.every(date => availableDates.includes(date));
+//     if (!isValid) {
+//       console.log('❌ Missing dates for range in:', idStr);
+//       console.log('   Required:', requiredDates);
+//       console.log('   Available:', availableDates);
+//     }
+
+//     return isValid;
+//   })();
+
+//   // Debug each condition
+//   if (isBooked) console.log('🛑 Filtered (booked):', idStr);
+//   if (!matchesDateRange) console.log('🛑 Filtered (date range):', idStr);
+//   if (!matchesSearch) console.log('🛑 Filtered (search):', idStr);
+//   if (!matchesRegion) console.log('🛑 Filtered (region):', idStr);
+//   if (!matchesAvailability) console.log('🛑 Filtered (availability):', idStr);
+
+//   const isIncluded = matchesSearch && matchesRegion && matchesAvailability && matchesDateRange && !isBooked;
+//   if (isIncluded) console.log('✅ Included:', idStr);
+
+//   return isIncluded;
+// });
 
 //   const paginatedData = filteredData.slice((currentPage - 1) * 10, currentPage * 10);
 //   const totalPages = Math.ceil(filteredData.length / 10);
@@ -179,7 +278,7 @@
 //   }, [paginatedData]);
 
 //   return (
-//     <div className="min-h-screen h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
+//     <div className="min-h-screen bg-[#fafafb] h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
 //       <Navbar />
 //       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
 //         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -188,21 +287,13 @@
 //             <Button onClick={() => navigate('/add-space')} className="text-xs w-full md:w-auto hover:-translate-y-1 hover:scale-110 transition">
 //               + Add Space
 //             </Button>
-
-//             <input
-//               type="file"
-//               accept=".xlsx, .csv"
-//               id="excel-upload"
-//               onChange={handleFileChange}
-//               className="hidden"
-//             />
+//             <input type="file" accept=".xlsx, .csv" id="excel-upload" onChange={handleFileChange} className="hidden" />
 //             <label
 //               htmlFor="excel-upload"
 //               className="cursor-pointer px-4 py-2 rounded bg-black text-white text-xs w-full md:w-auto hover:-translate-y-1 hover:scale-110 transition"
 //             >
 //               Upload Excel
 //             </label>
-
 //             <Button onClick={handleDownloadExcel} className="text-xs w-full md:w-auto hover:-translate-y-1 hover:scale-110 transition">
 //               Download Excel
 //             </Button>
@@ -212,7 +303,8 @@
 //         <div className="mt-6 text-sm flex flex-col md:flex-row justify-between gap-4 items-stretch md:items-center">
 //           <Input className="md:w-[28%] h-[1.8rem]" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
 //           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-//             <Input type="month" className="md:w-40" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+//             <Input type="date" className="md:w-40" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+//             <Input type="date" className="md:w-40" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
 //             <Input className="md:w-40" value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} placeholder="Enter City/State/Zone" />
 //             <select className="border px-3 py-2 rounded w-full md:w-40" value={availability} onChange={(e) => setAvailability(e.target.value)}>
 //               <option value="">All</option>
@@ -227,7 +319,7 @@
 //           {paginatedData.map((item, index) => (
 //             <Card
 //               key={item._id}
-//               className={`hover:shadow-md cursor-pointer transform transition-all duration-700 ease-out ${isAnimated ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}
+//               className={`hover:shadow-md hover:border-2  hover:scale-100 cursor-pointer transform transition-all duration-700 ease-out ${isAnimated ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}
 //               style={{ transitionDelay: `${index * 100}ms` }}
 //               onClick={() => navigate(`/space/${item._id}`)}
 //             >
@@ -243,10 +335,31 @@
 //                   <div className="text-sm font-semibold break-words">{item.spaceName}</div>
 //                   <div className="text-xs text-gray-600">{item.address || 'No address provided'}</div>
 //                 </div>
-//                 <div className="flex flex-wrap gap-2 items-center">
-//                   <span className="text-xs px-2 py-1 rounded bg-green-200">{item.city || 'City'}</span>
-//                   <span className="text-xs px-2 py-1 bg-purple-100 rounded">{item.spaceType || 'Type'}</span>
-//                 </div>
+                
+//                 <div className="flex gap-2 items-center">
+//   <span className="text-xs px-2 py-1 rounded bg-green-200">{item.city || 'City'}</span>
+//   <span className="text-xs px-2 py-1 bg-purple-100 rounded">{item.spaceType || 'Type'}</span>
+
+//   {(() => {
+//     const totalUnits = item.unit || 0;
+//     const occupied = item.occupiedUnits || 0;
+//     let status = 'Completely available';
+//     let color = 'bg-green-100';
+
+//     if (totalUnits === occupied && occupied !== 0) {
+//       status = 'Completely booked';
+//       color = 'bg-red-100';
+//     } else if (occupied > 0 && occupied < totalUnits) {
+//       status = 'Partially available';
+//       color = 'bg-yellow-100';
+//     }
+
+//     return (
+//       <span className={`text-xs px-2 py-1 rounded ${color}`}>{status}</span>
+//     );
+//   })()}
+// </div>
+
 //               </CardContent>
 //             </Card>
 //           ))}
@@ -266,7 +379,6 @@
 //           </Pagination>
 //         </div>
 
-//         {/* Upload Modal */}
 //         {showUploadModal && (
 //           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
 //             <div className="bg-white rounded-xl shadow-lg p-6 w-96">
@@ -355,6 +467,9 @@ export default function InventoryDashboard() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [bookedSpaceIds, setBookedSpaceIds] = useState([]);
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [tempStartDate, setTempStartDate] = useState('');
+  const [tempEndDate, setTempEndDate] = useState('');
 
   const fetchSpaces = async () => {
     try {
@@ -450,124 +565,58 @@ export default function InventoryDashboard() {
     }
   };
 
-  // const filteredData = spaces.filter((item) => {
-  //   const matchesSearch =
-  //     item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
-  //     item.city?.toLowerCase().includes(search.toLowerCase()) ||
-  //     item.state?.toLowerCase().includes(search.toLowerCase()) ||
-  //     item.zone?.toLowerCase().includes(search.toLowerCase()) ||
-  //     item.address?.toLowerCase().includes(search.toLowerCase());
-
-  //   const matchesRegion =
-  //     !selectedRegion ||
-  //     item.city?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
-  //     item.state?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
-  //     item.zone?.toLowerCase().includes(selectedRegion.toLowerCase());
-
-  //   const matchesAvailability =
-  //     availability === '' || item.availability === availability;
-
-  //   const isBooked = bookedSpaceIds.includes(item._id?.toString());
-
-
-  //   const matchesDateRange = (() => {
-  //     if (!startDate || !endDate) return true;
-
-  //     const start = new Date(startDate);
-  //     const end = new Date(endDate);
-  //     if (start > end) return false;
-
-  //     const requiredDates = [];
-  //     let current = new Date(start);
-  //     while (current <= end) {
-  //       requiredDates.push(current.toDateString());
-  //       current.setDate(current.getDate() + 1);
-  //     }
-
-  //     const availableDates = (item.dates || []).map(dateStr => {
-  //       const [day, month, year] = dateStr.split('-');
-  //       const fullYear = year.length === 2 ? `20${year}` : year;
-  //       return new Date(`${fullYear}-${month}-${day}`).toDateString();
-  //     });
-
-  //     return requiredDates.every(date => availableDates.includes(date));
-  //   })();
-
-  //   return matchesSearch && matchesRegion && matchesAvailability && matchesDateRange && !isBooked;
-  // });
-
   const filteredData = spaces.filter((item) => {
-  const idStr = item._id?.toString();
+    const idStr = item._id?.toString();
 
-  const matchesSearch =
-    item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
-    item.city?.toLowerCase().includes(search.toLowerCase()) ||
-    item.state?.toLowerCase().includes(search.toLowerCase()) ||
-    item.zone?.toLowerCase().includes(search.toLowerCase()) ||
-    item.address?.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch =
+      item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
+      item.city?.toLowerCase().includes(search.toLowerCase()) ||
+      item.state?.toLowerCase().includes(search.toLowerCase()) ||
+      item.zone?.toLowerCase().includes(search.toLowerCase()) ||
+      item.address?.toLowerCase().includes(search.toLowerCase());
 
-  const matchesRegion =
-    !selectedRegion ||
-    item.city?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
-    item.state?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
-    item.zone?.toLowerCase().includes(selectedRegion.toLowerCase());
+    const matchesRegion =
+      !selectedRegion ||
+      item.city?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
+      item.state?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
+      item.zone?.toLowerCase().includes(selectedRegion.toLowerCase());
 
-  const matchesAvailability =
-    availability === '' || item.availability === availability;
+    const matchesAvailability =
+      availability === '' || item.availability === availability;
 
-  const isBooked = bookedSpaceIds.includes(idStr);
+    const isBooked = bookedSpaceIds.includes(idStr);
 
-  const matchesDateRange = (() => {
-    if (!startDate || !endDate) return true;
+    const matchesDateRange = (() => {
+      if (!startDate || !endDate) return true;
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start > end) return false;
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (start > end) return false;
-
-    const requiredDates = [];
-    let current = new Date(start);
-    while (current <= end) {
-      requiredDates.push(current.toDateString());
-      current.setDate(current.getDate() + 1);
-    }
-
-    const availableDates = (item.dates || []).map(dateStr => {
-      const parts = dateStr.split('-');
-      let date;
-      if (parts[0].length === 4) {
-        // YYYY-MM-DD
-        date = new Date(dateStr);
-      } else {
-        // DD-MM-YYYY
-        const [day, month, year] = parts;
-        const fullYear = year.length === 2 ? `20${year}` : year;
-        date = new Date(`${fullYear}-${month}-${day}`);
+      const requiredDates = [];
+      let current = new Date(start);
+      while (current <= end) {
+        requiredDates.push(current.toDateString());
+        current.setDate(current.getDate() + 1);
       }
-      return date.toDateString();
-    });
 
-    const isValid = requiredDates.every(date => availableDates.includes(date));
-    if (!isValid) {
-      console.log('❌ Missing dates for range in:', idStr);
-      console.log('   Required:', requiredDates);
-      console.log('   Available:', availableDates);
-    }
+      const availableDates = (item.dates || []).map(dateStr => {
+        const parts = dateStr.split('-');
+        let date;
+        if (parts[0].length === 4) {
+          date = new Date(dateStr);
+        } else {
+          const [day, month, year] = parts;
+          const fullYear = year.length === 2 ? `20${year}` : year;
+          date = new Date(`${fullYear}-${month}-${day}`);
+        }
+        return date.toDateString();
+      });
 
-    return isValid;
-  })();
+      return requiredDates.every(date => availableDates.includes(date));
+    })();
 
-  // Debug each condition
-  if (isBooked) console.log('🛑 Filtered (booked):', idStr);
-  if (!matchesDateRange) console.log('🛑 Filtered (date range):', idStr);
-  if (!matchesSearch) console.log('🛑 Filtered (search):', idStr);
-  if (!matchesRegion) console.log('🛑 Filtered (region):', idStr);
-  if (!matchesAvailability) console.log('🛑 Filtered (availability):', idStr);
-
-  const isIncluded = matchesSearch && matchesRegion && matchesAvailability && matchesDateRange && !isBooked;
-  if (isIncluded) console.log('✅ Included:', idStr);
-
-  return isIncluded;
-});
+    return matchesSearch && matchesRegion && matchesAvailability && matchesDateRange && !isBooked;
+  });
 
   const paginatedData = filteredData.slice((currentPage - 1) * 10, currentPage * 10);
   const totalPages = Math.ceil(filteredData.length / 10);
@@ -589,6 +638,16 @@ export default function InventoryDashboard() {
             <Button onClick={() => navigate('/add-space')} className="text-xs w-full md:w-auto hover:-translate-y-1 hover:scale-110 transition">
               + Add Space
             </Button>
+            {/* <Button
+              onClick={() => {
+                setTempStartDate(startDate);
+                setTempEndDate(endDate);
+                setShowDateModal(true);
+              }}
+              className="text-xs w-full md:w-auto hover:-translate-y-1 hover:scale-110 transition"
+            >
+              Date Filter
+            </Button> */}
             <input type="file" accept=".xlsx, .csv" id="excel-upload" onChange={handleFileChange} className="hidden" />
             <label
               htmlFor="excel-upload"
@@ -605,8 +664,18 @@ export default function InventoryDashboard() {
         <div className="mt-6 text-sm flex flex-col md:flex-row justify-between gap-4 items-stretch md:items-center">
           <Input className="md:w-[28%] h-[1.8rem]" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <Input type="date" className="md:w-40" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <Input type="date" className="md:w-40" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            {/* <button
+              onClick={() => {
+                setTempStartDate(startDate);
+                setTempEndDate(endDate);
+                setShowDateModal(true);
+              }}
+              className="text-xs w-full bg-white text-black md:w-auto hover:border-black hover:-translate-y-1 hover:scale-110 transition"
+            >
+              Date Filter
+            </button> */}
+            {/* <Input type="date" className="md:w-40" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input type="date" className="md:w-40" value={endDate} onChange={(e) => setEndDate(e.target.value)} /> */}
             <Input className="md:w-40" value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} placeholder="Enter City/State/Zone" />
             <select className="border px-3 py-2 rounded w-full md:w-40" value={availability} onChange={(e) => setAvailability(e.target.value)}>
               <option value="">All</option>
@@ -614,6 +683,28 @@ export default function InventoryDashboard() {
               <option value="Partialy available">Partialy available</option>
               <option value="Completely booked">Completely booked</option>
             </select>
+            <button
+              onClick={() => {
+                setTempStartDate(startDate);
+                setTempEndDate(endDate);
+                setShowDateModal(true);
+              }}
+              className="text-xs w-full bg-white text-black md:w-auto hover:border-black hover:-translate-y-1 hover:scale-110 transition"
+            >
+              Date Filter
+            </button>
+            <button
+  onClick={() => {
+    setStartDate('');
+    setEndDate('');
+    setSelectedRegion('');
+    setAvailability('');
+  }}
+  className="text-xs w-full bg-white text-black md:w-auto hover:border-black hover:-translate-y-1 hover:scale-110 transition"
+>
+  Reset Filters
+</button>
+
           </div>
         </div>
 
@@ -627,19 +718,33 @@ export default function InventoryDashboard() {
             >
               <CardContent className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
-                  {item.mainPhoto ? (
-                    <img src={`${item.mainPhoto}`} alt="Main Photo" className="w-full h-[130%] object-cover" />
-                  ) : (
-                    <img src={`${item.mainPhoto}`} alt="" className="w-full h-[130%] object-cover" />
-                  )}
+                  <img src={`${item.mainPhoto}`} alt="Main Photo" className="w-full h-[130%] object-cover" />
                 </div>
                 <div className="flex-1 flex flex-col gap-1">
                   <div className="text-sm font-semibold break-words">{item.spaceName}</div>
                   <div className="text-xs text-gray-600">{item.address || 'No address provided'}</div>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
+                <div className="flex gap-2 items-center">
                   <span className="text-xs px-2 py-1 rounded bg-green-200">{item.city || 'City'}</span>
                   <span className="text-xs px-2 py-1 bg-purple-100 rounded">{item.spaceType || 'Type'}</span>
+                  {(() => {
+                    const totalUnits = item.unit || 0;
+                    const occupied = item.occupiedUnits || 0;
+                    let status = 'Completely available';
+                    let color = 'bg-green-100';
+
+                    if (totalUnits === occupied && occupied !== 0) {
+                      status = 'Completely booked';
+                      color = 'bg-red-100';
+                    } else if (occupied > 0 && occupied < totalUnits) {
+                      status = 'Partially available';
+                      color = 'bg-yellow-100';
+                    }
+
+                    return (
+                      <span className={`text-xs px-2 py-1 rounded ${color}`}>{status}</span>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -688,11 +793,50 @@ export default function InventoryDashboard() {
             </div>
           </div>
         )}
+
+        {showDateModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 w-96">
+              <h2 className="text-lg font-semibold mb-4">Select Date Range</h2>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                <input
+                  type="date"
+                  className="mt-1 block w-full border rounded px-3 py-2"
+                  value={tempStartDate}
+                  onChange={(e) => setTempStartDate(e.target.value)}
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">End Date</label>
+                <input
+                  type="date"
+                  className="mt-1 block w-full border rounded px-3 py-2"
+                  value={tempEndDate}
+                  onChange={(e) => setTempEndDate(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2 mt-[5%]">
+                <button onClick={() => setShowDateModal(false)} className="px-4 py-2 text-xs rounded bg-gray-300 text-black hover:bg-gray-400">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setStartDate(tempStartDate);
+                    setEndDate(tempEndDate);
+                    setShowDateModal(false);
+                  }}
+                  className="px-4 ml-auto py-2 text-xs rounded bg-black text-white hover:bg-gray-900"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
 }
-
-
 
 
