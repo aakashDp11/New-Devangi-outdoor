@@ -107,7 +107,7 @@ export default function User() {
 
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-          <h1 className="text-1xl md:text-2xl font-semibold">Users</h1>
+          <h1 className="text-1xl md:text-2xl ">Users</h1>
         </div>
 
         <div className="mt-6 text-sm flex flex-col md:flex-row justify-between gap-4 items-stretch md:items-center">

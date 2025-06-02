@@ -16,7 +16,7 @@ const BookingDashboard = () => {
   return (
     <div className="p-6 md:ml-64 min-h-screen bg-white">
         <Navbar/>
-      <h2 className="text-2xl font-semibold mb-6">Bookings</h2>
+      <h2 className="text-2xl  mb-6">Bookings</h2>
 
       {/* Revenue Chart Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">

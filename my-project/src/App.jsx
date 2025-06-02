@@ -35,7 +35,8 @@ import FinancePage from './components/FinancePage';
 import CampaignDetails from './components/CampaignDetails';
 export default function App() {
   return (
-    <>
+    < >
+    <div className=''>
       <Toaster position="top-right"/>
     <Routes>
       <Route path='/'  element={
@@ -110,8 +111,10 @@ export default function App() {
   </ReactFlowProvider>
 </PipelineProvider>
 </div>
+
 }/>
     </Routes>
+    </div>
     </>
   )
 }

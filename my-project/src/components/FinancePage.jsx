@@ -79,7 +79,7 @@ const handleDownload = async (url, filename = 'document') => {
           {journey()}
         </div>
 
-        <h1 className="text-2xl font-semibold mb-4">
+        <h1 className="text-2xl  mb-4">
           {currentView === 'year' && '📁 Finance Years'}
           {currentView === 'month' && '📂 Select a Month'}
           {currentView === 'documents' && '📄 Finance Documents'}

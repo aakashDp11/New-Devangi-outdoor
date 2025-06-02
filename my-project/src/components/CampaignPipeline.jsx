@@ -342,6 +342,7 @@ function CampaignPipelineInternal({ campaignId }) {
       try {
         const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
         setPipelineData(res.data);
+        console.log("Pip data is",res.data);
       } catch (err) {
         if (err.response?.status === 404) {
           const createRes = await axios.post(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
@@ -451,7 +452,7 @@ function CampaignPipelineInternal({ campaignId }) {
   if (!pipelineData) return <div>Loading Campaign Pipeline Data...</div>;
 
   return (
-    <div className="w-[160%] h-[90vh] relative">
+    <div className="w-[160%] bg-white h-[100vh] relative">
       <button
         onClick={() => setShowDeleteModal(true)}
         className="absolute top-4 right-6 bg-red-600 text-white text-sm px-4 py-1 rounded shadow hover:bg-red-700 z-50"

@@ -82,7 +82,7 @@ const [isAnimated, setIsAnimated] = useState(false);
       {/* Main Content */}
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-          <h1 className="text-1xl md:text-2xl font-semibold">Proposals</h1>
+          <h1 className="text-1xl md:text-2xl ">Proposals</h1>
           
         </div>
 

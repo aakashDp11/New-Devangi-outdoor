@@ -128,7 +128,7 @@ const [showDeletePopup, setShowDeletePopup] = useState(false);
         {booking.campaigns.map((campaign, idx) => (
           <div
             key={idx}
-            className="card w-[50%] bg-base-100 shadow-md p-4 mb-6 hover:pointer"
+            className="card w-[50%] bg-base-100 shadow-md p-4 mb-6 hover:shadow-lg cursor-pointer transition duration-200"
             // onClick={() => navigate(`/pipeline/${campaign._id}`)}
             onClick={() => navigate(`/campaign-details/${campaign._id}`)}
 

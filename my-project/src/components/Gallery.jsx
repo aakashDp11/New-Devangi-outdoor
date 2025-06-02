@@ -83,7 +83,7 @@ export default function Gallery() {
       <Navbar />
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-          <h1 className="text-1xl md:text-2xl font-semibold">Gallery</h1>
+          <h1 className="text-1xl md:text-2xl ">Gallery</h1>
         </div>
 
         <div className="mt-6 text-sm flex flex-col md:flex-row justify-between gap-4 items-stretch md:items-center">
@@ -97,7 +97,7 @@ export default function Gallery() {
 
         <div className="flex justify-between mt-[2%] items-center mb-4">
           <div className='text-xs'>
-            <button className="border border-gray-300 px-3 py-1 rounded mr-2">Filter</button>
+            {/* <button className="border border-gray-300 px-3 py-1 rounded mr-2">Filter</button> */}
           </div>
           
         </div>
@@ -136,7 +136,7 @@ export default function Gallery() {
                 {/* Booking Info */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
                   <div className="flex-1 flex flex-col gap-1">
-                    <div className="text-sm font-semibold break-words">{item.companyName}</div>
+                    <div className="text-sm  break-words">{item.companyName}</div>
                     <div className="text-xs text-gray-600">Client: {item.clientName || 'No Client'}</div>
                     <div className="text-xs text-gray-600">Campaign: {item.campaigns[0]?.campaignName || 'No Campaign'}</div>
                   </div>
