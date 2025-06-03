@@ -1,14 +1,14 @@
 
 
+
 // import React, { useEffect, useState, useContext } from 'react';
 // import axios from 'axios';
 // import { toast } from 'sonner';
 // import { PipelineContext } from '../../context/PipelineContext';
 
-// const PaymentStatusForm = ({ campaignId, onConfirm,onClose }) => {
+// const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
 //   const [totalAmount, setTotalAmount] = useState('');
 //   const [isTotalAmountLocked, setIsTotalAmountLocked] = useState(false);
-//   const [modeOfPayment, setModeOfPayment] = useState('cash');
 //   const [payments, setPayments] = useState([]);
 //   const { setPipelineData } = useContext(PipelineContext);
 
@@ -23,12 +23,14 @@
 //           setIsTotalAmountLocked(true);
 //         }
 
-//         if (data.modeOfPayment) {
-//           setModeOfPayment(data.modeOfPayment);
-//         }
-
 //         if (Array.isArray(data.payments)) {
-//           setPayments(data.payments);
+//           // Initialize missing modeOfPayment if not already present
+//           const enriched = data.payments.map(p => ({
+//             amount: p.amount || '',
+//             date: p.date || '',
+//             modeOfPayment: p.modeOfPayment || 'cash',
+//           }));
+//           setPayments(enriched);
 //         }
 //       } catch (err) {
 //         console.error('Failed to fetch payment data:', err);
@@ -39,7 +41,7 @@
 //   }, [campaignId]);
 
 //   const handleAddPayment = () => {
-//     setPayments([...payments, { amount: '', date: '' }]);
+//     setPayments([...payments, { amount: '', date: '', modeOfPayment: 'cash' }]);
 //   };
 
 //   const handleDeletePayment = (index) => {
@@ -56,22 +58,20 @@
 //   const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 //   const paymentDue = parseFloat(totalAmount || 0) - totalPaid;
 
-
-// const handleSave = async () => {
+//   const handleSave = async () => {
 //     try {
 //       if (totalPaid > parseFloat(totalAmount)) {
 //         toast.error('❌ Total paid exceeds the total amount!');
 //         return;
 //       }
-  
+
 //       const payload = {
 //         totalAmount,
-//         modeOfPayment,
 //         payments,
 //         totalPaid,
 //         paymentDue,
 //       };
-  
+
 //       const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/payment`, payload);
 //       setPipelineData(res.data);
 //       toast.success('Payment details saved!');
@@ -81,11 +81,10 @@
 //       toast.error('Failed to save payment details.');
 //     }
 //   };
-  
 
 //   return (
-//     <div className="max-w-2xl mx-auto p-6 bg-white  space-y-6">
-//       <h2 className="text-2xl font-bold text-gray-800"> Payment Status</h2>
+//     <div className="max-w-2xl mx-auto p-6 bg-white space-y-6">
+//       <h2 className="text-2xl font-bold text-gray-800">Payment Status</h2>
 
 //       <div>
 //         <label className="block text-xs font-medium text-gray-700">Total Amount (₹)</label>
@@ -100,39 +99,31 @@
 //       </div>
 
 //       <div>
-//         <label className="block text-xs font-medium text-gray-700">Mode of Payment</label>
-//         <select
-//           value={modeOfPayment}
-//           onChange={e => setModeOfPayment(e.target.value)}
-//           className="mt-1 w-full border rounded-md px-3 py-2"
-//         >
-//           <option value="cash">Cash</option>
-//           <option value="cheque">Cheque</option>
-//           <option value="pdc">PDC</option>
-//         </select>
-//       </div>
-
-//       <div>
 //         <h3 className="font-semibold text-gray-700 mb-2">Payment Records</h3>
 //         {payments.map((payment, idx) => (
-//           <div key={idx} className="flex items-center gap-2 mb-2">
+//           <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
 //             <input
 //               type="number"
 //               placeholder="Amount (₹)"
 //               value={payment.amount}
 //               onChange={e => handlePaymentChange(idx, 'amount', e.target.value)}
-//               className="w-[40%] border rounded-md px-3 py-2"
+//               className="w-full sm:w-[30%] border rounded-md px-3 py-2"
 //             />
 //             <input
 //               type="date"
-//               value={
-//                 payment.date
-//                   ? new Date(payment.date).toISOString().split('T')[0]
-//                   : ''
-//               }
+//               value={payment.date ? new Date(payment.date).toISOString().split('T')[0] : ''}
 //               onChange={e => handlePaymentChange(idx, 'date', e.target.value)}
-//               className="w-[40%] border rounded-md px-3 py-2"
+//               className="w-full sm:w-[30%] border rounded-md px-3 py-2"
 //             />
+//             <select
+//               value={payment.modeOfPayment}
+//               onChange={e => handlePaymentChange(idx, 'modeOfPayment', e.target.value)}
+//               className="w-full sm:w-[30%] border rounded-md px-3 py-2"
+//             >
+//               <option value="cash">Cash</option>
+//               <option value="cheque">Cheque</option>
+//               <option value="pdc">PDC</option>
+//             </select>
 //             <button
 //               onClick={() => handleDeletePayment(idx)}
 //               className="text-red-500 hover:text-red-700 text-xs"
@@ -156,32 +147,32 @@
 //           Payment Due: ₹{paymentDue}
 //         </p>
 //       </div>
+
 //       {totalPaid > parseFloat(totalAmount || 0) && (
-//   <p className="text-red-600 text-xs font-medium">
-//     ⚠ Total payment exceeds the allowed amount.
-//   </p>
-// )}
+//         <p className="text-red-600 text-xs font-medium">
+//           ⚠ Total payment exceeds the allowed amount.
+//         </p>
+//       )}
 
 //       <div className="flex">
-// <button
-//   onClick={onClose}
-//   className="w-[40%] mr-auto text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400 transition duration-200"
-// >
-//   Close
-// </button>
 //         <button
-//                 onClick={handleSave}
-//                 className="w-[40%] text-xs bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700 transition duration-200"
-//               >
-//                 Save 
-//               </button>
+//           onClick={onClose}
+//           className="w-[40%] mr-auto text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400 transition duration-200"
+//         >
+//           Close
+//         </button>
+//         <button
+//           onClick={handleSave}
+//           className="w-[40%] text-xs bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700 transition duration-200"
+//         >
+//           Save
+//         </button>
 //       </div>
 //     </div>
 //   );
 // };
 
 // export default PaymentStatusForm;
-
 
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
@@ -206,11 +197,11 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
         }
 
         if (Array.isArray(data.payments)) {
-          // Initialize missing modeOfPayment if not already present
           const enriched = data.payments.map(p => ({
             amount: p.amount || '',
             date: p.date || '',
             modeOfPayment: p.modeOfPayment || 'cash',
+            locked: true,
           }));
           setPayments(enriched);
         }
@@ -223,7 +214,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
   }, [campaignId]);
 
   const handleAddPayment = () => {
-    setPayments([...payments, { amount: '', date: '', modeOfPayment: 'cash' }]);
+    setPayments([...payments, { amount: '', date: '', modeOfPayment: 'cash', locked: false }]);
   };
 
   const handleDeletePayment = (index) => {
@@ -247,9 +238,11 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
         return;
       }
 
+      const cleanedPayments = payments.map(({ locked, ...rest }) => rest); // Remove 'locked' before saving
+
       const payload = {
         totalAmount,
-        payments,
+        payments: cleanedPayments,
         totalPaid,
         paymentDue,
       };
@@ -290,29 +283,34 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
               value={payment.amount}
               onChange={e => handlePaymentChange(idx, 'amount', e.target.value)}
               className="w-full sm:w-[30%] border rounded-md px-3 py-2"
+              readOnly={payment.locked}
             />
             <input
               type="date"
               value={payment.date ? new Date(payment.date).toISOString().split('T')[0] : ''}
               onChange={e => handlePaymentChange(idx, 'date', e.target.value)}
               className="w-full sm:w-[30%] border rounded-md px-3 py-2"
+              disabled={payment.locked}
             />
             <select
               value={payment.modeOfPayment}
               onChange={e => handlePaymentChange(idx, 'modeOfPayment', e.target.value)}
               className="w-full sm:w-[30%] border rounded-md px-3 py-2"
+              disabled={payment.locked}
             >
               <option value="cash">Cash</option>
               <option value="cheque">Cheque</option>
               <option value="pdc">PDC</option>
             </select>
-            <button
-              onClick={() => handleDeletePayment(idx)}
-              className="text-red-500 hover:text-red-700 text-xs"
-              title="Delete Payment"
-            >
-              🗑️
-            </button>
+            {!payment.locked && (
+              <button
+                onClick={() => handleDeletePayment(idx)}
+                className="text-red-500 hover:text-red-700 text-xs"
+                title="Delete Payment"
+              >
+                🗑️
+              </button>
+            )}
           </div>
         ))}
         <button
