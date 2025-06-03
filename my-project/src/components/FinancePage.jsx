@@ -5,6 +5,7 @@ import Navbar from './Navbar';
 import PdfLogo from '../assets/pdf.png';
 import folderLogo from '../assets/vector-folder-icon.jpg'
 import folderLogo1 from '../assets/folder-icon-2.png'
+import { toast } from 'sonner';
 const Card = ({ children, className = '', ...props }) => (
   <div className={`bg-white border shadow-sm rounded-xl ${className}`} {...props}>
     {children}
@@ -57,7 +58,7 @@ const handleDownload = async (url, filename = 'document') => {
     window.URL.revokeObjectURL(link.href);
   } catch (err) {
     console.error('Download error:', err);
-    alert('Failed to download file. Please try again.');
+    toast.error('Failed to download file. Please try again.');
   }
 };
 

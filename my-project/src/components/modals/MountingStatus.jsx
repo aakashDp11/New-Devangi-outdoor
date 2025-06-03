@@ -29,10 +29,7 @@ export default function MountingStatus({ spaceId, onConfirm, onClose }) {
 
   const handleSave = async () => {
     try {
-      if (!mountingStatus) {
-        toast.error('Please confirm mounting.');
-        return;
-      }
+    
       if (!receivedDate) {
         toast.error('Please select a received date.');
         return;

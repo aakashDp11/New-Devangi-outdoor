@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useBookingForm } from '../context/BookingFormContext'; // ✅
-
+import { toast } from 'sonner';
 
 const Button = ({ children, className = '', ...props }) => (
   <button className={`px-4 py-2 rounded bg-black text-white hover: transition ${className}`} {...props}>
@@ -55,11 +55,11 @@ export default function ProposalDetails() {
       if (response.ok) {
         navigate('/proposal-dashboard');
       } else {
-        alert('Failed to delete proposal.');
+        toast.error('Failed to delete proposal.');
       }
     } catch (error) {
       console.error('Error deleting proposal:', error);
-      alert('An error occurred while deleting.');
+      toast.error('An error occurred while deleting.');
     }
   };
   function convertToInputDateFormat(dateString) {

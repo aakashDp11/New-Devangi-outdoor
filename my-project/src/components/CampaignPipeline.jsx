@@ -304,7 +304,7 @@ import InvoiceForm from './modals/InvoiceDetailsForm';
 import PaymentStatusForm from './modals/PaymentStatusForm';
 import PrintingStatus from './modals/PrintingStatus';
 import MountingStatus from './modals/MountingStatus';
-
+import { toast } from 'sonner';
 import { PipelineContext } from '../context/PipelineContext';
 import axios from 'axios';
 
@@ -500,7 +500,7 @@ function CampaignPipelineInternal({ campaignId }) {
                     window.location.reload();
                   } catch (err) {
                     console.error('Failed to delete pipeline:', err);
-                    alert('Error deleting pipeline');
+                    toast.error('Error deleting pipeline');
                   }
                 }}
                 className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"

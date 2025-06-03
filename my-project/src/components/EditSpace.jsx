@@ -53,14 +53,14 @@ const facingOptions = ['Single Facing', 'Double Facing'];
       });
   
       if (response.ok) {
-        alert('Space deleted successfully!');
+        toast.success('Space deleted successfully!');
         navigate('/'); // Go back to InventoryDashboard
       } else {
-        alert('Failed to delete space.');
+        toast.error('Failed to delete space.');
       }
     } catch (error) {
       console.error('Error deleting space:', error);
-      alert('An error occurred while deleting.');
+      toast.error('An error occurred while deleting.');
     }
   };
   
@@ -105,7 +105,7 @@ const facingOptions = ['Single Facing', 'Double Facing'];
          toast.success('Space updated successfully!');
         navigate(`/`);
       } else {
-        alert('Failed to update space.');
+        toast.error('Failed to update space.');
       }
     } catch (error) {
       console.error('Error updating space:', error);

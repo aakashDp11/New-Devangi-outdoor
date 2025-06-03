@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useSpaceForm } from '../context/SpaceFormContext';
+import { toast } from 'sonner';
 export default function AddSpaceForm() {
     const navigate=useNavigate();
     const {
@@ -48,11 +49,11 @@ export default function AddSpaceForm() {
         if (!res.ok) throw new Error('Upload failed');
         const data = await res.json();
         console.log('Created successfully:', data);
-        alert('Space created!');
+        toast.success('Space created!');
         navigate('/success'); // or redirect wherever
       } catch (err) {
         console.error(err);
-        alert('Something went wrong!');
+        toast.error('Something went wrong!');
       }
     };
     const formatForInput = (dateStr) => {
@@ -240,7 +241,7 @@ export default function AddSpaceForm() {
     if (value === '' || Number(value) <= max) {
       handleInputChange(e);
     } else {
-      alert(`Max units allowed for ${form.spaceType || 'this type'} is ${max}`);
+      toast.error(`Max units allowed for ${form.spaceType || 'this type'} is ${max}`);
     }
   }}
   required

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from './Navbar';
-
+import { toast } from 'sonner';
 const Button = ({ children, className = '', ...props }) => (
   <button className={`px-4 py-2 rounded bg-black text-white hover: transition ${className}`} {...props}>
     {children}
@@ -75,14 +75,14 @@ const [selectedSpaces, setSelectedSpaces] = useState([]);
       });
 
       if (response.ok) {
-        alert('Proposal updated successfully!');
+        toast.success('Proposal updated successfully!');
         navigate(`/proposal/${id}`);
       } else {
-        alert('Failed to update proposal');
+        toast.error('Failed to update proposal');
       }
     } catch (error) {
       console.error('Error updating proposal:', error);
-      alert('Error updating proposal');
+      toast.error('Error updating proposal');
     }
   };
 

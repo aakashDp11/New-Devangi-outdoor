@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Navbar from './Navbar';
 import { useNavigate } from 'react-router-dom';
-
+import { toast } from 'sonner';
 export default function ProposalForm() {
   const navigate = useNavigate();
   const [selectedSpaces, setSelectedSpaces] = useState([]);
@@ -107,7 +107,7 @@ export default function ProposalForm() {
   const handleNext = () => setStep(2);
   const handleBack = () => setStep(1);
   const handleSubmit = () => {
-    alert('Submitting proposal...');
+    toast.success('Submitting proposal...');
     navigate('/create-booking-addSpaces');
   };
 

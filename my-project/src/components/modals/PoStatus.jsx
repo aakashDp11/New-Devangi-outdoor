@@ -29,7 +29,7 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
       window.URL.revokeObjectURL(link.href);
     } catch (err) {
       console.error('Download error:', err);
-      alert('Failed to download PO document.');
+      toast.error('Failed to download PO document.');
     }
   };
 

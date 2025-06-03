@@ -247,7 +247,7 @@ export default function BookingsDashboard1() {
 
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <h1 className="text-2xl font-semibold">Bookings</h1>
+          <h2 className="text-2xl ">Bookings</h2>
           <button
             onClick={() => navigate('/create-booking')}
             className="bg-black text-white text-xs px-3 py-2 rounded hover:scale-105 transition"
@@ -264,9 +264,9 @@ export default function BookingsDashboard1() {
         />
 
         <div className="overflow-x-auto mt-[3%]">
-          <table className="table-auto w-full border border-gray-300 rounded-md">
-            <thead className="bg-gray-100">
-              <tr>
+          <table className="table-auto bg-white w-full border border-gray-300 rounded-md">
+            <thead className="bg-white">
+              <tr className='text-xs'>
                 <th className="border border-gray-300 px-4 py-2 text-left">Client Logo</th>
 
                 <th className="border border-gray-300 px-4 py-2 text-left cursor-pointer">
@@ -337,7 +337,7 @@ export default function BookingsDashboard1() {
               </tr>
             </thead>
 
-            <tbody className='text-sm'>
+            <tbody className='text-xs'>
               {paginatedData.map((item) => (
                 <tr
                   key={item._id}

@@ -352,7 +352,7 @@ const unitUtilizationPieData = [
       <Navbar />
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
         <div className="flex flex-col md:flex-row mb-4 gap-4">
-          <h1 className="text-3xl font-sans md:text-3xl ml-[1%] font-semibold">Dashboard</h1>
+          <h2 className="text-3xl font-sans md:text-3xl ml-[1%] ">Dashboard</h2>
         </div>
 {/* <div className='flex w-full gap-[10%]'>
 <Card className=" shadow-md mt-4">
