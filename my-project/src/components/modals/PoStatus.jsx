@@ -3,7 +3,7 @@
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { PipelineContext } from '../../context/PipelineContext';
-
+import { toast } from 'sonner';
 export default function POForm({ campaignId, onConfirm,onClose }) {
   const [poReceived, setPoReceived] = useState(false);
   const [poFile, setPoFile] = useState(null);
@@ -56,8 +56,10 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
       );
 
       setPipelineData(res.data);
+      toast.success('PO details saved!');
       onConfirm();
     } catch (err) {
+      toast.error('Failed to save PO status:', err);
       console.error('Failed to save PO status:', err);
     }
   };
@@ -99,17 +101,17 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
           <h2 className="text-xl font-semibold text-gray-800 mb-5 text-center">PO Status</h2>
 
           <div className="flex items-center space-x-3 mb-5 text-sm">
-            <input
+            {/* <input
               type="checkbox"
               id="poCheckbox"
               checked={poReceived}
               onChange={() => setPoReceived(!poReceived)}
               className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
             />
-            <label htmlFor="poCheckbox" className="text-gray-700 font-medium">Yes?</label>
+            <label htmlFor="poCheckbox" className="text-gray-700 font-medium">Yes?</label> */}
           </div>
 
-          {poReceived && (
+         
             <div className="space-y-4">
               {/* PO Number */}
               <div>
@@ -172,15 +174,15 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
               {/* Save Button */}
               
             </div>
-          )}
-          {!poReceived && <div className='flex w-full'>
+         
+          {/* {!poReceived && <div className='flex w-full'>
   <button
   onClick={onClose}
   className=" mx-auto text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400 transition duration-200"
 >
   Close
 </button>
-</div> }
+</div> } */}
           
         </div>
       )}

@@ -43,8 +43,8 @@ export default function MountingStatus({ spaceId, onConfirm, onClose }) {
         receivedDate,
       });
 
-      toast.success('Mounting status saved.');
       setAlreadyConfirmed(true);
+      toast.success('Mounting status saved.');
       onConfirm();
     } catch (err) {
       console.error('Failed to confirm mounting status:', err);
@@ -75,20 +75,9 @@ export default function MountingStatus({ spaceId, onConfirm, onClose }) {
         </div>
       ) : (
         <>
-          <div className="flex items-center space-x-3 mb-4 text-sm">
-            <input
-              id="mountingCheckbox"
-              type="checkbox"
-              checked={mountingStatus}
-              onChange={() => setMountingStatus(!mountingStatus)}
-              className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-            />
-            <label htmlFor="mountingCheckbox" className="text-gray-700 font-medium">
-              Mounting Completed?
-            </label>
-          </div>
+          
 
-          {mountingStatus && (
+         
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Received Date</label>
@@ -115,18 +104,9 @@ export default function MountingStatus({ spaceId, onConfirm, onClose }) {
                 </button>
               </div>
             </div>
-          )}
+        
 
-          {!mountingStatus && (
-            <div className="flex mt-4 w-full">
-              <button
-                onClick={onClose}
-                className="mx-auto text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400 transition duration-200"
-              >
-                Close
-              </button>
-            </div>
-          )}
+          
         </>
       )}
     </div>
