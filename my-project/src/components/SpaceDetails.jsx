@@ -29,6 +29,7 @@ export default function SpaceDetails() {
         const response = await fetch(`http://localhost:3000/api/spaces/${id}`);
         const data = await response.json();
         setSpace(data);
+        console.log("Space data is",data);
       } catch (error) {
         console.error('Error fetching space details:', error);
       }

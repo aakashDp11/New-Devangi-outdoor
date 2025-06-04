@@ -67,7 +67,7 @@ export default function CampaignDetails() {
 
         {/* Tab Buttons */}
         <div className="flex space-x-4 mb-4">
-          {['Pipeline', 'Data'].map(tab => (
+          {['Details','Pipeline'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -88,7 +88,7 @@ export default function CampaignDetails() {
         )}
 
         {/* Data Tab */}
-        {activeTab === 'Data' && (
+        {activeTab === 'Details' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-[5%]">
             {/* Campaign Info with Payment Chart */}
             <div className="bg-white shadow-md border rounded-xl p-4">
