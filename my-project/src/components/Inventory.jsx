@@ -19,7 +19,7 @@ const Input = ({ className = '', ...props }) => (
 );
 
 const Card = ({ children, className = '', ...props }) => (
-  <div className={`bg-white border shadow-sm rounded-xl w-full ${className}`} {...props}>
+  <div className={`bg-white border shadow-sm rounded-xl w-full h-[100%] ${className}`} {...props}>
     {children}
   </div>
 );
@@ -156,12 +156,23 @@ export default function InventoryDashboard() {
   const filteredData = spaces.filter((item) => {
     const idStr = item._id?.toString();
 
-    const matchesSearch =
-      item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
-      item.city?.toLowerCase().includes(search.toLowerCase()) ||
-      item.state?.toLowerCase().includes(search.toLowerCase()) ||
-      item.zone?.toLowerCase().includes(search.toLowerCase()) ||
-      item.address?.toLowerCase().includes(search.toLowerCase());
+    // const matchesSearch =
+    //   item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
+    //   item.city?.toLowerCase().includes(search.toLowerCase()) ||
+    //   item.state?.toLowerCase().includes(search.toLowerCase()) ||
+    //   item.zone?.toLowerCase().includes(search.toLowerCase()) ||
+    //   item.address?.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = [
+  item.spaceName,
+  item.city,
+  item.state,
+  item.zone,
+  item.address,
+  item.tags  // ✅ includes tag string for searching
+]
+  .filter(Boolean)
+  .some(field => field.toLowerCase().includes(search.toLowerCase()));
+
 
     const matchesRegion =
       !selectedRegion ||
@@ -306,149 +317,123 @@ export default function InventoryDashboard() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 w-full">
-          {paginatedData.map((item, index) => (
-            <Card
-              key={item._id}
-              className={`hover:shadow-md hover:border-2  hover:scale-100 cursor-pointer transform transition-all duration-700 ease-out ${isAnimated ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}
-              style={{ transitionDelay: `${index * 100}ms` }}
-              // onClick={() => navigate(`/space/${item._id}`)}
-            >
-              <CardContent className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
-                  <img src={`${item.mainPhoto}`} alt="Main Photo" className="w-full h-[130%] object-cover" />
-                </div>
-                {/* <div className="flex-1 flex flex-col gap-1">
-                  <div className="text-sm font-semibold break-words">{item.spaceName}</div>
-                  <div className="text-xs text-gray-600">{item.address || 'No address provided'}</div>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <span className="text-xs px-2 py-1 rounded bg-green-200">{item.city || 'City'}</span>
-                  <span className="text-xs px-2 py-1 bg-purple-100 rounded">{item.spaceType || 'Type'}</span>
-                  {(() => {
-                    const totalUnits = item.unit || 0;
-                    const occupied = item.occupiedUnits || 0;
-                    let status = 'Completely available';
-                    let color = 'bg-green-100';
-
-                    if (totalUnits === occupied && occupied !== 0) {
-                      status = 'Completely booked';
-                      color = 'bg-red-100';
-                    } else if (occupied > 0 && occupied < totalUnits) {
-                      status = 'Partially available';
-                      color = 'bg-yellow-100';
-                    }
-
-                    return (
-                      <span className={`text-xs px-2 py-1 rounded ${color}`}>{status}</span>
-                    );
-                  })()}
-                </div> */}
-              <div className="flex-1 flex flex-col gap-1 w-full">
-    <div className="text-sm font-semibold break-words">{item.spaceName}</div>
-    <div className="text-xs text-gray-600">{item.address || 'No address provided'}</div>
-    
-    {/* Input box on left under name/address */}
-    <div className="mt-2">
-      <input
-        placeholder="+ Tag"
-        className="text-xs px-2 py-[3px] w-24 border rounded bg-white focus:outline-none"
-        onKeyDown={async (e) => {
-          if (e.key === 'Enter' && e.target.value.trim()) {
-            const newTag = e.target.value.trim();
-            try {
-              const res = await fetch(`http://localhost:3000/api/spaces/${item._id}/add-tag`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tag: newTag }),
-              });
-              if (res.ok) {
-                toast.success('Tag added');
-                fetchSpaces();
-                e.target.value = '';
-              } else {
-                toast.error('Failed to add tag');
-              }
-            } catch (err) {
-              console.error(err);
-              toast.error('Error while adding tag');
-            }
-          }
-        }}
-      />
-    </div>
-  </div>
-
-  {/* Right-side tags and badges */}
-  <div className="flex gap-2 flex-wrap justify-end">
-    <span className="text-xs px-2 py-1 rounded bg-green-200">{item.city || 'City'}</span>
-    <span className="text-xs px-2 py-1 bg-purple-100 rounded">{item.spaceType || 'Type'}</span>
-
-    {(() => {
-      const totalUnits = item.unit || 0;
-      const occupied = item.occupiedUnits || 0;
-      let status = 'Completely available';
-      let color = 'bg-green-100';
-
-      if (totalUnits === occupied && occupied !== 0) {
-        status = 'Completely booked';
-        color = 'bg-red-100';
-      } else if (occupied > 0 && occupied < totalUnits) {
-        status = 'Partially available';
-        color = 'bg-yellow-100';
-      }
-
-      return (
-        <span className={`text-xs px-2 py-1 rounded ${color}`}>{status}</span>
-      );
-    })()}
-
-    {/* Tags with remove option */}
-    {(item.tags || '')
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t)
-      .map((tag, idx) => (
-        <div
-          key={`${tag}-${idx}`}
-          className="relative group text-xs px-2 py-1 rounded bg-gray-200 flex items-center"
-        >
-          {tag}
-          <span
-            onClick={async (e) => {
-              e.stopPropagation();
-              try {
-                const res = await fetch(`http://localhost:3000/api/spaces/${item._id}/remove-tag`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tag }),
-                });
-                if (res.ok) {
-                  toast.success('Tag removed');
-                  fetchSpaces();
-                } else {
-                  toast.error('Failed to remove tag');
-                }
-              } catch (err) {
-                console.error(err);
-                toast.error('Error while removing tag');
-              }
-            }}
-            className="ml-2 text-sm text-red-500 hidden group-hover:inline cursor-pointer"
-          >
-            ×
-          </span>
-        </div>
-      ))}
+         {paginatedData.map((item, index) => (
+  <Card
+    key={item._id}
+    className={`hover:shadow-md hover:border-2 hover:scale-100 cursor-pointer transform transition-all duration-700 ease-out ${
+      isAnimated ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+    }`}
+    style={{ transitionDelay: `${index * 100}ms` }}
+    onClick={() => navigate(`/space/${item._id}`)} // ✅ Navigate on card click
+  >
+    <CardContent className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
+        <img src={`${item.mainPhoto}`} alt="Main Photo" className="w-full h-[130%] object-cover" />
       </div>
 
-              </CardContent>
-             
+      <div className="flex-1 flex flex-col gap-1 w-full">
+        <div className="text-sm font-semibold break-words">{item.spaceName}</div>
+        <div className="text-xs text-gray-600">{item.address || 'No address provided'}</div>
 
-            </Card>
-         
+        {/* Tag input box */}
+        <div className="mt-2 text-xs">
+          <input
+            placeholder="+ Tag"
+            className="text-xs px-2 py-[3px] w-24 border rounded bg-white focus:outline-none"
+            onKeyDown={async (e) => {
+              e.stopPropagation(); // ✅ Prevent card click
+              if (e.key === 'Enter' && e.target.value.trim()) {
+                const newTag = e.target.value.trim();
+                try {
+                  const res = await fetch(`http://localhost:3000/api/spaces/${item._id}/add-tag`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tag: newTag }),
+                  });
+                  if (res.ok) {
+                    toast.success('Tag added');
+                    fetchSpaces();
+                    e.target.value = '';
+                  } else {
+                    toast.error('Failed to add tag');
+                  }
+                } catch (err) {
+                  console.error(err);
+                  toast.error('Error while adding tag');
+                }
+              }
+            }}
+            onFocus={(e) => e.stopPropagation()} // ✅ Also block click on focus
+            onClick={(e) => e.stopPropagation()} // ✅ Block click on click
+          />
+        </div>
+      </div>
 
+      {/* Right side tags */}
+      <div className="flex gap-2 flex-wrap justify-end">
+        <span className="text-xs px-2 py-1 rounded bg-green-200">{item.city || 'City'}</span>
+        <span className="text-xs px-2 py-1 bg-purple-100 rounded">{item.spaceType || 'Type'}</span>
 
+        {/* Availability Badge */}
+        {(() => {
+          const totalUnits = item.unit || 0;
+          const occupied = item.occupiedUnits || 0;
+          let status = 'Completely available';
+          let color = 'bg-green-100';
+
+          if (totalUnits === occupied && occupied !== 0) {
+            status = 'Completely booked';
+            color = 'bg-red-100';
+          } else if (occupied > 0 && occupied < totalUnits) {
+            status = 'Partially available';
+            color = 'bg-yellow-100';
+          }
+
+          return <span className={`text-xs px-2 py-1 rounded ${color}`}>{status}</span>;
+        })()}
+
+        {/* Tags with remove option */}
+        {(item.tags || '')
+          .split(',')
+          .map((t) => t.trim())
+          .filter((t) => t)
+          .map((tag, idx) => (
+            <div
+              key={`${tag}-${idx}`}
+              className="relative group text-xs px-2 py-1 rounded bg-gray-200 flex items-center"
+            >
+              {tag}
+              <span
+                onClick={async (e) => {
+                  e.stopPropagation(); // ✅ Prevent card click on tag remove
+                  try {
+                    const res = await fetch(`http://localhost:3000/api/spaces/${item._id}/remove-tag`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ tag }),
+                    });
+                    if (res.ok) {
+                      toast.success('Tag removed');
+                      fetchSpaces();
+                    } else {
+                      toast.error('Failed to remove tag');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    toast.error('Error while removing tag');
+                  }
+                }}
+                className="ml-2 text-sm text-red-500 hidden group-hover:inline cursor-pointer"
+              >
+                ×
+              </span>
+            </div>
           ))}
+      </div>
+    </CardContent>
+  </Card>
+))}
+
         </div>
 
         <div className="mt-6">
