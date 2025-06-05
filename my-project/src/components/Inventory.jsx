@@ -58,6 +58,7 @@ export default function InventoryDashboard() {
   const [showDateModal, setShowDateModal] = useState(false);
   const [tempStartDate, setTempStartDate] = useState('');
   const [tempEndDate, setTempEndDate] = useState('');
+const [spaceTypeFilter, setSpaceTypeFilter] = useState('');
 
   const fetchSpaces = async () => {
     try {
@@ -65,6 +66,7 @@ export default function InventoryDashboard() {
       const data = await res.json();
       data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setSpaces(data);
+      console.log("Sample Space format is",data[0]);
     } catch (error) {
       console.error('Error fetching spaces:', error);
     }
@@ -155,6 +157,7 @@ export default function InventoryDashboard() {
 
   const filteredData = spaces.filter((item) => {
     const idStr = item._id?.toString();
+const matchesSpaceType = !spaceTypeFilter || item.spaceType === spaceTypeFilter;
 
     // const matchesSearch =
     //   item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -243,7 +246,7 @@ export default function InventoryDashboard() {
   return isInsideInventoryRange && !overlapsWithCampaign;
 })();
 
-    return matchesSearch && matchesRegion && matchesAvailability && matchesDateRange && !isBooked;
+    return matchesSearch && matchesRegion && matchesSpaceType && matchesAvailability && matchesDateRange && !isBooked;
   });
 
   const paginatedData = filteredData.slice((currentPage - 1) * 10, currentPage * 10);
@@ -291,6 +294,8 @@ export default function InventoryDashboard() {
               <option value="Partialy available">Partialy available</option>
               <option value="Completely booked">Completely booked</option>
             </select>
+           
+
             <button
               onClick={() => {
                 setTempStartDate(startDate);

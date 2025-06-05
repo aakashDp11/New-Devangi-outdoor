@@ -62,7 +62,7 @@ export default function CampaignDetails() {
       <Navbar />
       <main className="ml-64 w-full flex-1 px-8 py-4">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold">Campaign Details: {campaignName}</h1>
+          <h2 className="text-2xl ">Campaign : {campaignName}</h2>
         </div>
 
         {/* Tab Buttons */}
