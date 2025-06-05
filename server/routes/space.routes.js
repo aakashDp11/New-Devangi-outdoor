@@ -315,19 +315,7 @@ router.put('/:id/remove-tag', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
-  // UPDATE - PUT /api/space/:id
-  // router.put('/:id', async (req, res) => {
-  //   try {
-  //     const updatedSpace = await Space.findByIdAndUpdate(req.params.id, req.body, {
-  //       new: true,
-  //       runValidators: true,
-  //     });
-  //     if (!updatedSpace) return res.status(404).json({ error: 'Space not found' });
-  //     res.json({ message: 'Space updated successfully', data: updatedSpace });
-  //   } catch (error) {
-  //     res.status(400).json({ error: 'Failed to update space', details: error.message });
-  //   }
-  // });
+ 
 
   // PUT /api/spaces/:id
 router.put('/:id', upload.fields([
@@ -403,16 +391,7 @@ router.put('/:id/mountingStatus', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
-  // DELETE - DELETE /api/space/:id
-  // router.delete('/:id', async (req, res) => {
-  //   try {
-  //     const deletedSpace = await Space.findByIdAndDelete(req.params.id);
-  //     if (!deletedSpace) return res.status(404).json({ error: 'Space not found' });
-  //     res.json({ message: 'Space deleted successfully', data: deletedSpace });
-  //   } catch (error) {
-  //     res.status(500).json({ error: 'Failed to delete space', details: error.message });
-  //   }
-  // });
+ 
   // DELETE /api/spaces/:id
 router.delete('/:id', async (req, res) => {
   try {

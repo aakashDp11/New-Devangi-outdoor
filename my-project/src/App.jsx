@@ -33,6 +33,7 @@ import Gallery from './components/Gallery';
 import CampaignPipeline from './components/CampaignPipeline';
 import FinancePage from './components/FinancePage';
 import CampaignDetails from './components/CampaignDetails';
+import Report from './components/Report.jsx';
 export default function App() {
   return (
     < >
@@ -60,6 +61,7 @@ export default function App() {
     </BookingFormProvider>
   }
 >
+  <Route path="/reports" element={<Report/>} />
   <Route path="/create-booking" element={<CreateBookingOrderForm />} />
   <Route path="/create-booking-orderInfo" element={<BookingFormOrderInfo />} />
   <Route path="/create-booking-addSpaces" element={<BookingFormAddSpaces />} />
@@ -118,4 +120,5 @@ export default function App() {
     </>
   )
 }
+
 
