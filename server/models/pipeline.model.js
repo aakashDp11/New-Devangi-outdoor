@@ -95,6 +95,9 @@ const pipelineSchema = new Schema({
   },
 
   payment: {
+    mountingAmount:Number,
+    printingAmount:Number,
+    displayAmount:Number,
     totalAmount: Number,
     modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc'] ,default: undefined},
     

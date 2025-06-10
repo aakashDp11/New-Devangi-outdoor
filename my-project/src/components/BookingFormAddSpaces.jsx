@@ -210,7 +210,8 @@ const isSpaceAvailableInRange = (space) => {
 
 
  const filteredSpaces = (spaces || []).filter(space => {
-  console.log("🔍 Checking space:", space?.spaceName);
+  console.log("Space is",space);
+  console.log("🔍 Checking space:", space?.name);
 
     if (!isSpaceAvailableInRange(space)) return false;
     if (space.overlappingBooking && space.status === 'Completely booked') return false;
@@ -285,7 +286,7 @@ const isSpaceAvailableInRange = (space) => {
                       onChange={() => onToggleSpaceSelection(campaignIndex, space.id)}
                     />
                   </td>
-                  <td className="px-2 py-2 text-left">{space.spaceName}</td>
+                  <td className="px-2 py-2 text-left">{space.name}</td>
                   <td className="px-2 py-2">{space.spaceType}</td>
                   <td className="px-2 py-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${

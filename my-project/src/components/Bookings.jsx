@@ -14,7 +14,7 @@ const BookingDashboard = () => {
   const [search, setSearch] = useState('');
 
   return (
-    <div className="p-6 md:ml-64 min-h-screen bg-white">
+    <div className="p-6 md:ml-[30%] min-h-screen bg-white">
         <Navbar/>
       <h2 className="text-sm  mb-6">Bookings</h2>
 

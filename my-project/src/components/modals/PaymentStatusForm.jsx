@@ -189,8 +189,8 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
     const fetchPipelinePayment = async () => {
       try {
         const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${campaignId}`);
+        console.log("Data recieved in Payment form is",res.data);
         const data = res.data?.payment || {};
-
         if (data.totalAmount) {
           setTotalAmount(data.totalAmount);
           setIsTotalAmountLocked(true);

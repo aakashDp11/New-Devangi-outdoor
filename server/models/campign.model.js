@@ -36,10 +36,18 @@ const campaignSchema = new Schema({
     id: { type: Schema.Types.ObjectId, ref: 'Space', required: true },
     selectedUnits: { type: Number, required: true, min: 1 }
   }],
+  
  artwork: {
     confirmed: { type: Boolean, default: false },
     documentUrl: { type: String },
   },
+   inventoryCosts: [{
+    id: { type: Schema.Types.ObjectId, ref: 'Space', required: true },
+     displayCost: { type: Number, required: true },
+    printingcostpersquareFeet: { type: Number, required: true },
+    mountingcostpersquareFeet: { type: Number, required: true },
+    area: { type: Number, required: true }
+  }],
   pipeline: { type: Schema.Types.ObjectId, ref: 'Pipeline', unique: true,sparse: true },  
   startDate: { type: String,  },
   endDate: { type: String,  }

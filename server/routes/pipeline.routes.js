@@ -118,9 +118,22 @@ router.put('/campaign/:campaignId/printingStatus', confirmPrintingStatus);
 router.put('/campaign/:campaignId/mountingStatus', confirmMountingStatus);
 router.post('/campaign/:campaignId/invoice/upload', upload.single('file'), uploadInvoice);
 router.put('/campaign/:campaignId/invoice', updateInvoice);
-
+router.put('/campaign/:id/update-costs', async (req, res) => {
+  try {
+    const { inventoryCosts } = req.body;
+    console.log("inventoryCosts",inventoryCosts);
+    const campaign = await Campaign.findByIdAndUpdate(
+      req.params.id,
+      { inventoryCosts },
+      { new: true }
+    );
+    res.json(campaign);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // Payment Route
-router.put('/campaign/:campaignId/payment', updatePayment);
+  router.put('/campaign/:campaignId/payment', updatePayment);
 // PO Document Upload and Confirmation
 router.post('/campaign/:campaignId/po/upload', upload.single('file'), uploadPoDocument);
 router.put('/campaign/:campaignId/po', confirmPoStatus);

@@ -15,6 +15,7 @@ const bookingSchema = new Schema({
   clientContactNumber: { type: Number },
   brandDisplayName: { type: String },
   clientType: { type: String },
+  bookingMode: { type: String },
 
   industry: {
     type: String,
