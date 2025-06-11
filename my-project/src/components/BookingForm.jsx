@@ -459,6 +459,21 @@ export default function CreateOrderBasicInfo() {
               <option>Email </option>
             </select>
           </div>
+          <div>
+            <label className="block text-xs font-medium">Booking Source <span className="text-red-500">*</span></label>
+            <select
+              className="w-full p-2 border rounded mt-1"
+              value={basicInfo.bookingSource}
+              onChange={(e) =>
+                setBasicInfo({ ...basicInfo, bookingSource: e.target.value })
+              }
+            >
+              <option>Select...</option>
+              <option>Direct</option>
+              <option>Agency</option>
+              
+            </select>
+          </div>
         </div>
 
         <div className="mt-8 text-sm flex">

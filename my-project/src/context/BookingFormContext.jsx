@@ -158,6 +158,7 @@ export const BookingFormProvider = ({ children }) => {
     brandName: '',
     clientType: '',
     bookingMode:'',
+    bookingSource:'',
     campaignImages: [],
   });
 

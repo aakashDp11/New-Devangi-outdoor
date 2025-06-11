@@ -16,6 +16,8 @@ const bookingSchema = new Schema({
   brandDisplayName: { type: String },
   clientType: { type: String },
   bookingMode: { type: String },
+  bookingSource: { type: String },
+  reminderTimeline:{type:Number},
 
   industry: {
     type: String,

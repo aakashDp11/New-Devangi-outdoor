@@ -118,22 +118,61 @@ router.put('/campaign/:campaignId/printingStatus', confirmPrintingStatus);
 router.put('/campaign/:campaignId/mountingStatus', confirmMountingStatus);
 router.post('/campaign/:campaignId/invoice/upload', upload.single('file'), uploadInvoice);
 router.put('/campaign/:campaignId/invoice', updateInvoice);
+// router.put('/campaign/:id/update-costs', async (req, res) => {
+//   try {
+//     const { inventoryCosts } = req.body;
+//     console.log("inventoryCosts",inventoryCosts);
+//     const campaign = await Campaign.findByIdAndUpdate(
+//       req.params.id,
+//       { inventoryCosts },
+//       { new: true }
+//     );
+//     res.json(campaign);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+// Payment Route
+ 
 router.put('/campaign/:id/update-costs', async (req, res) => {
   try {
     const { inventoryCosts } = req.body;
-    console.log("inventoryCosts",inventoryCosts);
+
+    // Update campaign inventoryCosts
     const campaign = await Campaign.findByIdAndUpdate(
       req.params.id,
       { inventoryCosts },
       { new: true }
     );
-    res.json(campaign);
+
+    // Calculate total cost with 18% GST
+    let totalAmount = 0;
+
+    for (const cost of inventoryCosts) {
+      const display = cost.displayCost || 0;
+      const printing = (cost.printingcostpersquareFeet || 0) * (cost.area || 0);
+      const mounting = (cost.mountingcostpersquareFeet || 0) * (cost.area || 0);
+      const base = display + printing + mounting;
+      const withGST = base * 1.18;
+      totalAmount += withGST;
+    }
+
+    // Update payment.totalAmount in related pipeline
+    await Pipeline.findOneAndUpdate(
+      { campaign: req.params.id },
+      { 'payment.totalAmount': Math.round(totalAmount) }, // round if needed
+      { new: true }
+    );
+
+    res.json({ campaign });
   } catch (err) {
+    console.error('Update failed:', err);
     res.status(500).json({ error: err.message });
   }
 });
-// Payment Route
-  router.put('/campaign/:campaignId/payment', updatePayment);
+
+router.put('/campaign/:campaignId/payment', updatePayment);
+
 // PO Document Upload and Confirmation
 router.post('/campaign/:campaignId/po/upload', upload.single('file'), uploadPoDocument);
 router.put('/campaign/:campaignId/po', confirmPoStatus);

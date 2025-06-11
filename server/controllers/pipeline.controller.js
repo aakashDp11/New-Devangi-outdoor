@@ -5,19 +5,38 @@ import { uploadToS3 } from '../utils/s3uploader.js';
 /**
  * Get pipeline by Campaign ID
  */
+// export const getPipelineByCampaignId = async (req, res) => {
+//   const { campaignId } = req.params;
+//   try {
+//     const pipeline = await Pipeline.findOne({ campaign: campaignId }).populate('spaces');
+//     if (!pipeline) {
+//       return res.status(404).json({ error: 'Pipeline not found' });
+//     }
+//     res.json(pipeline);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
+//   }
+// };
+
 export const getPipelineByCampaignId = async (req, res) => {
   const { campaignId } = req.params;
   try {
-    const pipeline = await Pipeline.findOne({ campaign: campaignId }).populate('spaces');
+    const pipeline = await Pipeline.findOne({ campaign: campaignId })
+      .populate('spaces')
+      .populate({
+        path: 'campaign',
+        select: 'inventoryCosts', // only fetch inventoryCosts field
+      });
+
     if (!pipeline) {
       return res.status(404).json({ error: 'Pipeline not found' });
     }
+
     res.json(pipeline);
   } catch (error) {
     res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
   }
 };
-
 
 export const createPipelineForCampaign = async (req, res) => {
   const { campaignId } = req.params;
