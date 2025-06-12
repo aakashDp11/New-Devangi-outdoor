@@ -25,7 +25,7 @@ function Register() {
 
   return (
     <div className='flex mx-auto'>
-<Navbar/>
+{/* <Navbar/> */}
    
     <div className='w-[88rem] ml-[45%] mt-[10%]'>
       <h2 className="text-xl font-bold ml-[12%] mb-8">Create User</h2>

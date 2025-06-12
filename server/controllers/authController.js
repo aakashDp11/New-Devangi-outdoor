@@ -2,60 +2,11 @@ import bcrypt from 'bcrypt';
 import User from '../models/user.model.js';
 import nodemailer from 'nodemailer';
 
+import { generateTokens } from '../utils/token.js';
 const SALT_ROUNDS = 10;
 
 
-// export const registerUser = async (req, res) => {
-//     const { name, email, phone, password } = req.body;
-//     console.log("Req body is",req.body);
-//     try {
-//       const existingUser = await User.findOne({ email });
-//       if (existingUser) {
-//         return res.status(400).json({ message: 'User already exists' });
-//       }
-//       const hashedPassword = await bcrypt.hash(password, 10);
-//       console.log("Hashed password is",hashedPassword);
-//       const newUser = new User({
-//         name,
-//         email,
-//         phone,
-//         password: hashedPassword
-//       });
-//       console.log("New user is",newUser);
-//       await newUser.save();
-//       res.json({ message: 'User registered successfully' });
-//     } catch (error) {
-//       res.status(500).json({ message: 'Error registering user', error: error.message });
-//     }
-//   };
-// export const registerUser = async (req, res) => {
-//     const { name, email, phone, password } = req.body;
-//     console.log("Req body is", req.body);
-//     try {
-//       const existingUser = await User.findOne({ email });
-//       if (existingUser) {
-//         return res.status(400).json({ message: 'User already exists' });
-//       }
-  
-//       const hashedPassword = await bcrypt.hash(password, 10);
-//       const newUser = new User({
-//         name,
-//         email,
-//         phone,
-//         password: hashedPassword
-//       });
-  
-//       await newUser.save();
-  
-//       // Send confirmation email with raw password
-//       await sendConfirmationEmail({ name, email, phone, password });
-  
-//       res.json({ message: 'User registered successfully' });
-//     } catch (error) {
-//       console.error('Registration Error:', error);
-//       res.status(500).json({ message: 'Error registering user', error: error.message });
-//     }
-//   };
+
   
   const sendConfirmationEmail = async ({ name, email, phone, password,role }) => {
     const transporter = nodemailer.createTransport({
@@ -132,19 +83,39 @@ const SALT_ROUNDS = 10;
   
   
 
+// export const loginUser = async (req, res) => {
+//   const { email, password } = req.body;
+//   try {
+//     const user = await User.findOne({ email }); // ✅ await here too
+//     if (!user) {
+//       return res.status(401).json({ message: 'Invalid email or password' });
+//     }
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) {
+//       return res.status(401).json({ message: 'Invalid email or password' });
+//     }
+//     res.json({ message: 'Login successful' });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error logging in', error: error.message });
+//   }
+// };
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
-  try {
-    const user = await User.findOne({ email }); // ✅ await here too
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-    res.json({ message: 'Login successful' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error logging in', error: error.message });
+  const user = await User.findOne({ email });
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).json({ message: 'Invalid credentials' });
   }
-};
+
+  const { accessToken, refreshToken } = generateTokens(user);
+
+  // Optional: Set refresh token in secure HTTP-only cookie
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: true, // set to false on localhost
+    sameSite: 'Strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  res.json({ accessToken, user: { email: user.email, role: user.role, id: user._id,name:user.name } });
+}

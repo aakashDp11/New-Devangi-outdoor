@@ -5,11 +5,17 @@ import { useState, useEffect } from 'react';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { PieChart } from '@mui/x-charts/PieChart';
 import { Grid } from '@mui/material';
-
+import { useAuth } from '../context/AuthContext';
 const Card = ({ children, className = '', ...props }) => (
   <div className={`bg-white border shadow-sm rounded-xl w-full ${className}`} {...props}>
     {children}
   </div>
+);
+
+const Button = ({ children, className = '', ...props }) => (
+  <button className={`px-4 py-2 rounded bg-black text-white hover: transition ${className}`} {...props}>
+    {children}
+  </button>
 );
 
 const CardContent = ({ children, className = '' }) => (
@@ -27,6 +33,7 @@ const BookingGraphDashboard = () => {
   const [muiBookingData, setMuiBookingData] = useState({ xLabels: [], yData: [] });
   const [muiProposalData, setMuiProposalData] = useState({ xLabels: [], yData: [] });
   const [loading, setLoading] = useState(true);
+  const { auth,logout } = useAuth();
 
   useEffect(() => {
     fetchData();
@@ -60,59 +67,7 @@ const BookingGraphDashboard = () => {
     }
   };
 
-//   const getRangeStart = (now) => {
-//     const weekStart = now.startOf('week');
-//     const monthStart = now.startOf('month');
-//     const threeMonthsAgo = now.subtract(3, 'month').startOf('month');
-//     return range === 'week' ? weekStart : range === 'month' ? monthStart : threeMonthsAgo;
-//   };
 
-//   const processBookingData = () => {
-//     const now = dayjs();
-//     const rangeStart = getRangeStart(now);
-
-//     const data = {};
-//     bookings.forEach((b) => {
-//       const createdAt = dayjs(b.createdAt);
-//       console.log('Booking CreatedAt:', bookings.map(b => b.createdAt));
-// console.log('Proposal CreatedAt:', proposals.map(p => p.createdAt));
-
-//       if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
-//       const label = createdAt.format('DD MMM');
-//       data[label] = (data[label] || 0) + 1;
-//     });
-
-//     const sortedLabels = Object.keys(data).sort((a, b) =>
-//       dayjs(a, 'DD MMM').unix() - dayjs(b, 'DD MMM').unix()
-//     );
-
-//     setMuiBookingData({
-//       xLabels: sortedLabels,
-//       yData: sortedLabels.map((label) => data[label]),
-//     });
-//   };
-
-//   const processProposalData = () => {
-//     const now = dayjs();
-//     const rangeStart = getRangeStart(now);
-
-//     const data = {};
-//     proposals.forEach((p) => {
-//       const createdAt = dayjs(p.createdAt);
-//       if (!createdAt.isValid() || createdAt.isBefore(rangeStart)) return;
-//       const label = createdAt.format('DD MMM');
-//       data[label] = (data[label] || 0) + 1;
-//     });
-
-//     const sortedLabels = Object.keys(data).sort((a, b) =>
-//       dayjs(a, 'DD MMM').unix() - dayjs(b, 'DD MMM').unix()
-//     );
-
-//     setMuiProposalData({
-//       xLabels: sortedLabels,
-//       yData: sortedLabels.map((label) => data[label]),
-//     });
-//   };
 
 
 
@@ -187,36 +142,7 @@ const getRangeStart = (now) => {
   };
 
 
-//  const getAvailabilityStats = () => {
-//   const availabilityCounts = {
-//     completelyAvailable: 0,
-//     partiallyAvailable: 0,
-//     completelyBooked: 0,
-//   };
 
-//   bookings.forEach((booking) => {
-//     booking.campaigns?.forEach((campaign) => {
-//       campaign.spaces?.forEach((spaceWrapper) => {
-//         const space = spaceWrapper.id;
-
-//         if (!space || typeof space !== 'object') return;
-
-//         const totalUnits = space.unit || 0;
-//         const occupied = space.occupiedUnits || 0;
-
-//         if (occupied >= totalUnits) {
-//           availabilityCounts.completelyBooked++;
-//         } else if (occupied > 0) {
-//           availabilityCounts.partiallyAvailable++;
-//         } else {
-//           availabilityCounts.completelyAvailable++;
-//         }
-//       });
-//     });
-//   });
-
-//   return availabilityCounts;
-// };
 
 const getAvailabilityStats = () => {
   const availabilityCounts = {
@@ -353,21 +279,11 @@ const unitUtilizationPieData = [
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
         <div className="flex flex-col md:flex-row mb-4 gap-4">
           <h2 className="text-3xl font-sans md:text-3xl ml-[1%] ">Dashboard</h2>
+           <Button onClick={logout}  className="text-xs ml-auto w-full md:w-auto hover:-translate-y-1 hover:scale-110 transition">
+             Log Out
+            </Button>
         </div>
-{/* <div className='flex w-full gap-[10%]'>
-<Card className=" shadow-md mt-4">
-  <CardContent>
-<h2 className="text-sm font-medium ">Active Bookings</h2>
-  </CardContent>
-</Card>
-<Card className=" shadow-md mt-4">
-  <CardContent>
-<h2 className="text-sm font-medium mb-2">Total Inventories</h2>
-  </CardContent>
-</Card>
 
-
-      </div> */}
         <div className="flex flex-row w-full gap-[5%] mt-6">
           
           {loading ? (
