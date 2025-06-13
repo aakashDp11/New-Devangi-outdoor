@@ -117,5 +117,5 @@ export const loginUser = async (req, res) => {
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
-  res.json({ accessToken, user: { email: user.email, role: user.role, id: user._id,name:user.name } });
+  res.json({ accessToken, user: { email: user.email, role: user.role, id: user._id,name:user.name,role:user.role } });
 }

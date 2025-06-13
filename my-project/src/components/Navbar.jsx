@@ -100,7 +100,7 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // Import the useAuth hook
+import { useAuth } from '../context/AuthContext';// Import the useAuth hook
 import logo1 from '../assets/d3.png';
 import {
   FaHome,
@@ -117,7 +117,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { auth } = useAuth(); // Get the user information from AuthContext
-console.log("Auth details are",auth);
+// console.log("Auth details are",auth);
   const navItems = [
     { label: 'Home', path: '/home', icon: <FaHome /> },
     { label: 'Inventories', path: '/', icon: <FaBoxOpen /> },

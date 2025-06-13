@@ -167,9 +167,9 @@ export default function App() {
         <Toaster position="top-right" />
         <Routes>
           {/* Public Routes */}
-          <Route path='/login' element={<Login />} />
           <Route path='/create-user' element={<Register />} />
           <Route path='/register' element={<Register />} />
+          <Route path='/login' element={<Login />} />
           
           {/* Protected Routes */}
           <Route path='/home' element={
@@ -187,7 +187,7 @@ export default function App() {
               <HomePage />
             </ProtectedRoute>
           } /> */}
-          
+          <Route path='/users' element={<ProtectedRoute><User/></ProtectedRoute>}/>
           <Route path='/add-space' element={
             <ProtectedRoute>
               <SpaceFormProvider>
@@ -220,13 +220,61 @@ export default function App() {
               <FinancePage />
             </ProtectedRoute>
           } />
+          <Route path='/booking/:id' element={
+            <ProtectedRoute>
+             < BookingDetails />
+            </ProtectedRoute>
+          } />
+          <Route path='/booking-preview' element={
+            <ProtectedRoute>
+             <BookingPreview />
+            </ProtectedRoute>
+          } />
+           <Route path='/pipeline' element={
+            <ProtectedRoute>
+              <div style={{ height: '100%', width: '100%' }}>
+                
+                <PipelineProvider>
+                  <ReactFlowProvider>
+                    <CampaignPipeline />
+                  </ReactFlowProvider>
+                </PipelineProvider>
+              </div>
+              </ProtectedRoute>
+            } />
+            <Route path='/pipeline/:id' element={
+              <ProtectedRoute>
+              <div style={{ height: '100%', width: '100%' }}>
+                <PipelineProvider>
+                  <ReactFlowProvider>
+                    <CampaignPipeline />
+                  </ReactFlowProvider>
+                </PipelineProvider>
+              </div>
+              </ProtectedRoute>
+            } />
+            <Route path='/campaign-details/:id' element={
+              <ProtectedRoute>
+              <div className="">
+                <PipelineProvider>
+                  <ReactFlowProvider>
+                    <CampaignDetails />
+                  </ReactFlowProvider>
+                </PipelineProvider>
+              </div>
+              </ProtectedRoute>
+            } />
+             <Route path='/proposal/:id' element={<ProtectedRoute><ProposalDetails /></ProtectedRoute>} />
+            <Route path='/space/:id' element={<ProtectedRoute><SpaceDetails /></ProtectedRoute>} />
+            <Route path='/space/:id/edit' element={<ProtectedRoute><EditSpace /></ProtectedRoute>} />
+             <Route path='/gallery' element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
           {/* Protected Routes wrapped in ProtectedRoute */}
-          <Route element={<ProtectedRoute />}>
+          {/* <Route element={<ProtectedRoute />}>
             <Route path='/booking-preview' element={<BookingPreview />} />
             <Route path='/proposal/:id' element={<ProposalDetails />} />
             <Route path='/space/:id' element={<SpaceDetails />} />
             <Route path='/space/:id/edit' element={<EditSpace />} />
-            <Route path='/booking/:id' element={<BookingDetails />} />
+        
             <Route path='/pipeline' element={
               <div style={{ height: '100%', width: '100%' }}>
                 <PipelineProvider>
@@ -255,7 +303,9 @@ export default function App() {
                 </PipelineProvider>
               </div>
             } />
-          </Route>
+          </Route> */}
+         
+
 
         </Routes>
       </div>

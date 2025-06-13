@@ -28,50 +28,59 @@
 
 // export const useAuth = () => useContext(AuthContext);
 
-  import React, { createContext, useState, useEffect, useContext } from 'react';
-  import { useNavigate } from 'react-router-dom';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-  const AuthContext = createContext();
+const AuthContext = createContext();
 
-  export const AuthProvider = ({ children }) => {
-    const [auth, setAuth] = useState(null);
-    const [loading, setLoading] = useState(true); // Track loading state
-    const navigate = useNavigate();
+export const AuthProvider = ({ children }) => {
+  const [auth, setAuth] = useState(null);
+  const [loading, setLoading] = useState(true); // Track loading state
+  const navigate = useNavigate();
 
-    useEffect(() => {
-      const storedToken = localStorage.getItem('accessToken');
-      const storedName = localStorage.getItem('userName');
-      if (storedToken && storedName) {
-        // If token exists, we can verify it or just set the user
-        console.log("stored name in auth context is",storedName);
-        setAuth({ token: storedToken,userName: storedName });
-      } else {
-        setAuth(null); // User is not authenticated
-      }
+  // Ensure navigate stays stable
+  const stableNavigate = useCallback(navigate, []);
 
-      setLoading(false); // Done loading
-    }, []);
-useEffect(() => {
-  console.log('Auth state:', auth);
-}, [auth]);  // This will run whenever `auth` state changes
+  useEffect(() => {
+    const storedToken = localStorage.getItem('accessToken');
+    const storedName = localStorage.getItem('userName');
+    const storedEmail = localStorage.getItem('userEmail');
+    const storedRole = localStorage.getItem('userRole');
+    
+    if (storedToken && storedName && storedRole) {
+      setAuth({ token: storedToken, userName: storedName, role: storedRole });
+    } else {
+      setAuth(null); // User is not authenticated
+    }
 
-    const logout = () => {
-      console.log("Logout triggered"); 
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('userName');
-      setAuth(null);
-      navigate('/login');
-      window.location.href = '/login';
-       window.location.reload();
-    };
+    setLoading(false); // Done loading
+  }, []);
 
-    if (loading) return <div>Loading...</div>; // Show loading screen until auth state is ready
+  useEffect(() => {
+    if (auth) {
+      stableNavigate('/home');  // Redirect immediately when auth state changes
+    }
+  }, [auth, stableNavigate]);
 
-    return (
-      <AuthContext.Provider value={{ auth, setAuth, logout }}>
-        {children}
-      </AuthContext.Provider>
-    );
+  const logout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userRole');
+    setAuth(null);
+    stableNavigate('/login');
   };
 
-  export const useAuth = () => useContext(AuthContext);
+  if (loading) return <div>Loading...</div>; // Show loading screen until auth state is ready
+
+  return (
+    <AuthContext.Provider value={{ auth, setAuth, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext);
+
+
+

@@ -13,6 +13,7 @@ export default function BookingDetails() {
   const [booking, setBooking] = useState(null);
 const [showDeletePopup, setShowDeletePopup] = useState(false);
   useEffect(() => {
+    console.log("In booking details");
     const fetchBooking = async () => {
       try {
         const res = await fetch(`http://localhost:3000/api/bookings/${id}`);
