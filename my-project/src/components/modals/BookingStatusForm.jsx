@@ -10,9 +10,35 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
   const [bookingDate, setBookingDate] = useState('');
   const [memberName, setMemberName] = useState('');
   const { pipelineData, setPipelineData } = useContext(PipelineContext);
-
+ const username = localStorage.getItem('userName'); // Replace with your actual AuthContext or storage mechanism
+  const useremail = localStorage.getItem('userEmail');
+  const userId = localStorage.getItem('userId');
   const handleSave = async () => {
+    const previousBookingStatus = { ...pipelineData?.bookingStatus }; // Capture the previous booking status
+
+    const newBookingStatus = {
+      confirmed: true,
+      reference: bookingNumber,
+      bookingDate,
+      memberName,
+    };
+
+    // Log the change to the ChangeLog table
+    const changeLogData = {
+      campaignId,
+      userId: userId,  // Use username or email from localStorage or AuthContext
+      changeType: 'Booking Form Status Update',
+      userName:username,
+      userEmail:useremail,
+      previousValue: previousBookingStatus,
+      newValue: newBookingStatus,
+    };
+
+
     try {
+      console.log("Changelog data from fr is",changeLogData);
+      const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+      console.log("Change log for booking status form is",res1);
       const res = await axios.put(
         `http://localhost:3000/api/pipeline/campaign/${campaignId}/bookingStatus`,
         {

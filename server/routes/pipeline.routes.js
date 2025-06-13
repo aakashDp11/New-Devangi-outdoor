@@ -12,7 +12,9 @@ import { uploadToS3 } from '../utils/s3uploader.js';
 import Campaign from '../models/campign.model.js';
 const router = express.Router();
 import Pipeline from '../models/pipeline.model.js';
+import ChangeLog from '../models/changelog.model.js';
 import moment from 'moment';
+import mongoose from 'mongoose';
 
 
 router.get('/campaign/:campaignId', getPipelineByCampaignId);
@@ -56,31 +58,7 @@ router.post('/campaign/:campaignId', createPipelineForCampaign);
 
 router.put('/campaign/:campaignId/bookingStatus', updateBookingStatus);
 router.put('/campaign/:campaignId/artwork', confirmArtwork);
-// router.post('/campaign/:campaignId/artwork/upload', upload.single('file'), async (req, res) => {
-//   try {
-//     if (!req.file) {
-//       return res.status(400).json({ error: 'No file uploaded' });
-//     }
 
-//     const fileUrl = `/uploads/${req.file.filename}`; // Adjust path if needed
-
-//     // ✅ Save the document URL to pipeline.artwork.documentUrl
-//     const pipeline = await Pipeline.findOneAndUpdate(
-//       { campaign: req.params.campaignId },
-//       { 'artwork.documentUrl': fileUrl },
-//       { new: true }
-//     );
-
-//     if (!pipeline) {
-//       return res.status(404).json({ error: 'Pipeline not found for the campaign' });
-//     }
-
-//     res.status(200).json({ message: 'Artwork uploaded', documentUrl: fileUrl, pipeline });
-//   } catch (error) {
-//     console.error('Artwork upload error:', error);
-//     res.status(500).json({ error: error.message || 'Failed to upload artwork' });
-//   }
-// });
 router.post('/campaign/:campaignId/artwork/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file || !req.file.path) {
@@ -115,23 +93,82 @@ router.post('/campaign/:campaignId/artwork/upload', upload.single('file'), async
   }
 });
 router.put('/campaign/:campaignId/printingStatus', confirmPrintingStatus);
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+
+
+// router.post('/campaign/changeLog', async (req, res) => {
+//   console.log('Received request body:', req.body);  // Log the complete request body
+//   const { campaignId, userId, userEmail, userName, changeType, previousValue, newValue } = req.body;
+
+//   // Ensure campaignId and userId are valid ObjectIds
+//   if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+//     console.log('Invalid campaignId:', campaignId);  // Log invalid campaignId
+//     return res.status(400).send({ message: 'Invalid campaignId' });
+//   }
+
+//   if (!mongoose.Types.ObjectId.isValid(userId)) {
+//     console.log('Invalid userId:', userId);  // Log invalid userId
+//     return res.status(400).send({ message: 'Invalid userId' });
+//   }
+
+//   try {
+//     // No need to explicitly cast here if you've already validated
+//     const changeLog = new ChangeLog({
+//       campaignId: mongoose.Types.ObjectId(campaignId),  // Cast to ObjectId
+//       userId: mongoose.Types.ObjectId(userId),  // Cast to ObjectId
+//       userEmail,
+//       userName,
+//       changeType,
+//       previousValue,
+//       newValue,
+//     });
+
+//     await changeLog.save();
+//     res.status(201).send({ message: 'Change log saved successfully' });
+//   } catch (err) {
+//     console.error('Error saving change log:', err);
+//     res.status(500).send({ message: 'Error saving change log' });
+//   }
+// });
+router.post('/change-Log', async(req, res) => {
+  console.log('Received test request body:', req.body);
+  const { campaignId, userId, userEmail, userName, changeType, previousValue, newValue } = req.body;
+
+  // Ensure campaignId and userId are valid ObjectIds
+  if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+    console.log('Invalid campaignId:', campaignId);  // Log invalid campaignId
+    return res.status(400).send({ message: 'Invalid campaignId' });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    console.log('Invalid userId:', userId);  // Log invalid userId
+    return res.status(400).send({ message: 'Invalid userId' });
+  }
+
+  try {
+    // No need to explicitly cast here if you've already validated
+    const changeLog = new ChangeLog({
+      campaignId: new mongoose.Types.ObjectId(campaignId),  // Cast to ObjectId
+userId: new mongoose.Types.ObjectId(userId),  // Cast to ObjectId
+      userEmail,
+      userName,
+      changeType,
+      previousValue,
+      newValue,
+    });
+
+    await changeLog.save();
+    res.status(201).send({ message: 'Change log saved successfully' });
+  } catch (err) {
+    console.error('Error saving change log:', err);
+    res.status(500).send({ message: 'Error saving change log' });
+  }
+});
 router.put('/campaign/:campaignId/mountingStatus', confirmMountingStatus);
 router.post('/campaign/:campaignId/invoice/upload', upload.single('file'), uploadInvoice);
 router.put('/campaign/:campaignId/invoice', updateInvoice);
-// router.put('/campaign/:id/update-costs', async (req, res) => {
-//   try {
-//     const { inventoryCosts } = req.body;
-//     console.log("inventoryCosts",inventoryCosts);
-//     const campaign = await Campaign.findByIdAndUpdate(
-//       req.params.id,
-//       { inventoryCosts },
-//       { new: true }
-//     );
-//     res.json(campaign);
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
+
 // Payment Route
  
 router.put('/campaign/:id/update-costs', async (req, res) => {

@@ -174,7 +174,9 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose }) {
   const [isArtworkSaved, setIsArtworkSaved] = useState(false);
   const [artworkUrl, setArtworkUrl] = useState('');
   const { pipelineData, setPipelineData } = useContext(PipelineContext);
-
+ const username = localStorage.getItem('userName'); // Replace with your actual AuthContext or storage mechanism
+  const useremail = localStorage.getItem('userEmail');
+  const userId = localStorage.getItem('userId');
   useEffect(() => {
     const fetchArtwork = async () => {
       try {
@@ -218,8 +220,27 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose }) {
       toast.error('Please upload artwork and select received date.');
       return;
     }
+const previousArtworkStatus = { ...pipelineData?.artwork }; // Capture the previous booking status
 
+    const newArtworkStatus = {
+      confirmed: true,
+     receivedDate,
+    };
+
+    // Log the change to the ChangeLog table
+    const changeLogData = {
+      campaignId,
+      userId: userId,  // Use username or email from localStorage or AuthContext
+      changeType: 'Artwork Form Status Update',
+      userName:username,
+      userEmail:useremail,
+      previousValue: previousArtworkStatus,
+      newValue: newArtworkStatus,
+    };
     try {
+      console.log("Changelog data from fr is",changeLogData);
+            const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+            console.log("Change log for booking status form is",res1);
       const formData = new FormData();
       formData.append('file', artworkFile);
 

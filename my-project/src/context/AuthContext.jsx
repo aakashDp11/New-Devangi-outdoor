@@ -46,9 +46,10 @@ export const AuthProvider = ({ children }) => {
     const storedName = localStorage.getItem('userName');
     const storedEmail = localStorage.getItem('userEmail');
     const storedRole = localStorage.getItem('userRole');
+    const storedUserid = localStorage.getItem('userId');
     
     if (storedToken && storedName && storedRole) {
-      setAuth({ token: storedToken, userName: storedName, role: storedRole });
+      setAuth({ token: storedToken, userName: storedName, role: storedRole,userId:storedUserid });
     } else {
       setAuth(null); // User is not authenticated
     }
@@ -67,6 +68,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('userName');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
     setAuth(null);
     stableNavigate('/login');
   };

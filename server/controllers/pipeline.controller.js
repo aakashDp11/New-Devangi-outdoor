@@ -86,7 +86,7 @@ export const createPipelineForCampaign = async (req, res) => {
 export const updateBookingStatus = async (req, res) => {
   const { campaignId } = req.params;
   const { confirmed, reference,bookingDate,memberName } = req.body;
-
+console.log("One for booking statis")
   try {
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },

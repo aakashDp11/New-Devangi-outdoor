@@ -141,6 +141,7 @@ const {auth,setAuth}=useAuth();
       localStorage.setItem('userName', user.name);
       localStorage.setItem('userEmail', user.email);
       localStorage.setItem('userRole', user.role);
+      localStorage.setItem('userId', user.id);
       toast.success('Login successful!');
  setAuth({ token: accessToken, userName: user.name, role: user.role });
       // Redirect immediately after setting the state and localStorage

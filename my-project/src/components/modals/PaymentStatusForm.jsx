@@ -16,8 +16,10 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
     totalBeforeGST: 0,
     finalWithGST: 0,
   });
-
-  const { setPipelineData } = useContext(PipelineContext);
+ const username = localStorage.getItem('userName'); // Replace with your actual AuthContext or storage mechanism
+  const useremail = localStorage.getItem('userEmail');
+  const userId = localStorage.getItem('userId');
+  const { pipelineData,setPipelineData } = useContext(PipelineContext);
 
   useEffect(() => {
     const fetchPipelinePayment = async () => {
@@ -91,6 +93,12 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
   const paymentDue = parseFloat(totalAmount || 0) - totalPaid;
 
   const handleSave = async () => {
+    const previousPaymentStatus = { ...pipelineData?.payment }; // Capture the previous booking status
+
+   
+
+    // Log the change to the ChangeLog table
+    
     try {
       if (totalPaid > parseFloat(totalAmount)) {
         toast.error('❌ Total paid exceeds the total amount!');
@@ -98,14 +106,30 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
       }
 
       const cleanedPayments = payments.map(({ locked, ...rest }) => rest);
-
+       const newPaymentStatus = {
+      totalAmount,
+        payments: cleanedPayments,
+        totalPaid,
+        paymentDue,
+    };
+    const changeLogData = {
+      campaignId,
+      userId: userId,  // Use username or email from localStorage or AuthContext
+      changeType: 'Payment Status Update',
+      userName:username,
+      userEmail:useremail,
+      previousValue: previousPaymentStatus,
+      newValue: newPaymentStatus,
+    };
       const payload = {
         totalAmount,
         payments: cleanedPayments,
         totalPaid,
         paymentDue,
       };
-
+console.log("Changelog data from fr is",changeLogData);
+      const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+      console.log("Change log for booking status form is",res1);
       const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/payment`, payload);
       setPipelineData(res.data);
       toast.success('Payment details saved!');

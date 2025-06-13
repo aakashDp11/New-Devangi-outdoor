@@ -198,7 +198,9 @@ export default function InvoiceForm({ campaignId, onConfirm, onClose }) {
   const [isInvoiceSaved, setIsInvoiceSaved] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState('');
   const { pipelineData, setPipelineData } = useContext(PipelineContext);
-
+const username = localStorage.getItem('userName'); // Replace with your actual AuthContext or storage mechanism
+  const useremail = localStorage.getItem('userEmail');
+  const userId = localStorage.getItem('userId');
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
@@ -250,7 +252,27 @@ export default function InvoiceForm({ campaignId, onConfirm, onClose }) {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       }
+      const previousInvoiceDetails = { ...pipelineData?.invoice }; // Capture the previous booking status
 
+    const newInvoiceDetails = {
+       invoiceNumber,
+        invoiceDate,
+        invoiceValue,
+    };
+
+    // Log the change to the ChangeLog table
+    const changeLogData = {
+      campaignId,
+      userId: userId,  // Use username or email from localStorage or AuthContext
+      changeType: 'Invoice details Update',
+      userName:username,
+      userEmail:useremail,
+      previousValue: previousInvoiceDetails,
+      newValue: newInvoiceDetails,
+    };
+console.log("Changelog data from fr is",changeLogData);
+      const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+      console.log("Change log for booking status form is",res1);
       const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/invoice`, {
         invoiceNumber,
         invoiceDate,

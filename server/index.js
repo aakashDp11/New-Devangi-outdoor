@@ -37,6 +37,7 @@ app.use(cors({
 }));
 let db;
 app.use(express.json()); // for parsing application/json
+
 app.use('/api/spaces', spaceRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/pipeline',pipelineRoutes);
@@ -44,7 +45,15 @@ app.use('/api/proposals', proposalRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/debug', debugRoutes);
+app.use((req, res, next) => {
+  res.status(404).send({ message: 'Route not found' });
+});
 
+// Error handling middleware (500 handler for unexpected errors)
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send({ message: 'Internal Server Error' });
+});
 export const createAdminIfNotExists = async () => {
   const existingAdmin = await User.findOne({ role: 'admin' });
   if (!existingAdmin) {

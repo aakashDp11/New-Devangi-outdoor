@@ -11,7 +11,9 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
   const [poDate, setPoDate] = useState('');
   const [poValue, setPoValue] = useState('');
   const { pipelineData, setPipelineData } = useContext(PipelineContext);
-
+ const username = localStorage.getItem('userName'); // Replace with your actual AuthContext or storage mechanism
+  const useremail = localStorage.getItem('userEmail');
+  const userId = localStorage.getItem('userId');
   const handleFileChange = (e) => {
     setPoFile(e.target.files[0]);
   };
@@ -34,6 +36,7 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
   };
 
   const handleSave = async () => {
+    
     try {
       if (poFile) {
         const formData = new FormData();
@@ -44,7 +47,7 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
           { headers: { 'Content-Type': 'multipart/form-data' } }
         );
       }
-
+     const previousPoDetails = { ...pipelineData?.po };
       const res = await axios.put(
         `http://localhost:3000/api/pipeline/campaign/${campaignId}/po`,
         {

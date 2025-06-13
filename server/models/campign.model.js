@@ -40,6 +40,7 @@ const campaignSchema = new Schema({
  artwork: {
     confirmed: { type: Boolean, default: false },
     documentUrl: { type: String },
+    recievedDate:{type:String}
   },
    inventoryCosts: [{
     id: { type: Schema.Types.ObjectId, ref: 'Space', required: true },
