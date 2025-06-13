@@ -9,7 +9,7 @@ import { toast } from 'sonner'; // ✅ Import toast
 export default function PreviewAddSpace() {
   const navigate = useNavigate();
   const { form, stepOrder, completedSteps } = useSpaceForm();
-
+console.log("basic details",form);
   const handleBack = () => {
     navigate('/add-space');
   };

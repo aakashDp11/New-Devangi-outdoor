@@ -68,19 +68,7 @@ export default function SpaceDetails() {
         <div className="flex mt-[3%] flex-col md:flex-row gap-8">
           {/* Image */}
           <div className="w-full md:w-1/3">
-            {/* <div className="w-full h-64 overflow-hidden rounded-md bg-gray-100">
-              {space.mainPhoto ? (
-                <img
-                  src={`http://localhost:3000/uploads/${space.mainPhoto}`}
-                  alt="Main Photo"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                  No Image
-                </div>
-              )}
-            </div> */}
+          
             <div className="w-full grid grid-cols-2 gap-4">
   {/* Main Photo */}
   {space.mainPhoto && (

@@ -189,11 +189,11 @@ export default function App() {
           } /> */}
           <Route path='/users' element={<ProtectedRoute><User/></ProtectedRoute>}/>
           <Route path='/add-space' element={
-            <ProtectedRoute>
               <SpaceFormProvider>
+            <ProtectedRoute>
                 <AddSpaceForm />
-              </SpaceFormProvider>
             </ProtectedRoute>
+              </SpaceFormProvider>
           } />
           <Route path='/booking-dashboard' element={
             <ProtectedRoute>
@@ -205,11 +205,23 @@ export default function App() {
               <Report />
             </ProtectedRoute>
           } />
+                <Route path='/preview-add-space' element={
+   <SpaceFormProvider>
+    <ProtectedRoute>
+     <PreviewAddSpaceForm/>
+     </ProtectedRoute>
+  </SpaceFormProvider>
+ } />
           <Route path='/create-booking' element={
-            <ProtectedRoute>
-              <CreateBookingOrderForm />
-            </ProtectedRoute>
+            <BookingFormProvider>
+  <ProtectedRoute>
+    <CreateBookingOrderForm />
+  </ProtectedRoute>
+</BookingFormProvider>
           } />
+             <Route path="/create-booking-orderInfo" element={<BookingFormProvider>
+  <ProtectedRoute><BookingFormOrderInfo /></ProtectedRoute></BookingFormProvider>} />
+   <Route path="/create-booking-addSpaces" element={<BookingFormProvider><ProtectedRoute><BookingFormAddSpaces /></ProtectedRoute></BookingFormProvider>} />
           <Route path='/proposal-dashboard' element={
             <ProtectedRoute>
               <ProposalDashboard />
@@ -226,10 +238,13 @@ export default function App() {
             </ProtectedRoute>
           } />
           <Route path='/booking-preview' element={
+            <BookingFormProvider>
             <ProtectedRoute>
              <BookingPreview />
             </ProtectedRoute>
+            </BookingFormProvider>
           } />
+             <Route path="/proposal/:id" element={ <ProtectedRoute><ProposalDetails /></ProtectedRoute>} />
            <Route path='/pipeline' element={
             <ProtectedRoute>
               <div style={{ height: '100%', width: '100%' }}>
@@ -264,46 +279,11 @@ export default function App() {
               </div>
               </ProtectedRoute>
             } />
-             <Route path='/proposal/:id' element={<ProtectedRoute><ProposalDetails /></ProtectedRoute>} />
+             <Route path='/proposal/:id' element={<BookingFormProvider><ProtectedRoute><ProposalDetails /></ProtectedRoute></BookingFormProvider>} />
             <Route path='/space/:id' element={<ProtectedRoute><SpaceDetails /></ProtectedRoute>} />
             <Route path='/space/:id/edit' element={<ProtectedRoute><EditSpace /></ProtectedRoute>} />
              <Route path='/gallery' element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
-          {/* Protected Routes wrapped in ProtectedRoute */}
-          {/* <Route element={<ProtectedRoute />}>
-            <Route path='/booking-preview' element={<BookingPreview />} />
-            <Route path='/proposal/:id' element={<ProposalDetails />} />
-            <Route path='/space/:id' element={<SpaceDetails />} />
-            <Route path='/space/:id/edit' element={<EditSpace />} />
-        
-            <Route path='/pipeline' element={
-              <div style={{ height: '100%', width: '100%' }}>
-                <PipelineProvider>
-                  <ReactFlowProvider>
-                    <CampaignPipeline />
-                  </ReactFlowProvider>
-                </PipelineProvider>
-              </div>
-            } />
-            <Route path='/gallery' element={<Gallery />} />
-            <Route path='/pipeline/:id' element={
-              <div style={{ height: '100%', width: '100%' }}>
-                <PipelineProvider>
-                  <ReactFlowProvider>
-                    <CampaignPipeline />
-                  </ReactFlowProvider>
-                </PipelineProvider>
-              </div>
-            } />
-            <Route path='/campaign-details/:id' element={
-              <div className="">
-                <PipelineProvider>
-                  <ReactFlowProvider>
-                    <CampaignDetails />
-                  </ReactFlowProvider>
-                </PipelineProvider>
-              </div>
-            } />
-          </Route> */}
+
          
 
 
