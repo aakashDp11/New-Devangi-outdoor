@@ -13,6 +13,7 @@ import Campaign from '../models/campign.model.js';
 const router = express.Router();
 import Pipeline from '../models/pipeline.model.js';
 import ChangeLog from '../models/changelog.model.js';
+import Booking from '../models/booking.model.js';
 import moment from 'moment';
 import mongoose from 'mongoose';
 
@@ -163,6 +164,56 @@ userId: new mongoose.Types.ObjectId(userId),  // Cast to ObjectId
   } catch (err) {
     console.error('Error saving change log:', err);
     res.status(500).send({ message: 'Error saving change log' });
+  }
+});
+// router.get('/change-Log', async (req, res) => {
+//   try {
+//     const changelogs = await ChangeLog.find()
+//       .sort({ createdAt: -1 })
+//       .populate('campaignId', 'campaignName')
+//       .populate('userId', 'name');
+
+//     res.json({ changelogs });
+//   } catch (error) {
+//     console.error('Error fetching changelogs:', error);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// });
+router.get('/change-Log', async (req, res) => {
+  try {
+    const changelogs = await ChangeLog.find()
+      .sort({ createdAt: -1 })
+      .populate('campaignId', 'campaignName')
+      .populate('userId', 'name');
+
+    // Fetch all bookings with their campaigns
+    const bookings = await Booking.find().select('campaigns companyName clientName');
+
+    // Map campaignId to booking info
+    const campaignToBookingMap = {};
+    bookings.forEach((booking) => {
+      booking.campaigns.forEach((campaignId) => {
+        campaignToBookingMap[campaignId.toString()] = {
+          bookingName: booking.companyName,
+          clientName: booking.clientName,
+        };
+      });
+    });
+
+    // Attach booking/client info to each changelog
+    const enrichedLogs = changelogs.map((log) => {
+      const bookingInfo = campaignToBookingMap[log.campaignId?._id?.toString()] || {};
+      return {
+        ...log.toObject(),
+        bookingName: bookingInfo.bookingName || null,
+        clientName: bookingInfo.clientName || null,
+      };
+    });
+
+    res.json({ changelogs: enrichedLogs });
+  } catch (error) {
+    console.error('Error fetching changelogs:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 router.put('/campaign/:campaignId/mountingStatus', confirmMountingStatus);
