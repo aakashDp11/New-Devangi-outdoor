@@ -102,19 +102,7 @@ console.log("One for booking statis")
 /**
  * Confirm Artwork
  */
-// export const confirmArtwork = async (req, res) => {
-//   const { campaignId } = req.params;
-//   try {
-//     const pipeline = await Pipeline.findOneAndUpdate(
-//       { campaign: campaignId },
-//       { 'artwork.confirmed': true },
-//       { new: true }
-//     );
-//     res.json(pipeline);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message || 'Failed to confirm artwork' });
-//   }
-// };
+
 export const confirmArtwork = async (req, res) => {
   const { campaignId } = req.params;
   const { receivedDate } = req.body;
@@ -145,40 +133,68 @@ export const confirmArtwork = async (req, res) => {
 /**
  * Confirm Printing Status
  */
+
 // export const confirmPrintingStatus = async (req, res) => {
 //   const { campaignId } = req.params;
+//   const { printingDate } = req.body;
+
 //   try {
+//     const updateData = {
+//       'printingStatus.confirmed': true,
+//       ...(printingDate && { 'printingStatus.printingDate': printingDate }),
+//     };
+
 //     const pipeline = await Pipeline.findOneAndUpdate(
 //       { campaign: campaignId },
-//       { 'printingStatus.confirmed': true },
+//       updateData,
 //       { new: true }
 //     );
-//     res.json(pipeline);
+
+//     if (!pipeline) {
+//       return res.status(404).json({ error: 'Pipeline not found' });
+//     }
+
+//     res.status(200).json(pipeline);
 //   } catch (error) {
+//     console.error('Error confirming printing status:', error);
 //     res.status(500).json({ error: error.message || 'Failed to confirm printing status' });
 //   }
 // };
-export const confirmPrintingStatus = async (req, res) => {
-  const { campaignId } = req.params;
-  const { printingDate } = req.body;
 
+
+
+export const confirmPrintingStatus = async (req, res) => {
+  const { spaceId } = req.params;
+  const {
+    confirmed,
+    printingDate,
+    assignedPerson,
+    assignedAgency,
+    printingMaterial,
+    note
+  } = req.body;
+console.log("Payload recieved in backend is",req.body);
   try {
     const updateData = {
-      'printingStatus.confirmed': true,
+      'printingStatus.confirmed': confirmed ?? true,
       ...(printingDate && { 'printingStatus.printingDate': printingDate }),
+      ...(assignedPerson && { 'printingStatus.assignedPerson': assignedPerson }),
+      ...(assignedAgency && { 'printingStatus.assignedAgency': assignedAgency }),
+      ...(printingMaterial && { 'printingStatus.printingMaterial': printingMaterial }),
+      ...(note && { 'printingStatus.note': note }),
     };
 
-    const pipeline = await Pipeline.findOneAndUpdate(
-      { campaign: campaignId },
-      updateData,
+    const updatedSpace = await Space.findByIdAndUpdate(
+      spaceId,
+      { $set: updateData },
       { new: true }
     );
 
-    if (!pipeline) {
-      return res.status(404).json({ error: 'Pipeline not found' });
+    if (!updatedSpace) {
+      return res.status(404).json({ error: 'Space not found' });
     }
 
-    res.status(200).json(pipeline);
+    res.status(200).json(updatedSpace);
   } catch (error) {
     console.error('Error confirming printing status:', error);
     res.status(500).json({ error: error.message || 'Failed to confirm printing status' });
@@ -188,20 +204,55 @@ export const confirmPrintingStatus = async (req, res) => {
 /**
  * Confirm Mounting Status
  */
+// export const confirmMountingStatus = async (req, res) => {
+//   const { campaignId } = req.params;
+//   try {
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: campaignId },
+//       { 'mountingStatus.confirmed': true },
+//       { new: true }
+//     );
+//     res.json(pipeline);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message || 'Failed to confirm mounting status' });
+//   }
+// };
+
 export const confirmMountingStatus = async (req, res) => {
-  const { campaignId } = req.params;
+  const { spaceId } = req.params;
+  const {
+    confirmed,
+    receivedDate,
+    assignedPerson,
+    assignedAgency,
+    note
+  } = req.body;
+
   try {
-    const pipeline = await Pipeline.findOneAndUpdate(
-      { campaign: campaignId },
-      { 'mountingStatus.confirmed': true },
+    const updateData = {
+      'mountingStatus.confirmed': confirmed ?? true,
+      ...(receivedDate && { 'mountingStatus.mountingDate': receivedDate }),
+      ...(assignedPerson && { 'mountingStatus.assignedPerson': assignedPerson }),
+      ...(assignedAgency && { 'mountingStatus.assignedAgency': assignedAgency }),
+      ...(note && { 'mountingStatus.note': note }),
+    };
+
+    const updatedSpace = await Space.findByIdAndUpdate(
+      spaceId,
+      { $set: updateData },
       { new: true }
     );
-    res.json(pipeline);
+
+    if (!updatedSpace) {
+      return res.status(404).json({ error: 'Space not found' });
+    }
+
+    res.status(200).json(updatedSpace);
   } catch (error) {
+    console.error('Error confirming mounting status:', error);
     res.status(500).json({ error: error.message || 'Failed to confirm mounting status' });
   }
 };
-
 export const uploadInvoice = async (req, res) => {
   try {
     const campaignId = req.params.campaignId;

@@ -74,6 +74,7 @@ const pipelineSchema = new Schema({
     reference: { type: String },
     bookingDate:{ type: String },
     memberName:{ type: String },
+    estimateDocument :{type:String}
   },
 
   po: {

@@ -48,12 +48,20 @@ const spaceSchema = new Schema({
 
   printingStatus: {
     confirmed: { type: Boolean, default: false },
-    printingDate:{type: String}
+    printingDate:{type: String,default:''},
+    printingMaterial:{type:String,default:''},
+    assignedPerson:{type:String,default:''},
+    assignedAgency:{type:String,default:''},
+    note:{type:String}
   },
-
+  numberOfBookings:{type:Number,default:0},
+  totalBookingValue:{type:Number,default:0},
   mountingStatus: {
     confirmed: { type: Boolean, default: false },
-    printingDate:{type: String}
+    mountingDate:{type: String,default:''},
+    assignedPerson:{type:String,default:''},
+    assignedAgency:{type:String,default:''},
+    note:{type:String}
   },
 
   otherPhotos: [String],
@@ -62,20 +70,6 @@ const spaceSchema = new Schema({
     type: String,
     default: 'Completely available',
   }, 
-//   unitStatuses: [
-//   {
-//     unitIndex: { type: Number, required: true }, // e.g. 0 for first unit, 1 for second, etc.
-//     printingStatus: {
-//       confirmed: { type: Boolean, default: false },
-//       printingDate: { type: String }
-//     },
-//     mountingStatus: {
-//       confirmed: { type: Boolean, default: false },
-//       mountingDate: { type: String }
-//     }
-//   }
-// ],
-
 
   dates: [{ type: String }], 
   campaignDates: [{

@@ -516,8 +516,8 @@ function CampaignPipelineInternal({ campaignId }) {
             {selectedNode.id === 'artwork' && <ArtworkForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
             {selectedNode.id === 'invoice' && <InvoiceForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
             {selectedNode.id === 'payment' && <PaymentStatusForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
-            {selectedNode.id.startsWith('print-') && <PrintingStatus spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
-            {selectedNode.id.startsWith('mount-') && <MountingStatus spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {selectedNode.id.startsWith('print-') && <PrintingStatus campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {selectedNode.id.startsWith('mount-') && <MountingStatus campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
           </div>
         </div>
       )}

@@ -357,14 +357,46 @@ router.put('/:id', upload.fields([
   }
 });
 
-  router.put('/:id/printingStatus', async (req, res) => {
+//   router.put('/:id/printingStatus', async (req, res) => {
+//   try {
+//     const space = await Space.findById(req.params.id);
+//     if (!space) {
+//       return res.status(404).json({ error: 'Space not found' });
+//     }
+
+//     space.printingStatus.confirmed = true;
+//     await space.save();
+
+//     res.json(space);
+//   } catch (error) {
+//     console.error('Error updating printing status:', error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// });
+router.put('/:id/printingStatus', async (req, res) => {
   try {
     const space = await Space.findById(req.params.id);
     if (!space) {
       return res.status(404).json({ error: 'Space not found' });
     }
 
-    space.printingStatus.confirmed = true;
+    const {
+      confirmed,
+      printingDate,
+      assignedPerson,
+      assignedAgency,
+      printingMaterial,
+      note
+    } = req.body;
+
+    // Update fields only if they are provided
+    if (confirmed !== undefined) space.printingStatus.confirmed = confirmed;
+    if (printingDate !== undefined) space.printingStatus.printingDate = printingDate;
+    if (assignedPerson !== undefined) space.printingStatus.assignedPerson = assignedPerson;
+    if (assignedAgency !== undefined) space.printingStatus.assignedAgency = assignedAgency;
+    if (printingMaterial !== undefined) space.printingStatus.printingMaterial = printingMaterial;
+    if (note !== undefined) space.printingStatus.note = note;
+
     await space.save();
 
     res.json(space);
@@ -374,7 +406,26 @@ router.put('/:id', upload.fields([
   }
 });
 
+
+
 // Confirm mounting status on space (Safe isolated route)
+// router.put('/:id/mountingStatus', async (req, res) => {
+//   try {
+//     const space = await Space.findById(req.params.id);
+//     if (!space) {
+//       return res.status(404).json({ error: 'Space not found' });
+//     }
+
+//     space.mountingStatus.confirmed = true;
+//     await space.save();
+
+//     res.json(space);
+//   } catch (error) {
+//     console.error('Error updating mounting status:', error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// });
+
 router.put('/:id/mountingStatus', async (req, res) => {
   try {
     const space = await Space.findById(req.params.id);
@@ -382,7 +433,20 @@ router.put('/:id/mountingStatus', async (req, res) => {
       return res.status(404).json({ error: 'Space not found' });
     }
 
-    space.mountingStatus.confirmed = true;
+    const {
+      confirmed,
+      receivedDate,
+      assignedPerson,
+      assignedAgency,
+      note
+    } = req.body;
+
+    if (confirmed !== undefined) space.mountingStatus.confirmed = confirmed;
+    if (receivedDate !== undefined) space.mountingStatus.mountingDate = receivedDate;
+    if (assignedPerson !== undefined) space.mountingStatus.assignedPerson = assignedPerson;
+    if (assignedAgency !== undefined) space.mountingStatus.assignedAgency = assignedAgency;
+    if (note !== undefined) space.mountingStatus.note = note;
+
     await space.save();
 
     res.json(space);
@@ -391,6 +455,7 @@ router.put('/:id/mountingStatus', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
  
   // DELETE /api/spaces/:id
 router.delete('/:id', async (req, res) => {

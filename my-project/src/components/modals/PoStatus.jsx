@@ -46,8 +46,28 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
           formData,
           { headers: { 'Content-Type': 'multipart/form-data' } }
         );
+      } else{
+        toast.error('Please upload an PO file before saving.');
+        return;
       }
      const previousPoDetails = { ...pipelineData?.po };
+     
+
+    // Log the change to the ChangeLog table
+    const changeLogData = {
+      campaignId,
+      userId: userId,  // Use username or email from localStorage or AuthContext
+      changeType: 'PO Status Update',
+      userName:username,
+      userEmail:useremail,
+      previousValue: previousPoDetails,
+      newValue:  {
+          confirmed: true,
+          poNumber,
+          poDate,
+          poValue,
+        },
+    };
       const res = await axios.put(
         `http://localhost:3000/api/pipeline/campaign/${campaignId}/po`,
         {
@@ -59,6 +79,8 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
       );
 
       setPipelineData(res.data);
+      const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+      console.log("Change log for PO status form is",res1);
       toast.success('PO details saved!');
       onConfirm();
     } catch (err) {
