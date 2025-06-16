@@ -84,13 +84,26 @@ export const createPipelineForCampaign = async (req, res) => {
  * Update booking status
  */
 export const updateBookingStatus = async (req, res) => {
+ console.log("Booking files recieved are",req.file);
+      if (!req.file || !req.file.path) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+  
+      // ✅ Upload file to S3
+      let fileUrl = '';
+      try {
+        fileUrl = await uploadToS3(req.file.path, req.file.filename);
+      } catch (uploadErr) {
+        console.error('S3 upload failed:', uploadErr);
+        return res.status(500).json({ error: 'Failed to upload artwork to S3' });
+      }
   const { campaignId } = req.params;
-  const { confirmed, reference,bookingDate,memberName } = req.body;
-console.log("One for booking statis")
+  const { confirmed, reference,bookingDate,estimateDocument} = req.body;
+console.log("One for booking status")
   try {
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
-      { bookingStatus: { confirmed, reference,bookingDate,memberName } },
+      { bookingStatus: { confirmed, reference,bookingDate,estimateDocument:fileUrl } },
       { new: true }
     );
     res.json(pipeline);

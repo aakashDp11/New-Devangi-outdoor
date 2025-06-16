@@ -57,7 +57,7 @@ router.get('/finance', async (req, res) => {
 
 router.post('/campaign/:campaignId', createPipelineForCampaign);
 
-router.put('/campaign/:campaignId/bookingStatus', updateBookingStatus);
+router.put('/campaign/:campaignId/bookingStatus', upload.single('file'),updateBookingStatus);
 router.put('/campaign/:campaignId/artwork', confirmArtwork);
 
 router.post('/campaign/:campaignId/artwork/upload', upload.single('file'), async (req, res) => {

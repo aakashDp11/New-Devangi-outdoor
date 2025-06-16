@@ -56,7 +56,7 @@ const BookingGraphDashboard = () => {
         bookingsRes.json(),
         proposalsRes.json(),
       ]);
-// console.log("bookings data",bookingsData);
+console.log("bookings data",bookingsData);
 // console.log('📦 Proposals API:', proposalsData);
       setBookings(bookingsData.bookings);
       setProposals(proposalsData);
@@ -210,30 +210,60 @@ const getUnitUtilizationStats = () => {
 };
 
 
+  // const getPipelineStatusCounts = () => {
+  //   const counts = {
+  //     bookingConfirmed: 0,
+  //     artworkReceived: 0,
+  //     printingStatus: 0,
+  //     mountingStatus: 0,
+  //     advertisingLive: 0,
+  //   };
+
+  //   bookings.forEach((b) => {
+  //     b.campaigns?.forEach((campaign) => {
+  //       const pipeline = campaign.pipeline;
+  //       if (pipeline) {
+  //         if (pipeline.bookingStatus?.confirmed) counts.bookingConfirmed++;
+  //         if (pipeline.artwork?.confirmed) counts.artworkReceived++;
+  //         if (pipeline.printingStatus?.confirmed) counts.printingStatus++;
+  //         if (pipeline.mountingStatus?.confirmed) counts.mountingStatus++;
+  //         if (pipeline.advertisingLive?.started) counts.advertisingLive++;
+  //       }
+  //     });
+  //   });
+
+  //   return counts;
+  // };
+
   const getPipelineStatusCounts = () => {
-    const counts = {
-      bookingConfirmed: 0,
-      artworkReceived: 0,
-      printingStatus: 0,
-      mountingStatus: 0,
-      advertisingLive: 0,
-    };
-
-    bookings.forEach((b) => {
-      b.campaigns?.forEach((campaign) => {
-        const pipeline = campaign.pipeline;
-        if (pipeline) {
-          if (pipeline.bookingStatus?.confirmed) counts.bookingConfirmed++;
-          if (pipeline.artwork?.confirmed) counts.artworkReceived++;
-          if (pipeline.printingStatus?.confirmed) counts.printingStatus++;
-          if (pipeline.mountingStatus?.confirmed) counts.mountingStatus++;
-          if (pipeline.advertisingLive?.started) counts.advertisingLive++;
-        }
-      });
-    });
-
-    return counts;
+  const counts = {
+    bookingConfirmed: 0,
+    artworkReceived: 0,
+    printingStatus: 0,
+    mountingStatus: 0,
+    // advertisingLive: 0,
   };
+
+  bookings.forEach((b) => {
+    b.campaigns?.forEach((campaign) => {
+      const pipeline = campaign.pipeline;
+      if (pipeline) {
+        if (pipeline.bookingStatus?.confirmed) counts.bookingConfirmed++;
+        if (pipeline.artwork?.confirmed) counts.artworkReceived++;
+        // if (pipeline.advertisingLive?.started) counts.advertisingLive++;
+
+        // Check printingStatus and mountingStatus for each space
+        campaign.spaces?.forEach((space) => {
+          if (space?.id?.printingStatus?.confirmed) counts.printingStatus++;
+          if (space?.id?.mountingStatus?.confirmed) counts.mountingStatus++;
+        });
+      }
+    });
+  });
+
+  return counts;
+};
+
 
 
   const { totalReceived, totalDue } = getPaymentStats();
@@ -256,14 +286,14 @@ const getUnitUtilizationStats = () => {
     'Artwork Received',
     'Printing Status',
     'Mounting Status',
-    'Advertisement Live',
+    // 'Advertisement Live',
   ],
   values: [
     pipelineCounts.bookingConfirmed,
     pipelineCounts.artworkReceived,
     pipelineCounts.printingStatus,
     pipelineCounts.mountingStatus,
-    pipelineCounts.advertisingLive,
+    // pipelineCounts.advertisingLive,
   ],
 };
 const unitUtilizationStats = getUnitUtilizationStats();

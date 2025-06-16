@@ -73,7 +73,7 @@ const pipelineSchema = new Schema({
     confirmed: { type: Boolean, default: false },
     reference: { type: String },
     bookingDate:{ type: String },
-    memberName:{ type: String },
+    // memberName:{ type: String },
     estimateDocument :{type:String}
   },
 
@@ -101,7 +101,7 @@ const pipelineSchema = new Schema({
     displayAmount:Number,
     totalAmount: Number,
     modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc'] ,default: undefined},
-    
+    cashMemoNo:Number,
     payments: [
   {
     amount: Number,
