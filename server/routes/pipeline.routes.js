@@ -166,19 +166,7 @@ userId: new mongoose.Types.ObjectId(userId),  // Cast to ObjectId
     res.status(500).send({ message: 'Error saving change log' });
   }
 });
-// router.get('/change-Log', async (req, res) => {
-//   try {
-//     const changelogs = await ChangeLog.find()
-//       .sort({ createdAt: -1 })
-//       .populate('campaignId', 'campaignName')
-//       .populate('userId', 'name');
 
-//     res.json({ changelogs });
-//   } catch (error) {
-//     console.error('Error fetching changelogs:', error);
-//     res.status(500).json({ message: 'Internal Server Error' });
-//   }
-// });
 router.get('/change-Log', async (req, res) => {
   try {
     const changelogs = await ChangeLog.find()
@@ -260,6 +248,24 @@ router.put('/campaign/:id/update-costs', async (req, res) => {
 });
 
 router.put('/campaign/:campaignId/payment', updatePayment);
+
+router.post(
+  '/campaign/:campaignId/payment/upload',
+  upload.single('file'),
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    try {
+      const fileUrl = await uploadToS3(req.file.path, req.file.filename);
+
+      // Just return the S3 file URL to the frontend
+      return res.status(200).json({ documentUrl: fileUrl });
+    } catch (uploadErr) {
+      console.error('S3 upload failed:', uploadErr);
+      return res.status(500).json({ error: 'Failed to upload payment document to S3' });
+    }
+  }
+);
 
 // PO Document Upload and Confirmation
 router.post('/campaign/:campaignId/po/upload', upload.single('file'), uploadPoDocument);

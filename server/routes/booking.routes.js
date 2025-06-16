@@ -167,7 +167,7 @@ export const createBooking = async (req, res) => {
         for (let i = 0; i < selected.selectedUnits; i++) {
           space.campaignDates.push({ startDate, endDate });
         }
-
+        space.numberOfBookings += 1;
         await space.save({ session });
       }
 
@@ -334,7 +334,7 @@ export const deleteBooking = async (req, res) => {
         } else {
           space.availability = 'Partialy available';
         }
-
+         space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
         await space.save({ session });
       }
 
