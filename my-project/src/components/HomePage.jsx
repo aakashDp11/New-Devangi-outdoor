@@ -241,7 +241,8 @@ const getUnitUtilizationStats = () => {
     artworkReceived: 0,
     printingStatus: 0,
     mountingStatus: 0,
-    // advertisingLive: 0,
+    poReceived: 0,        // ✅ Add
+    invoiceReceived: 0,
   };
 
   bookings.forEach((b) => {
@@ -250,7 +251,8 @@ const getUnitUtilizationStats = () => {
       if (pipeline) {
         if (pipeline.bookingStatus?.confirmed) counts.bookingConfirmed++;
         if (pipeline.artwork?.confirmed) counts.artworkReceived++;
-        // if (pipeline.advertisingLive?.started) counts.advertisingLive++;
+        if (pipeline.po?.documentUrl) counts.poReceived++;                     // ✅ Check if PO is confirmed
+        if (pipeline.invoice?.invoiceNumber) counts.invoiceReceived++; 
 
         // Check printingStatus and mountingStatus for each space
         campaign.spaces?.forEach((space) => {
@@ -286,14 +288,16 @@ const getUnitUtilizationStats = () => {
     'Artwork Received',
     'Printing Status',
     'Mounting Status',
-    // 'Advertisement Live',
+     'PO',           // ✅ New
+    'Invoice'
   ],
   values: [
     pipelineCounts.bookingConfirmed,
     pipelineCounts.artworkReceived,
     pipelineCounts.printingStatus,
     pipelineCounts.mountingStatus,
-    // pipelineCounts.advertisingLive,
+     pipelineCounts.poReceived,           // ✅ New
+    pipelineCounts.invoiceReceived,
   ],
 };
 const unitUtilizationStats = getUnitUtilizationStats();
