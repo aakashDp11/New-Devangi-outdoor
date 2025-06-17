@@ -408,6 +408,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useSpaceForm } from '../context/SpaceFormContext';
 import { toast } from 'sonner';
+import MapPreview from './MapPreview';
 
 export default function AddSpaceForm() {
   const navigate = useNavigate();
@@ -670,46 +671,58 @@ export default function AddSpaceForm() {
             <Input label="City" mandatory="true" name="city" value={form.city} onChange={handleInputChange} required />
             <Select label="State" mandatory="true" name="state" value={form.state} onChange={handleInputChange} required>
              //   <option value="">-- Select State --</option>
-//   <option value="Andhra Pradesh">Andhra Pradesh</option>
-//   <option value="Arunachal Pradesh">Arunachal Pradesh</option>
-//   <option value="Assam">Assam</option>
-//   <option value="Bihar">Bihar</option>
-//   <option value="Chhattisgarh">Chhattisgarh</option>
-//   <option value="Goa">Goa</option>
-//   <option value="Gujarat">Gujarat</option>
-//   <option value="Haryana">Haryana</option>
-//   <option value="Himachal Pradesh">Himachal Pradesh</option>
-//   <option value="Jharkhand">Jharkhand</option>
-//   <option value="Karnataka">Karnataka</option>
-//   <option value="Kerala">Kerala</option>
-//   <option value="Madhya Pradesh">Madhya Pradesh</option>
-//   <option value="Maharashtra">Maharashtra</option>
-//   <option value="Manipur">Manipur</option>
-//   <option value="Meghalaya">Meghalaya</option>
-//   <option value="Mizoram">Mizoram</option>
-//   <option value="Nagaland">Nagaland</option>
-//   <option value="Odisha">Odisha</option>
-//   <option value="Punjab">Punjab</option>
-//   <option value="Rajasthan">Rajasthan</option>
-//   <option value="Sikkim">Sikkim</option>
-//   <option value="Tamil Nadu">Tamil Nadu</option>
-//   <option value="Telangana">Telangana</option>
-//   <option value="Tripura">Tripura</option>
-//   <option value="Uttar Pradesh">Uttar Pradesh</option>
-//   <option value="Uttarakhand">Uttarakhand</option>
-//   <option value="West Bengal">West Bengal</option>
-//   <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
-//   <option value="Chandigarh">Chandigarh</option>
-//   <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
-//   <option value="Delhi">Delhi</option>
-//   <option value="Jammu and Kashmir">Jammu and Kashmir</option>
-//   <option value="Ladakh">Ladakh</option>
-//   <option value="Lakshadweep">Lakshadweep</option>
-//   <option value="Puducherry">Puducherry</option>
+   <option value="Andhra Pradesh">Andhra Pradesh</option>
+   <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+  <option value="Assam">Assam</option>
+   <option value="Bihar">Bihar</option>
+   <option value="Chhattisgarh">Chhattisgarh</option>
+   <option value="Goa">Goa</option>
+   <option value="Gujarat">Gujarat</option>
+   <option value="Haryana">Haryana</option>
+   <option value="Himachal Pradesh">Himachal Pradesh</option>
+   <option value="Jharkhand">Jharkhand</option>
+   <option value="Karnataka">Karnataka</option>
+   <option value="Kerala">Kerala</option>
+   <option value="Madhya Pradesh">Madhya Pradesh</option>
+   <option value="Maharashtra">Maharashtra</option>
+   <option value="Manipur">Manipur</option>
+   <option value="Meghalaya">Meghalaya</option>
+   <option value="Mizoram">Mizoram</option>
+   <option value="Nagaland">Nagaland</option>
+   <option value="Odisha">Odisha</option>
+   <option value="Punjab">Punjab</option>
+   <option value="Rajasthan">Rajasthan</option>
+   <option value="Sikkim">Sikkim</option>
+   <option value="Tamil Nadu">Tamil Nadu</option>
+   <option value="Telangana">Telangana</option>
+   <option value="Tripura">Tripura</option>
+   <option value="Uttar Pradesh">Uttar Pradesh</option>
+   <option value="Uttarakhand">Uttarakhand</option>
+   <option value="West Bengal">West Bengal</option>
+   <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>/   <option value="Chandigarh">Chandigarh</option>
+   <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+   <option value="Delhi">Delhi</option>
+   <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+   <option value="Ladakh">Ladakh</option>
+   <option value="Lakshadweep">Lakshadweep</option>
+   <option value="Puducherry">Puducherry</option>
             </Select>
             <Input label="Pin-code" mandatory="true" name="zip" value={form.zip} onChange={handleInputChange} />
             <Input label="Latitude" mandatory="true" name="latitude" value={form.latitude} onChange={handleInputChange} />
             <Input label="Longitude" mandatory="true" name="longitude" value={form.longitude} onChange={handleInputChange} />
+           {form.latitude && form.longitude && !isNaN(parseFloat(form.latitude)) && !isNaN(parseFloat(form.longitude)) && (
+  <div className="md:col-span-2">
+    <label className="text-sm font-semibold mb-1 block">Map Preview</label>
+    <MapPreview latitude={parseFloat(form.latitude)} longitude={parseFloat(form.longitude)} />
+    <p className="mt-1 text-xs text-gray-500">
+      Real-time map preview from OpenStreetMap.
+    </p>
+  </div>
+)}
+
+
+
+
             <Input label="Landmark" name="landmark" value={form.landmark} onChange={handleInputChange} />
             <Select label="Zone" name="zone" value={form.zone} onChange={handleInputChange} required>
               <option value="West">West</option>

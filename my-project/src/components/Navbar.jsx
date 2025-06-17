@@ -31,7 +31,7 @@
 //   ];
 
 //   return (
-//     <aside className="w-[80%] lg:w-64 bg-[#fff] text-black p-6 space-y-4 overflow-y-auto fixed top-0 left-0 bottom-0 z-10 border border-gray-300">
+//     <aside className="w-[80%] lg:w-64 bg-[#fff] text-black p-6 space-y-4 overflow-y-auto fixed top-0 left-0 bottom-0 z-10 border border-gray-300 shadow-lg">
 //       <div className="flex flex-col items-center">
 //         <img className="w-[80%] mr-auto"  src={logo1} alt="Logo" />
         
@@ -98,7 +98,7 @@ export default function Navbar() {
   ];
 
   return (
-    <aside className="w-[70%] lg:w-64 bg-[#fff] text-black py-6 space-y-4 overflow-y-auto fixed top-0 left-0 bottom-0 z-10 border border-gray-300">
+    <aside className="w-[70%] lg:w-64 bg-[#fff] text-black py-6 space-y-4 overflow-y-auto fixed top-0 left-0 bottom-0 z-10 border border-gray-300 shadow-lg">
       <div className="flex flex-col items-center ml-[5%]">
         <img className="w-[60%] mr-auto "  src={logo1} alt="Logo" />
         
@@ -123,7 +123,7 @@ export default function Navbar() {
         ))}
       </nav>
       
-      <div className="mt-10 text-xs space-y-1">
+      <div className="pl-[5%] text-xs space-y-1">
         <div className="px-3">Privacy Policy</div>
         {/* <div className="px-3">Disclaimer Policy</div>
         <div className="px-3">Cookie Policy</div> */}
