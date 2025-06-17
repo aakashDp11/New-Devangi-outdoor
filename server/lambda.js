@@ -1,12 +1,15 @@
-// lambda.js
-import express from 'express';
 import serverlessExpress from '@vendia/serverless-express';
+import app, { initializeDatabase } from './app.js';
 
-const app = express();
+let server;
 
-// Your routes
-app.get('/hello', (req, res) => {
-  res.json({ message: 'Hello from Lambda!' });
-});
+const bootstrap = async () => {
+  await initializeDatabase();
+  server = serverlessExpress({ app });
+};
 
-export const handler = serverlessExpress({ app });
+await bootstrap();
+
+export const handler = async (event, context) => {
+  return server(event, context);
+};

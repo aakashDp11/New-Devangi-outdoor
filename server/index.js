@@ -17,7 +17,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import debugRoutes from './routes/debug.routes.js'
 import Campaign from './models/campign.model.js';
-// Enable CORS for all origins (or specify origin)
+
 dotenv.config();
 const app = express();
 const port = 3000;
@@ -31,9 +31,23 @@ const __dirname = dirname(__filename);
   const filePath = path.join(__dirname, 'uploads', req.params.filename);
   res.download(filePath); // ✅ Force download
 });
+// app.use(cors({
+//   origin: 'http://localhost:5173', // your Vite frontend URL
+//   credentials: true,              // if you’re using cookies or auth headers
+// }));
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+
 app.use(cors({
-  origin: 'http://localhost:5173', // your Vite frontend URL
-  credentials: true,              // if you’re using cookies or auth headers
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
 }));
 let db;
 app.use(express.json()); // for parsing application/json
@@ -108,3 +122,6 @@ async function connectAndStart() {
   }
   
   connectAndStart();
+
+
+
