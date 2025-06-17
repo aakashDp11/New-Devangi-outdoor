@@ -243,7 +243,7 @@ export default function BookingsDashboard1() {
 
   return (
     // <div className="min-h-screen bg-[#fafafb] w-[168%] text-black flex flex-col lg:flex-row overflow-hidden">
-    <div className="min-h-screen bg-gray-100 h-screen w-screen text-black flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen bg-white h-screen w-screen text-black flex flex-col lg:flex-row overflow-hidden">
       <Navbar />
 
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">

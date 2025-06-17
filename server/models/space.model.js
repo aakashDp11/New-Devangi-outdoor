@@ -12,15 +12,15 @@ const spaceSchema = new Schema({
   spaceType: { type: String, enum: ['Billboard', 'DOOH','Gantry','Pole Kiosk'] }, // removed `required`
   traded: { type: Boolean, default: false },
   category: { type: String, enum: ['Retail', 'Transit'] }, // removed `required`
-  mediaType: { type: String, enum: ['Static', 'Digital'] }, // removed `required`
+  mediaType: { type: String, enum: ['Static', 'Digital',""],default:"" }, // removed `required`
   price: { type: Number },
   footfall: { type: Number },
   audience: { type: String, enum: ['Youth', 'Working Professionals'] },
   demographics: { type: String, enum: ['Urban', 'Rural'] },
   description: { type: String },
-  illuminations: { type: String, enum: ['Front lit', 'Back lit'] },
+  illuminations: { type: String, enum: ['Front lit', 'Back lit','Non lit'] },
 
-  unit: { type: Number }, // removed custom validator
+  unit: { type: Number,default:1 }, // removed custom validator
 
   occupiedUnits: { type: Number, default: 0 }, // removed validator
 

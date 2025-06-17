@@ -307,7 +307,7 @@ const unitUtilizationPieData = [
 ];
 
   return (
-    <div className="min-h-screen  h-screen w-screen bg-gray-100 text-black flex flex-col  ">
+    <div className="min-h-screen  h-screen w-screen bg-white text-black flex flex-col  ">
       
       <Navbar />
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
@@ -351,7 +351,7 @@ const unitUtilizationPieData = [
              
               <Card className="max-w-[275px] h-[30%] shadow-md mt-4">
   <CardContent>
-    <h2 className="text-sm font-medium mb-2">Unit Utilization</h2>
+    <h2 className="text-sm font-medium mb-2">DOOH Unit Utilization</h2>
     <div className="w-full">
       <div className='flex mt-4'>
         <div className="ml-auto text-[0.8rem]">
@@ -398,7 +398,7 @@ const unitUtilizationPieData = [
           )}
         </div>
 
-        <div className='flex w-[80%] mt-[10%]'>
+        {/* <div className='flex w-[80%] mt-[10%]'>
            <Card className="w-full shadow-md mt-4">
     <CardContent>
       <h2 className="text-sm font-medium mb-2">Campaign Status Overview</h2>
@@ -428,7 +428,7 @@ const unitUtilizationPieData = [
       </div>
     </CardContent>
   </Card>
-        </div>
+        </div> */}
 
         {!loading && (
           <div className="mt-14 flex flex-col w-full">
@@ -519,6 +519,37 @@ const unitUtilizationPieData = [
            
           </div>
         )}
+         <div className='flex w-[80%] mt-[10%]'>
+           <Card className="w-full shadow-md mt-4">
+    <CardContent>
+      <h2 className="text-sm font-medium mb-2">Campaign Status Overview</h2>
+      <div className="w-full h-[400px]">
+       
+        <BarChart
+  xAxis={[{
+    scaleType: 'band',
+    data: pipelineBarData.labels,
+    barGapRatio: 0.5,
+    categoryGapRatio: 0.8,
+  }]}
+  series={[{
+    data: pipelineBarData.values,
+    label: 'Completed',
+  }]}
+  height={400}
+  borderRadius={10}
+  slotProps={{
+    bar: {
+      width: 30, // ✅ Thinner bars for better centering
+      cornerradius: 10,
+    },
+  }}
+/>
+
+      </div>
+    </CardContent>
+  </Card>
+        </div>
       </main>
     </div>
   );

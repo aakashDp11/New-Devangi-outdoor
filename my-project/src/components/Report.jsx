@@ -525,7 +525,7 @@ export default function Report() {
     }));
 
   return (
-    <div className="bg-[#fafafb] w-[111%] text-black flex flex-col">
+    <div className="bg-[#fafafb] w-[111%] bg-white text-black flex flex-col">
       <Navbar />
       <main className="flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 ml-0 lg:ml-64">
         <h2 className="text-2xl font-sans mb-6">Reports</h2>

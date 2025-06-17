@@ -258,7 +258,7 @@ export default function BookingDetails() {
 
   return (
     // MODIFICATION: Added overflow-x-hidden and w-full to the root div
-    <div className="min-h-screen bg-[#fafafb] w-full text-base-content flex flex-col lg:flex-row overflow-x-hidden">
+    <div className="min-h-screen bg-[#fafafb] bg-white w-full text-base-content flex flex-col lg:flex-row overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1 h-full overflow-y-auto px-4 sm:px-6 py-6 ml-0 lg:ml-64">
@@ -289,7 +289,7 @@ export default function BookingDetails() {
             <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-3">Payment Overview</h2>
             {(totalPaid === 0 && totalDue === 0 && grandTotal === 0) ? (
               <div className="flex items-center justify-center h-48">
-                <p className="text-gray-500 text-md text-center"> Please Make the payment first</p>
+                <p className="text-gray-500 text-md text-center"> Please enter the payment details </p>
               </div>
             ) : (
               <>
