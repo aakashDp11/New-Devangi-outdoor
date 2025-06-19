@@ -35,7 +35,7 @@ const __dirname = dirname(__filename);
 //   origin: 'http://localhost:5173', // your Vite frontend URL
 //   credentials: true,              // if you’re using cookies or auth headers
 // }));
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174','https://new-devangi-outdoor-1.onrender.com/'];
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174','https://new-devangi-outdoor-1.onrender.com'];
 
 app.use(cors({
   origin: function (origin, callback) {
