@@ -71,6 +71,158 @@ export const getCampaignById = async (req, res) => {
 };
 
 
+// export const createBooking = async (req, res) => {
+//   console.log("Create booking data is", req.body);
+//   console.log("Uploaded file info:", req.file);
+
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+
+//   try {
+//     const {
+//       companyName,
+//       clientName,
+//       clientEmail,
+//       clientPan,
+//       clientGst,
+//       clientContact,
+//       brandName,
+//       clientType,
+//       campaigns = [],
+//       user: userId
+//     } = req.body;
+
+//     if (!companyName) throw new Error('Company Name is required');
+//     if (!userId) throw new Error('Assigned User is required');
+
+//     // ✅ Validate user exists
+//     const user = await User.findById(userId);
+//     if (!user) throw new Error('Invalid user assigned to booking');
+
+//     const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
+
+//     // ✅ Handle logo upload
+//     let companyLogo = '';
+//     if (req.file?.path) {
+//       try {
+//         companyLogo = await uploadToS3(req.file.path, req.file.filename);
+//       } catch (uploadErr) {
+//         throw new Error(`Logo upload failed: ${uploadErr.message}`);
+//       }
+//     }
+
+//     // ✅ Create Booking
+//     const newBooking = new Booking({
+//       companyName,
+//       clientName,
+//       clientEmail,
+//       clientPanNumber: clientPan,
+//       clientGstNumber: clientGst,
+//       clientContactNumber: clientContact,
+//       brandDisplayName: brandName,
+//       clientType,
+//       companyLogo,
+//       campaigns: [],
+//       user: userId
+//     });
+
+//     await newBooking.save({ session });
+
+//     const createdCampaigns = [];
+
+//     for (const campaignData of parsedCampaigns) {
+//       const {
+//         campaignName,
+//         industry,
+//         description,
+//         selectedSpaces = [],
+//         campaignImages = [],
+//         startDate,
+//         endDate
+//       } = campaignData;
+
+//       // ✅ Space allocation and availability
+//       for (const selected of selectedSpaces) {
+//         const space = await Space.findById(selected.id).session(session);
+//         if (!space) throw new Error(`Space not found: ${selected.id}`);
+
+//         // const availableUnits = space.unit - space.occupiedUnits;
+//         // if (selected.selectedUnits > availableUnits) {
+//         //   throw new Error(`Not enough units for space: ${space.spaceName}`);
+//         // }
+//         const availableUnits = space.unit - space.occupiedUnits;
+
+// if (selected.selectedUnits > availableUnits) {
+//   if (space.overlappingBooking) {
+//     throw new Error(`Not enough units for space: ${space.spaceName} and overlapping is not allowed`);
+//   } else {
+//     // Allow booking to proceed and enable overlapping mode
+//     space.overlappingBooking = true;
+//     console.warn(`Proceeding with overlapping booking for space: ${space.spaceName}`);
+//   }
+// }
+
+
+//         space.occupiedUnits += selected.selectedUnits;
+
+//         space.availability =
+//           space.occupiedUnits >= space.unit
+//             ? 'Completely booked'
+//             : space.occupiedUnits === 0
+//               ? 'Completely available'
+//               : 'Partialy available';
+
+//         if (!Array.isArray(space.campaignDates)) {
+//           space.campaignDates = [];
+//         }
+
+//         for (let i = 0; i < selected.selectedUnits; i++) {
+//           space.campaignDates.push({ startDate, endDate });
+//         }
+//         space.numberOfBookings += 1;
+//         await space.save({ session });
+//       }
+
+//       // ✅ Create Campaign
+//       const newCampaign = new Campaign({
+//         campaignName,
+//         description,
+//         industry,
+//         campaignImages,
+//         spaces: selectedSpaces.map(s => ({
+//           id: s.id,
+//           selectedUnits: s.selectedUnits
+//         })),
+//         startDate,
+//         endDate
+//       });
+
+//       await newCampaign.save({ session });
+//       createdCampaigns.push(newCampaign._id);
+//     }
+
+//     // ✅ Link campaigns to booking
+//     newBooking.campaigns = createdCampaigns;
+//     await newBooking.save({ session });
+
+//     await session.commitTransaction();
+//     session.endSession();
+
+//     return res.status(201).json({
+//       message: 'Booking created successfully',
+//       bookingId: newBooking._id
+//     });
+
+//   } catch (error) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     console.error("Booking creation error:", error);
+//     return res.status(500).json({ error: error.message || 'Failed to create booking' });
+//   }
+// };
+
+
+
 export const createBooking = async (req, res) => {
   console.log("Create booking data is", req.body);
   console.log("Uploaded file info:", req.file);
@@ -141,25 +293,46 @@ export const createBooking = async (req, res) => {
         endDate
       } = campaignData;
 
-      // ✅ Space allocation and availability
       for (const selected of selectedSpaces) {
         const space = await Space.findById(selected.id).session(session);
         if (!space) throw new Error(`Space not found: ${selected.id}`);
 
-        const availableUnits = space.unit - space.occupiedUnits;
-        if (selected.selectedUnits > availableUnits) {
-          throw new Error(`Not enough units for space: ${space.spaceName}`);
+        const availableUnitsBeforeBooking = space.unit - space.occupiedUnits;
+
+        // Overlapping booking check
+        if (selected.selectedUnits > availableUnitsBeforeBooking) {
+          if (!space.overlappingBooking) {
+            space.overlappingBooking = true;
+            console.warn(`Proceeding with overlapping booking for space: ${space.spaceName}`);
+          } else {
+            throw new Error(`Not enough units for space: ${space.spaceName} and overlapping is not allowed`);
+          }
         }
 
         space.occupiedUnits += selected.selectedUnits;
 
-        space.availability =
-          space.occupiedUnits >= space.unit
+        // Custom availability logic
+        const isDOOH = space.spaceType === 'DOOH';
+        const allUnitsBooked = space.occupiedUnits >= space.unit;
+        const noUnitsBooked = space.occupiedUnits === 0;
+
+        if (isDOOH) {
+          space.availability = allUnitsBooked
             ? 'Completely booked'
-            : space.occupiedUnits === 0
+            : noUnitsBooked
               ? 'Completely available'
               : 'Partialy available';
+        } else {
+          if (space.overlappingBooking) {
+            space.availability = 'Overlapping booking';
+          } else {
+            space.availability = allUnitsBooked
+              ? 'Booked'
+              : 'Available';
+          }
+        }
 
+        // Add campaign date entries
         if (!Array.isArray(space.campaignDates)) {
           space.campaignDates = [];
         }
@@ -167,6 +340,7 @@ export const createBooking = async (req, res) => {
         for (let i = 0; i < selected.selectedUnits; i++) {
           space.campaignDates.push({ startDate, endDate });
         }
+
         space.numberOfBookings += 1;
         await space.save({ session });
       }

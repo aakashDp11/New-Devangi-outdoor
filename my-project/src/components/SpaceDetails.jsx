@@ -225,7 +225,7 @@ export default function SpaceDetails() {
       const response = await fetch(`${API_BASE_URL}/api/spaces/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Space deleted successfully!');
-        navigate('/inventories');
+        navigate('/');
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Failed to delete space' }));
         console.error('Failed to delete space:', errorData.message);

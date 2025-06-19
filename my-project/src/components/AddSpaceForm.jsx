@@ -512,9 +512,10 @@ export default function AddSpaceForm() {
   };
 
   return (
-    <div className="p-6 md:ml-64 min-h-screen">
+    <div className="p-6 md:ml-64   min-h-screen">
+       {/* <div className=" md:ml-64 pl-5  bg-white  text-black flex flex-col lg:flex-row overflow-hidden">   */}
       <Navbar />
-      <form onSubmit={handleSubmit} className="max-w-screen-xl mx-auto">
+      <form onSubmit={handleSubmit} className="max-w-screen-xl w-full mx-auto">
         <div className="text-2xl font-semibold mb-6">Create Spaces</div>
 
         <div className="flex gap-6 mb-6 text-sm font-medium">
@@ -535,7 +536,7 @@ export default function AddSpaceForm() {
         </div>
 
         {step === 'Basic' && (
-          <div className="flex">
+          <div className="flex w-full">
             <div className="grid grid-cols-1 text-xs lg:grid-cols-2">
               <div className="space-y-4">
                 <Input label="Space name" mandatory="true" name="spaceName" value={form.spaceName} onChange={handleInputChange} required />
@@ -617,7 +618,7 @@ export default function AddSpaceForm() {
         )}
 
         {step === 'Specifications' && (
-          <div className="space-y-6 text-xs">
+          <div className="space-y-6 w-full text-xs">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Select label="Illumination" name="illumination" mandatory="true" value={form.illumination} onChange={handleInputChange} required>
                 <option value="">Select...</option>
@@ -740,13 +741,44 @@ export default function AddSpaceForm() {
           </div>
         )}
 
-        <div className="flex text-xs justify-between mt-8">
-          <button type="button" className="border px-4 py-2 rounded">Cancel</button>
+        {/* <div className="flex text-xs justify-between mt-8">
+        
+          <button type="button" className="border text-xs px-4 py-0 rounded">Cancel</button>
           <div className="space-x-2 text-xs">
             <button type="button" onClick={handleBack} className="bg-black text-white px-3 py-1 rounded">Back</button>
             <button type="button" onClick={handleNext} className="bg-black text-white px-3 py-1 rounded">{step === 'Location' ? 'Preview' : 'Next'}</button>
           </div>
-        </div>
+        </div> */}
+        <div className=" bg-white border-t pt-4 mt-12 pb-0">
+  <div className="flex text-xs  w-full justify-between  mx-auto">
+    <button
+      type="button"
+      className="border px-4 py-2 rounded"
+      onClick={() => navigate(-1)} // or any cancel logic
+    >
+      Cancel
+    </button>
+    <div className="space-x-2 text-xs">
+      <button
+        type="button"
+        onClick={handleBack}
+        className="bg-black text-white px-3 py-1 rounded"
+      >
+        Back
+      </button>
+      <button
+        type="button"
+        onClick={handleNext}
+        className="bg-black text-white px-3 py-1 rounded"
+      >
+        {step === 'Location' ? 'Preview' : 'Next'}
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
       </form>
     </div>
   );

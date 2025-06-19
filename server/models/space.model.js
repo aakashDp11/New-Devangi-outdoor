@@ -36,7 +36,7 @@ const spaceSchema = new Schema({
   longitude: { type: String },
   landmark: { type: String },
   zone: { type: String }, // removed enum
-  ownership: { type: String }, // removed enum
+  ownershipType: { type: String }, // removed enum
   tier: { type: String }, // removed enum
   faciaTowards: { type: String },
   overlappingBooking: { type: Boolean, default: false },

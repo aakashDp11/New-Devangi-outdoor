@@ -33,6 +33,8 @@ const BookingGraphDashboard = () => {
   const [muiBookingData, setMuiBookingData] = useState({ xLabels: [], yData: [] });
   const [muiProposalData, setMuiProposalData] = useState({ xLabels: [], yData: [] });
   const [loading, setLoading] = useState(true);
+  const [spaces, setSpaces] = useState([]);
+
   const { auth,logout } = useAuth();
 
   useEffect(() => {
@@ -44,28 +46,53 @@ const BookingGraphDashboard = () => {
     if (proposals.length) processProposalData();
   }, [range, bookings, proposals]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [bookingsRes, proposalsRes] = await Promise.all([
-        fetch('http://localhost:3000/api/bookings'),
-        fetch('http://localhost:3000/api/proposals'),
-      ]);
+//   const fetchData = async () => {
+//     try {
+//       setLoading(true);
+//       const [bookingsRes, proposalsRes] = await Promise.all([
+//         fetch('http://localhost:3000/api/bookings'),
+//         fetch('http://localhost:3000/api/proposals'),
+//       ]);
 
-      const [bookingsData, proposalsData] = await Promise.all([
-        bookingsRes.json(),
-        proposalsRes.json(),
-      ]);
-console.log("bookings data",bookingsData);
-// console.log('📦 Proposals API:', proposalsData);
-      setBookings(bookingsData.bookings);
-      setProposals(proposalsData);
-    } catch (err) {
-      console.error('Failed to fetch data', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+//       const [bookingsData, proposalsData] = await Promise.all([
+//         bookingsRes.json(),
+//         proposalsRes.json(),
+//       ]);
+// console.log("bookings data",bookingsData);
+// // console.log('📦 Proposals API:', proposalsData);
+//       setBookings(bookingsData.bookings);
+//       setProposals(proposalsData);
+//     } catch (err) {
+//       console.error('Failed to fetch data', err);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+const fetchData = async () => {
+  try {
+    setLoading(true);
+    const [bookingsRes, proposalsRes, spacesRes] = await Promise.all([
+      fetch('http://localhost:3000/api/bookings'),
+      fetch('http://localhost:3000/api/proposals'),
+      fetch('http://localhost:3000/api/spaces'),
+    ]);
+
+    const [bookingsData, proposalsData, spacesData] = await Promise.all([
+      bookingsRes.json(),
+      proposalsRes.json(),
+      spacesRes.json(),
+    ]);
+
+    setBookings(bookingsData.bookings);
+    setProposals(proposalsData);
+    setSpaces(spacesData); // 👈 set space list
+  } catch (err) {
+    console.error('Failed to fetch data', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
 
 
@@ -144,40 +171,68 @@ const getRangeStart = (now) => {
 
 
 
+// const getAvailabilityStats = () => {
+//   const availabilityCounts = {
+//     completelyAvailable: 0,
+//     // partiallyAvailable: 0,
+//     completelyBooked: 0,
+//   };
+
+//   const spaceMap = new Map(); // Avoid duplicate counts
+
+//   bookings.forEach((booking) => {
+//     booking.campaigns?.forEach((campaign) => {
+//       campaign.spaces?.forEach((spaceWrapper) => {
+//         const space = spaceWrapper.id;
+//         const spaceId = space?._id;
+//         if (!space || spaceMap.has(spaceId)) return;
+
+//         const totalUnits = space.unit || 0;
+//         const occupiedUnits = space.occupiedUnits || 0;
+
+//         if (occupiedUnits >= totalUnits) {
+//           availabilityCounts.completelyBooked++;
+//         } else if (occupiedUnits > 0) {
+//           availabilityCounts.partiallyAvailable++;
+//         } else {
+//           availabilityCounts.completelyAvailable++;
+//         }
+
+//         spaceMap.set(spaceId, true); // Mark this space as processed
+//       });
+//     });
+//   });
+
+//   return availabilityCounts;
+// };
+
+
 const getAvailabilityStats = () => {
-  const availabilityCounts = {
-    completelyAvailable: 0,
-    partiallyAvailable: 0,
-    completelyBooked: 0,
+  const counts = {
+    available: 0,
+    booked: 0,
+    overlapping: 0,
   };
 
-  const spaceMap = new Map(); // Avoid duplicate counts
+  spaces
+    .filter((space) => space.spaceType !== 'DOOH')
+    .forEach((space) => {
+      const occupied = space.occupiedUnits || 0;
+      const overlapping = space.overlappingBooking;
 
-  bookings.forEach((booking) => {
-    booking.campaigns?.forEach((campaign) => {
-      campaign.spaces?.forEach((spaceWrapper) => {
-        const space = spaceWrapper.id;
-        const spaceId = space?._id;
-        if (!space || spaceMap.has(spaceId)) return;
-
-        const totalUnits = space.unit || 0;
-        const occupiedUnits = space.occupiedUnits || 0;
-
-        if (occupiedUnits >= totalUnits) {
-          availabilityCounts.completelyBooked++;
-        } else if (occupiedUnits > 0) {
-          availabilityCounts.partiallyAvailable++;
-        } else {
-          availabilityCounts.completelyAvailable++;
-        }
-
-        spaceMap.set(spaceId, true); // Mark this space as processed
-      });
+      if (occupied === 0) {
+        counts.available++;
+      } else if (overlapping) {
+        counts.overlapping++;
+      } else {
+        counts.booked++;
+      }
     });
-  });
 
-  return availabilityCounts;
+  return counts;
 };
+
+
 const getUnitUtilizationStats = () => {
   let totalUnits = 0;
   let totalBooked = 0;
@@ -277,11 +332,17 @@ const getUnitUtilizationStats = () => {
     { id: 1, value: totalDue || 0.01, label: 'Due' },
   ];
 
+  // const availabilityPieData = [
+  //   { id: 0, value: availabilityStats.completelyAvailable || 0.01, label: ' Available' },
+  //   // { id: 1, value: availabilityStats.partiallyAvailable || 0.01, label: 'Partially available' },
+  //   { id: 2, value: availabilityStats.completelyBooked || 0.01, label: ' Booked' },
+  // ];
   const availabilityPieData = [
-    { id: 0, value: availabilityStats.completelyAvailable || 0.01, label: 'Completely available' },
-    { id: 1, value: availabilityStats.partiallyAvailable || 0.01, label: 'Partially available' },
-    { id: 2, value: availabilityStats.completelyBooked || 0.01, label: 'Completely booked' },
-  ];
+  { id: 0, value: availabilityStats.available || 0.01, label: 'Available' },
+  { id: 1, value: availabilityStats.booked || 0.01, label: 'Booked' },
+  { id: 2, value: availabilityStats.overlapping || 0.01, label: 'Overlapping Booking' },
+];
+
   const pipelineBarData = {
   labels: [
     'Booking Confirmed',
@@ -372,13 +433,14 @@ const unitUtilizationPieData = [
 
               <Card className="max-w-[320px] h-[30%] shadow-md mt-4">
                 <CardContent>
-                  <h2 className="text-sm font-medium mb-2">Space Availability</h2>
+                  <h2 className="text-sm font-medium mb-2">Static Space Availability</h2>
                   <div className="w-full ">
                      <div className='flex mt-4'>
         <div className="ml-auto text-[0.7rem]">
-        <p><strong>Completely Available:</strong> {availabilityStats.completelyAvailable}</p>
-        <p><strong>Partially Available:</strong> {availabilityStats.partiallyAvailable}</p>
-        <p><strong>Completely Booked:</strong> {availabilityStats.completelyBooked}</p>
+        <p><strong> Available:</strong> {availabilityStats.available}</p>
+        {/* <p><strong>Partially Available:</strong> {availabilityStats.partiallyAvailable}</p> */}
+        <p><strong> Booked:</strong> {availabilityStats.booked}</p>
+        <p><strong> Overlapping booking:</strong> {availabilityStats.overlapping}</p>
       </div>
       </div>
                     <PieChart

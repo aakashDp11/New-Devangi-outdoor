@@ -65,8 +65,9 @@ const [spaceTypeFilter, setSpaceTypeFilter] = useState('');
       const res = await fetch('http://localhost:3000/api/spaces');
       const data = await res.json();
       data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
       setSpaces(data);
-      console.log("Sample Space format is",data[0]);
+      console.log("Spaces are",data);
     } catch (error) {
       console.error('Error fetching spaces:', error);
     }
@@ -154,17 +155,22 @@ const [spaceTypeFilter, setSpaceTypeFilter] = useState('');
       toast.error('Something went wrong while uploading');
     }
   };
+const getComputedAvailability = (item) => {
+  const totalUnits = item.unit || 0;
+  const occupied = item.occupiedUnits || 0;
+
+  if (item.overlappingBooking) return 'Overlapping booking';
+  if (item.availability === 'Booked') return 'Completely booked'; // explicit mapping
+  if (totalUnits === occupied && occupied !== 0) return 'Completely booked';
+  if (occupied > 0 && occupied < totalUnits) return 'Partially available';
+  return 'Completely available';
+};
 
   const filteredData = spaces.filter((item) => {
     const idStr = item._id?.toString();
 const matchesSpaceType = !spaceTypeFilter || item.spaceType === spaceTypeFilter;
 
-    // const matchesSearch =
-    //   item.spaceName?.toLowerCase().includes(search.toLowerCase()) ||
-    //   item.city?.toLowerCase().includes(search.toLowerCase()) ||
-    //   item.state?.toLowerCase().includes(search.toLowerCase()) ||
-    //   item.zone?.toLowerCase().includes(search.toLowerCase()) ||
-    //   item.address?.toLowerCase().includes(search.toLowerCase());
+ 
     const matchesSearch = [
   item.spaceName,
   item.city,
@@ -183,39 +189,13 @@ const matchesSpaceType = !spaceTypeFilter || item.spaceType === spaceTypeFilter;
       item.state?.toLowerCase().includes(selectedRegion.toLowerCase()) ||
       item.zone?.toLowerCase().includes(selectedRegion.toLowerCase());
 
+    // const matchesAvailability =
+    //   availability === '' || item.availability === availability;
     const matchesAvailability =
-      availability === '' || item.availability === availability;
+      availability === '' || getComputedAvailability(item) === availability;
 
     const isBooked = bookedSpaceIds.includes(idStr);
 
-    // const matchesDateRange = (() => {
-    //   if (!startDate || !endDate) return true;
-    //   const start = new Date(startDate);
-    //   const end = new Date(endDate);
-    //   if (start > end) return false;
-
-    //   const requiredDates = [];
-    //   let current = new Date(start);
-    //   while (current <= end) {
-    //     requiredDates.push(current.toDateString());
-    //     current.setDate(current.getDate() + 1);
-    //   }
-
-    //   const availableDates = (item.dates || []).map(dateStr => {
-    //     const parts = dateStr.split('-');
-    //     let date;
-    //     if (parts[0].length === 4) {
-    //       date = new Date(dateStr);
-    //     } else {
-    //       const [day, month, year] = parts;
-    //       const fullYear = year.length === 2 ? `20${year}` : year;
-    //       date = new Date(`${fullYear}-${month}-${day}`);
-    //     }
-    //     return date.toDateString();
-    //   });
-
-    //   return requiredDates.every(date => availableDates.includes(date));
-    // })();
 
     const matchesDateRange = (() => {
   if (!startDate || !endDate || !item.dates || item.dates.length < 2) return true;
@@ -293,6 +273,8 @@ const matchesSpaceType = !spaceTypeFilter || item.spaceType === spaceTypeFilter;
               <option value="Completely available">Completely available</option>
               <option value="Partialy available">Partialy available</option>
               <option value="Completely booked">Completely booked</option>
+              <option value="Overlapping booking">Overlapping booking</option>
+             
             </select>
            
 
@@ -383,6 +365,7 @@ const matchesSpaceType = !spaceTypeFilter || item.spaceType === spaceTypeFilter;
         {(() => {
           const totalUnits = item.unit || 0;
           const occupied = item.occupiedUnits || 0;
+          const overlappingBooking=item.overlappingBooking;
           let status = 'Completely available';
           let color = 'bg-green-100';
 
@@ -392,7 +375,11 @@ const matchesSpaceType = !spaceTypeFilter || item.spaceType === spaceTypeFilter;
           } else if (occupied > 0 && occupied < totalUnits) {
             status = 'Partially available';
             color = 'bg-yellow-100';
+          } else if(overlappingBooking){
+             status = 'Overlapping Booking';
+            color = 'bg-red-400';
           }
+         
 
           return <span className={`text-xs px-2 py-1 rounded ${color}`}>{status}</span>;
         })()}

@@ -56,6 +56,7 @@ export default function BookingFormOrderInfo() {
         spaceType: space.spaceType,
         unit: space.unit,
         occupiedUnits: space.occupiedUnits,
+        ownershipType:space.ownershipType,
         price: space.price,
         traded: space.traded,
         overlappingBooking: space.overlappingBooking,

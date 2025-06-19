@@ -110,7 +110,8 @@ form.dates = [form.startDate, form.endDate];
                 <span className="text-blue-700 font-semibold">{form.spaceType}</span>
                 <span className="text-purple-700 font-semibold">{form.category}</span>
               </div>
-              <div className="text-2xl font-bold mt-2">{form.price}</div>
+              <div className="text-2xl font-bold mt-2">{form.ownershipType}</div>
+             
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -130,17 +131,21 @@ form.dates = [form.startDate, form.endDate];
                 <div>Additional Tags</div>
                 <div className="text-gray-500">{form.additionalTags}</div>
               </div>
+              <div>
+                <div>Price</div>
+                <div className="text-gray-500">{form.price}</div>
+              </div>
             </div>
 
             {/* Specifications */}
             <div className="space-y-2">
               <div className="font-semibold">Specifications</div>
               <div className="grid grid-cols-2 gap-4 text-sm border p-4 rounded">
-                <div><strong>Media Type</strong><br />{form.mediaType}</div>
-                <div><strong>Illumination</strong><br />{form.illumination}</div>
+                {/* <div><strong>Media Type</strong><br />{form.mediaType}</div> */}
+               { form.illumination && <div><strong>Illumination</strong><br />{form.illumination}</div> }
                 <div><strong>Size (WxH)</strong><br />{form.width}ft x {form.height}ft</div>
-                <div><strong>Unit</strong><br />{form.unit}</div>
-                <div><strong>Resolution</strong><br />{form.resolution}</div>
+                <div><strong>Unit</strong><br />{form.unit}</div> 
+                {form.resolution && <div><strong>Resolution</strong><br />{form.resolution}</div> }
                 <div><strong>Facing</strong><br />{form.facing}</div>
               </div>
             </div>

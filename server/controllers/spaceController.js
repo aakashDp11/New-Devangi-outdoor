@@ -73,13 +73,16 @@ import { uploadToS3 } from "../utils/s3uploader.js";
 export const createSpace = async (req, res) => {
   try {
     const { body, files } = req;
-
+   console.log("Incoming Space body is",body);
     const price = parseFloat(body.price);
     const footfall = parseInt(body.footfall);
-    const unit = parseInt(body.unit);
+    let unit = parseInt(body.unit, 10);
+if (isNaN(unit)) {
+  unit = 1;
+}
 
     const maxUnitMap = {
-      Billboard: 2,
+      Billboard: 1,
       DOOH: 10,
       'Pole kiosk': 10,
       Gantry: 1,
