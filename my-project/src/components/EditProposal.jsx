@@ -25,7 +25,7 @@ const [selectedSpaces, setSelectedSpaces] = useState([]);
   useEffect(() => {
     const fetchProposal = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/api/proposals/${id}`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/proposals/${id}`);
         const data = await response.json();
         setProposal(data);
       } catch (error) {
@@ -49,7 +49,7 @@ const [selectedSpaces, setSelectedSpaces] = useState([]);
   
   const fetchAvailableSpaces = async () => {
     try {
-      const response = await fetch(`http://localhost:3000/api/spaces/available?start=${startDate}&end=${endDate}`);
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/available?start=${startDate}&end=${endDate}`);
       const data = await response.json();
       setAvailableSpaces(data);
     } catch (error) {
@@ -68,7 +68,7 @@ const [selectedSpaces, setSelectedSpaces] = useState([]);
 
   const handleSave = async () => {
     try {
-      const response = await fetch(`http://localhost:3000/api/proposals/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/proposals/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(proposal),

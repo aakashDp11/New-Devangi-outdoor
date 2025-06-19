@@ -19,7 +19,7 @@ const username = localStorage.getItem('userName'); // Replace with your actual A
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${campaignId}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}`);
         const invoice = res.data?.invoice || {};
 
         if (invoice.invoiceNumber) {
@@ -63,7 +63,7 @@ const username = localStorage.getItem('userName'); // Replace with your actual A
         const formData = new FormData();
         formData.append('file', invoiceFile);
 
-        await axios.post(`http://localhost:3000/api/pipeline/campaign/${campaignId}/invoice/upload`, formData, {
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/invoice/upload`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       }
@@ -86,9 +86,9 @@ const username = localStorage.getItem('userName'); // Replace with your actual A
       newValue: newInvoiceDetails,
     };
 console.log("Changelog data from fr is",changeLogData);
-      const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+      const res1=await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData); 
       console.log("Change log for booking status form is",res1);
-      const res = await axios.put(`http://localhost:3000/api/pipeline/campaign/${campaignId}/invoice`, {
+      const res = await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/invoice`, {
         invoiceNumber,
         invoiceDate,
         invoiceValue,

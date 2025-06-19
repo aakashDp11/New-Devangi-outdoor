@@ -53,7 +53,7 @@ export default function User() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/users');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users`);
       const data = await response.json();
       setUsers(data);
     } catch (error) {
@@ -67,7 +67,7 @@ export default function User() {
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${userToDelete}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/${userToDelete}`, {
         method: 'DELETE',
       });
       const result = await res.json();

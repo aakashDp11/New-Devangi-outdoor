@@ -46,7 +46,7 @@ const [isAnimated, setIsAnimated] = useState(false);
   useEffect(() => {
     const fetchProposals = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/proposals');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/proposals`);
         const data = await response.json();
         data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setProposals(data); 

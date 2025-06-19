@@ -20,7 +20,7 @@ export default function PrintingStatus({ campaignId,spaceId, onConfirm, onClose 
   useEffect(() => {
     const fetchSpaceStatus = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/spaces/${spaceId}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}`);
         if (res.data?.printingStatus?.confirmed) {
           setAlreadyConfirmed(true);
           console.log("printing data is",res.data);
@@ -72,7 +72,7 @@ export default function PrintingStatus({ campaignId,spaceId, onConfirm, onClose 
         printingMaterial,
         note
       });
-      await axios.put(`http://localhost:3000/api/spaces/${spaceId}/printingStatus`, {
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}/printingStatus`, {
         confirmed: true,
         printingDate,
         assignedPerson,
@@ -80,7 +80,7 @@ export default function PrintingStatus({ campaignId,spaceId, onConfirm, onClose 
         printingMaterial,
         note
       });
-  const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+  const res1=await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData); 
       console.log("Change log for PO status form is",res1);
       setAlreadyConfirmed(true);
       onConfirm();

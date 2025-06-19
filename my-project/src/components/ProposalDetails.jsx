@@ -34,7 +34,7 @@ export default function ProposalDetails() {
   useEffect(() => {
     const fetchProposal = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/api/proposals/${id}`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/proposals/${id}`);
         const data = await response.json();
         console.log("Proposal data is",data);
         setProposal(data);
@@ -48,7 +48,7 @@ export default function ProposalDetails() {
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`http://localhost:3000/api/proposals/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/proposals/${id}`, {
         method: 'DELETE',
       });
 

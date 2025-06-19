@@ -19,7 +19,7 @@ console.log("orderInfo",orderInfo);
 useEffect(() => {
   const fetchUsers = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/users');
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users`);
       const data = await res.json();
       setUsers(data);
       const foundUser = data.find(u => u._id === basicInfo.user);
@@ -72,7 +72,7 @@ useEffect(() => {
        formData.append('companyLogo', basicInfo.companyLogo.file);
       }
 console.log("FormData before submission is",formData);
-      const response = await fetch('http://localhost:3000/api/bookings', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`, {
         method: 'POST',
         body: formData,
       });
@@ -107,8 +107,8 @@ console.log("FormData before submission is",formData);
       };
 
       const url = proposalId
-        ? `http://localhost:3000/api/proposals/${proposalId}`
-        : 'http://localhost:3000/api/proposals';
+        ? `${import.meta.env.VITE_API_BASE_URL}/api/proposals/${proposalId}`
+        : `${import.meta.env.VITE_API_BASE_URL}/api/proposals`;
 
       const method = proposalId ? 'PUT' : 'POST';
 

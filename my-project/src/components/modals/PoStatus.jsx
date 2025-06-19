@@ -42,7 +42,7 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
         const formData = new FormData();
         formData.append('file', poFile);
         await axios.post(
-          `http://localhost:3000/api/pipeline/campaign/${campaignId}/po/upload`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/po/upload`,
           formData,
           { headers: { 'Content-Type': 'multipart/form-data' } }
         );
@@ -69,7 +69,7 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
         },
     };
       const res = await axios.put(
-        `http://localhost:3000/api/pipeline/campaign/${campaignId}/po`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/po`,
         {
           confirmed: true,
           poNumber,
@@ -79,7 +79,7 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
       );
 
       setPipelineData(res.data);
-      const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+      const res1=await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData); 
       console.log("Change log for PO status form is",res1);
       toast.success('PO details saved!');
       onConfirm();

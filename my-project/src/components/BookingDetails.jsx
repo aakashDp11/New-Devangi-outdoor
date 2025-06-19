@@ -191,7 +191,7 @@ export default function BookingDetails() {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/api/bookings/${id}`);
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings/${id}`);
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({ message: `Failed to fetch booking (status: ${res.status})` }));
           throw new Error(errorData.message || `Failed to fetch booking (status: ${res.status})`);
@@ -209,7 +209,7 @@ export default function BookingDetails() {
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/bookings/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings/${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Booking deleted successfully');
         navigate('/booking-dashboard');

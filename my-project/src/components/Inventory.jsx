@@ -62,7 +62,7 @@ const [spaceTypeFilter, setSpaceTypeFilter] = useState('');
 
   const fetchSpaces = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/spaces');
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces`);
       const data = await res.json();
       data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       
@@ -79,7 +79,7 @@ const [spaceTypeFilter, setSpaceTypeFilter] = useState('');
       return;
     }
     try {
-      const res = await fetch(`http://localhost:3000/api/spaces/active-spaces?from=${startDate}&to=${endDate}`);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/active-spaces?from=${startDate}&to=${endDate}`);
       const data = await res.json();
       setBookedSpaceIds(data.bookedSpaceIds || []);
     } catch (error) {
@@ -136,7 +136,7 @@ const [spaceTypeFilter, setSpaceTypeFilter] = useState('');
     formData.append('file', selectedFile);
 
     try {
-      const response = await fetch('http://localhost:3000/api/spaces/upload-excel', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/upload-excel`, {
         method: 'POST',
         body: formData,
       });
@@ -332,7 +332,7 @@ const matchesSpaceType = !spaceTypeFilter || item.spaceType === spaceTypeFilter;
               if (e.key === 'Enter' && e.target.value.trim()) {
                 const newTag = e.target.value.trim();
                 try {
-                  const res = await fetch(`http://localhost:3000/api/spaces/${item._id}/add-tag`, {
+                  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${item._id}/add-tag`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tag: newTag }),
@@ -399,7 +399,7 @@ const matchesSpaceType = !spaceTypeFilter || item.spaceType === spaceTypeFilter;
                 onClick={async (e) => {
                   e.stopPropagation(); // ✅ Prevent card click on tag remove
                   try {
-                    const res = await fetch(`http://localhost:3000/api/spaces/${item._id}/remove-tag`, {
+                    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${item._id}/remove-tag`, {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ tag }),

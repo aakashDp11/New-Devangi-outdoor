@@ -26,7 +26,7 @@ const facingOptions = ['Single Facing', 'Double Facing'];
   useEffect(() => {
     const fetchSpace = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/api/spaces/${id}`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${id}`);
         const data = await response.json();
         setSpace(data);
       } catch (error) {
@@ -48,7 +48,7 @@ const facingOptions = ['Single Facing', 'Double Facing'];
     if (!confirmDelete) return;
   
     try {
-      const response = await fetch(`http://localhost:3000/api/spaces/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${id}`, {
         method: 'DELETE',
       });
   
@@ -96,7 +96,7 @@ const facingOptions = ['Single Facing', 'Double Facing'];
         selectedFiles.otherPhotos.forEach((photo) => formData.append('otherPhotos', photo));
       }
 
-      const response = await fetch(`http://localhost:3000/api/spaces/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${id}`, {
         method: 'PUT',
         body: formData,
       });
@@ -243,7 +243,7 @@ const facingOptions = ['Single Facing', 'Double Facing'];
   <label>Main Photo:</label>
   {space.mainPhoto && (
     <img
-      src={`http://localhost:3000/uploads/${space.mainPhoto}`}
+      src={`${import.meta.env.VITE_API_BASE_URL}/uploads/${space.mainPhoto}`}
       alt="Main"
       className="w-32 h-32 object-cover rounded-md mb-2"
     />
@@ -255,7 +255,7 @@ const facingOptions = ['Single Facing', 'Double Facing'];
   <label>Long Shot:</label>
   {space.longShot && (
     <img
-      src={`http://localhost:3000/uploads/${space.longShot}`}
+      src={`${import.meta.env.VITE_API_BASE_URL}/uploads/${space.longShot}`}
       alt="Long Shot"
       className="w-32 h-32 object-cover rounded-md mb-2"
     />
@@ -267,7 +267,7 @@ const facingOptions = ['Single Facing', 'Double Facing'];
   <label>Close Shot:</label>
   {space.closeShot && (
     <img
-      src={`http://localhost:3000/uploads/${space.closeShot}`}
+      src={`${import.meta.env.VITE_API_BASE_URL}/uploads/${space.closeShot}`}
       alt="Close Shot"
       className="w-32 h-32 object-cover rounded-md mb-2"
     />
@@ -282,7 +282,7 @@ const facingOptions = ['Single Facing', 'Double Facing'];
       {space.otherPhotos.map((photo, index) => (
         <img
           key={index}
-          src={`http://localhost:3000/uploads/${photo}`}
+          src={`${import.meta.env.VITE_API_BASE_URL}/uploads/${photo}`}
           alt={`Other ${index + 1}`}
           className="w-24 h-24 object-cover rounded-md"
         />

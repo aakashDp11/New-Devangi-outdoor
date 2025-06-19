@@ -24,7 +24,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
   useEffect(() => {
     const fetchPipelinePayment = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${campaignId}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}`);
         const data = res.data?.payment || {};
 
         if (data.totalAmount) {
@@ -101,7 +101,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
     formData.append('file', file);
     try {
       const uploadRes = await axios.post(
-        `http://localhost:3000/api/pipeline/campaign/${campaignId}/payment/upload`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/payment/upload`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -148,9 +148,9 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
     };
 
     try {
-      await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData);
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData);
       const res = await axios.put(
-        `http://localhost:3000/api/pipeline/campaign/${campaignId}/payment`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/payment`,
         newPaymentStatus
       );
       setPipelineData(res.data);

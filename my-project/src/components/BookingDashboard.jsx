@@ -207,7 +207,7 @@ export default function BookingsDashboard1() {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/bookings');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`);
         const data = await response.json();
         data.bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setBookings(data.bookings);

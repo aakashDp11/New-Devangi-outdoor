@@ -50,8 +50,8 @@ const BookingGraphDashboard = () => {
 //     try {
 //       setLoading(true);
 //       const [bookingsRes, proposalsRes] = await Promise.all([
-//         fetch('http://localhost:3000/api/bookings'),
-//         fetch('http://localhost:3000/api/proposals'),
+//         fetch('${import.meta.env.VITE_API_BASE_URL}/api/bookings'),
+//         fetch('${import.meta.env.VITE_API_BASE_URL}/api/proposals'),
 //       ]);
 
 //       const [bookingsData, proposalsData] = await Promise.all([
@@ -73,9 +73,9 @@ const fetchData = async () => {
   try {
     setLoading(true);
     const [bookingsRes, proposalsRes, spacesRes] = await Promise.all([
-      fetch('http://localhost:3000/api/bookings'),
-      fetch('http://localhost:3000/api/proposals'),
-      fetch('http://localhost:3000/api/spaces'),
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`),
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/proposals`),
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces`),
     ]);
 
     const [bookingsData, proposalsData, spacesData] = await Promise.all([

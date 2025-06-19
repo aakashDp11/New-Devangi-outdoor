@@ -204,7 +204,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = 'http://localhost:3000';
+
 
 // Reusable component for Key-Value display
 const DetailItem = ({ label, value, className = '' }) => (
@@ -222,7 +222,7 @@ export default function SpaceDetails() {
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/spaces/${id}`, { method: 'DELETE' });
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${id}`, { method: 'DELETE' });
       if (response.ok) {
         toast.success('Space deleted successfully!');
         navigate('/');

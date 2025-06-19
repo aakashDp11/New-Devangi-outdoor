@@ -8,7 +8,7 @@ import multer from 'multer';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes.js'
 import User from './models/user.model.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import userRoutes from './routes/user.routes.js';
 import pipelineRoutes from './routes/pipeline.routes.js'
@@ -58,7 +58,9 @@ app.use('/api/pipeline',pipelineRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/debug', debugRoutes);
+app.use('/api/debug', debugRoutes);
+
+
 app.use((req, res, next) => {
   res.status(404).send({ message: 'Route not found' });
 });

@@ -41,7 +41,7 @@ export default function BookingFormWizard() {
   const fetchSpaces = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:3000/api/spaces');
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces`);
       const data = await res.json();
       const availableSpaces = data.filter(space => space.available);
       const transformed = availableSpaces.map(space => ({
@@ -66,7 +66,7 @@ export default function BookingFormWizard() {
 
   const fetchBooking = async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/bookings/${id}`);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings/${id}`);
       const data = await res.json();
       setBooking(data);
     } catch (err) {
@@ -98,7 +98,7 @@ export default function BookingFormWizard() {
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/bookings/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings/${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Booking deleted successfully');
         navigate('/booking-dashboard');

@@ -496,7 +496,7 @@ export default function AddSpaceForm() {
     }
 
     try {
-      const res = await fetch('http://localhost:3000/api/spaces/create', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/create`, {
         method: 'POST',
         body: formData,
       });

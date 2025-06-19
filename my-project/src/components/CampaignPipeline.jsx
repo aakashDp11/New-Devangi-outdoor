@@ -55,12 +55,12 @@
 //   useEffect(() => {
 //     const fetchOrCreatePipeline = async () => {
 //       try {
-//         const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+//         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
 //         setPipelineData(res.data);
 //         console.log("Pip data is",res.data);
 //       } catch (err) {
 //         if (err.response?.status === 404) {
-//           const createRes = await axios.post(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+//           const createRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
 //           setPipelineData(createRes.data);
 //         } else {
 //           console.error('Error fetching/creating pipeline:', err);
@@ -74,7 +74,7 @@
 //   useEffect(() => {
 //     const fetchSpaces = async () => {
 //       try {
-//         const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+//         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
 //         const populatedSpaces = res.data.spaces.map(s => s.id);
 //         setSpaces(populatedSpaces);
 //       } catch (error) {
@@ -209,7 +209,7 @@
 //               <button
 //                 onClick={async () => {
 //                   try {
-//                     await axios.delete(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+//                     await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
 //                     setPipelineData(null);
 //                     setShowDeleteModal(false);
 //                     window.location.reload();
@@ -347,12 +347,12 @@ function CampaignPipelineInternal({ campaignId }) {
   useEffect(() => {
     const fetchOrCreatePipeline = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
         setPipelineData(res.data);
         console.log("Pip data is", res.data);
       } catch (err) {
         if (err.response?.status === 404) {
-          const createRes = await axios.post(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+          const createRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
           setPipelineData(createRes.data);
         } else {
           console.error('Error fetching/creating pipeline:', err);
@@ -366,7 +366,7 @@ function CampaignPipelineInternal({ campaignId }) {
   useEffect(() => {
     const fetchSpaces = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
         const populatedSpaces = res.data.spaces.map(s => s.id);
         setSpaces(populatedSpaces);
       } catch (error) {
@@ -530,7 +530,7 @@ function CampaignPipelineInternal({ campaignId }) {
               <button
                 onClick={async () => {
                   try {
-                    await axios.delete(`http://localhost:3000/api/pipeline/campaign/${CampaignId}`);
+                    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
                     setPipelineData(null);
                     setShowDeleteModal(false);
                     window.location.reload();

@@ -45,7 +45,7 @@ export default function BookingFormOrderInfo() {
 
   useEffect(() => {
     const fetchSpaces = async () => {
-      const res = await fetch('http://localhost:3000/api/spaces');
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces`);
       const data = await res.json();
       const transformed = data.map(space => ({
         id: space._id,

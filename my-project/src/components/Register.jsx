@@ -15,7 +15,7 @@ function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3000/api/auth/register', { email, password,name,phone });
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/register`, { email, password,name,phone });
       toast.success('Registration successful!');
       navigate('/users');
     } catch (error) {

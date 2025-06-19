@@ -25,7 +25,7 @@ export default function FinancePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/pipeline/finance');
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/finance`);
         const json = await res.json();
         setData(json);
       } catch (err) {

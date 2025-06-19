@@ -41,10 +41,10 @@
 
 //     try {
 //       console.log("Changelog data from fr is",changeLogData);
-//       const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+//       const res1=await axios.post('${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log', changeLogData); 
 //       console.log("Change log for booking status form is",res1);
 //       const res = await axios.put(
-//         `http://localhost:3000/api/pipeline/campaign/${campaignId}/bookingStatus`,
+//         `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/bookingStatus`,
 //         {
 //           confirmed: true,
 //           reference: bookingNumber,
@@ -210,7 +210,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
 
     try {
       // Save Change Log
-      await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData);
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData);
 
       // Prepare form data
       const formData = new FormData();
@@ -223,7 +223,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
 
       // Upload and update booking status
       const res = await axios.put(
-        `http://localhost:3000/api/pipeline/campaign/${campaignId}/bookingStatus`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/bookingStatus`,
         formData,
         {
           headers: {

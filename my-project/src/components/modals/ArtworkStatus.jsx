@@ -180,7 +180,7 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose }) {
   useEffect(() => {
     const fetchArtwork = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/pipeline/campaign/${campaignId}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}`);
         const artwork = res.data?.artwork || {};
         if (artwork.confirmed) {
           setIsArtworkSaved(true);
@@ -239,13 +239,13 @@ const previousArtworkStatus = { ...pipelineData?.artwork }; // Capture the previ
     };
     try {
       console.log("Changelog data from fr is",changeLogData);
-            const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+            const res1=await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData); 
             console.log("Change log for booking status form is",res1);
       const formData = new FormData();
       formData.append('file', artworkFile);
 
       await axios.post(
-        `http://localhost:3000/api/pipeline/campaign/${campaignId}/artwork/upload`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/artwork/upload`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -253,7 +253,7 @@ const previousArtworkStatus = { ...pipelineData?.artwork }; // Capture the previ
       );
 
       const res = await axios.put(
-        `http://localhost:3000/api/pipeline/campaign/${campaignId}/artwork`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}/artwork`,
         {
           confirmed: true,
           receivedDate,

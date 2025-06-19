@@ -75,11 +75,11 @@ export default function BookingFlow({ bookingId }) {
   useEffect(() => {
     const fetchOrCreatePipeline = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/pipeline/${BookingId}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/${BookingId}`);
         setPipelineData(res.data);
       } catch (err) {
         if (err.response && err.response.status === 404) {
-          const createRes = await axios.post(`http://localhost:3000/api/pipeline/${BookingId}`);
+          const createRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/${BookingId}`);
           setPipelineData(createRes.data);
         } else {
           console.error('Error fetching/creating pipeline:', err);
@@ -205,7 +205,7 @@ useEffect(() => {
               <button
                 onClick={async () => {
                   try {
-                    await axios.delete(`http://localhost:3000/api/pipeline/${BookingId}`);
+                    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/${BookingId}`);
                     setPipelineData(null);
                     setShowDeleteModal(false);
                     window.location.reload();

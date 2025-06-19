@@ -52,7 +52,7 @@
 
 //   const fetchBookings = async () => {
 //     try {
-//       const res = await fetch('http://localhost:3000/api/bookings');
+//       const res = await fetch('${import.meta.env.VITE_API_BASE_URL}/api/bookings');
 //       const data = await res.json();
 //       setBookings(data.bookings || []);
 //     } catch (err) {
@@ -387,7 +387,7 @@ export default function Report() {
 
   const fetchBookings = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/bookings');
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`);
       const data = await res.json();
       setBookings(data.bookings || []);
     } catch (err) {
@@ -397,7 +397,7 @@ export default function Report() {
 
   const fetchChangelogs = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/pipeline/change-Log');
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`);
       const data = await res.json();
       console.log("changelogs data is",data);
       setChangelogs(data.changelogs || []);

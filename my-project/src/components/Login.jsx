@@ -11,7 +11,7 @@
 //   const handleRegister = async (e) => {
 //     e.preventDefault();
 //     try {
-//       const response = await axios.post('http://localhost:3000/api/auth/login', { email, password });
+//       const response = await axios.post('${import.meta.env.VITE_API_BASE_URL}/api/auth/login', { email, password });
 //       toast.success('Login successful!');
 //       navigate('/home');
 //     } catch (error) {
@@ -64,7 +64,7 @@
 //     e.preventDefault(); // Prevent page reload on form submit
 
 //     try {
-//       const response = await axios.post('http://localhost:3000/api/auth/login', { email, password });
+//       const response = await axios.post('${import.meta.env.VITE_API_BASE_URL}/api/auth/login', { email, password });
 
 //       // Store token if necessary
 //       const { accessToken, user } = response.data;
@@ -132,7 +132,7 @@ const {auth,setAuth}=useAuth();
     e.preventDefault(); 
 
     try {
-      const response = await axios.post('http://localhost:3000/api/auth/login', { email, password });
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login`, { email, password });
 
       // Store token if necessary
       const { accessToken, user } = response.data;

@@ -18,7 +18,7 @@ export default function MountingStatus({ campaignId,spaceId, onConfirm, onClose 
   useEffect(() => {
     const fetchSpaceStatus = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/spaces/${spaceId}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}`);
         if (res.data?.mountingStatus?.confirmed) {
           setAlreadyConfirmed(true);
           setReceivedDate(res.data.mountingStatus.mountingDate || '');
@@ -58,14 +58,14 @@ export default function MountingStatus({ campaignId,spaceId, onConfirm, onClose 
         note
       },
     };
-      await axios.put(`http://localhost:3000/api/spaces/${spaceId}/mountingStatus`, {
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}/mountingStatus`, {
         confirmed: true,
         receivedDate,
          assignedPerson,
         assignedAgency,
         note
       });
- const res1=await axios.post('http://localhost:3000/api/pipeline/change-Log', changeLogData); 
+ const res1=await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData); 
       console.log("Change log for PO status form is",res1);
       setAlreadyConfirmed(true);
       toast.success('Mounting status saved.');
