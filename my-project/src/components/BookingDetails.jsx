@@ -1,171 +1,5 @@
 
 
-// import React, { useState, useEffect } from 'react';
-// import { useParams, useNavigate } from 'react-router-dom';
-// import { toast } from 'sonner';
-// import Navbar from './Navbar';
-// import InventorySelector from './BookingFormAddSpaces';
-// import { PieChart } from '@mui/x-charts/PieChart';
-
-// export default function BookingDetails() {
-//   const { id } = useParams();
-//   const navigate = useNavigate();
-//   const [booking, setBooking] = useState(null);
-// const [showDeletePopup, setShowDeletePopup] = useState(false);
-//   useEffect(() => {
-//     console.log("In booking details");
-//     const fetchBooking = async () => {
-//       try {
-//         const res = await fetch(`http://localhost:3000/api/bookings/${id}`);
-//         const data = await res.json();
-//         setBooking(data);
-//         console.log("Campaings are",data?.campaigns);
-//       } catch (err) {
-//         console.error(err);
-//         toast.error('Failed to load booking details');
-//       }
-//     };
-
-//     fetchBooking();
-//   }, [id]);
-//   const handleDelete = async () => {
-//     try {
-//       const res = await fetch(`http://localhost:3000/api/bookings/${id}`, { method: 'DELETE' });
-//       if (res.ok) {
-//         toast.success('Booking deleted');
-//         navigate('/booking-dashboard');
-//       } else {
-//         toast.error('Delete failed');
-//       }
-//     } catch (err) {
-//       console.error(err);
-//       toast.error('Error deleting booking');
-//     }
-//   };
-//   const formatLabel = (key) =>
-//     key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-
-//   if (!booking) return <div className="flex justify-center items-center h-screen">Loading...</div>;
-
-//   const totalPaid = booking.campaigns?.reduce(
-//     (sum, c) => sum + (c.pipeline?.payment?.totalPaid || 0),
-//     0
-//   );
-
-//   const totalDue = booking.campaigns?.reduce(
-//     (sum, c) => sum + (c.pipeline?.payment?.paymentDue || 0),
-//     0
-//   );
-
-//   return (
-//     <div className="min-h-screen bg-[#fafafb] w-[100%] bg-base-100 text-base-content flex flex-col lg:flex-row">
-//       <Navbar />
-
-//       <main className="flex-1 h-full overflow-y-auto px-6 py-6 ml-0 lg:ml-64">
-//         <div className="flex justify-between items-center mb-6">
-//           <h2 className="text-lg">Booking Details</h2>
-//           <div className="space-x-2">
-//             <button
-//               className="bg-red-600 text-white px-2 py-1 text-xs rounded hover:bg-red-700"
-//               onClick={() => setShowDeletePopup(true)}
-//             >
-//               Delete Booking
-//             </button>
-//           </div>
-//         </div>
-
-//         {/* ✅ Flex Row with Booking Info and Payment Chart */}
-//         <div className="flex w-[100%] flex-wrap gap-6 mb-6">
-//           {/* Booking Info Card */}
-//           <div className="card bg-base-100 shadow-md p-4 min-w-[300px] flex-1">
-//             <h2 className="text-lg font-semibold mb-4">Client Information</h2>
-//             <div className="grid grid-cols-2 gap-4 text-sm">
-//               {Object.entries(booking).filter(([key]) =>
-//                 [
-//                   'companyName',
-//                   'clientName',
-//                   'clientEmail',
-//                   'clientContactNumber',
-//                   'clientPanNumber',
-//                   'clientGstNumber',
-//                   'brandDisplayName',
-//                   'clientType',
-//                 ].includes(key)
-//               ).map(([key, value]) => (
-//                 <Info key={key} label={formatLabel(key)} value={value} />
-//               ))}
-//               <Info label="Created At" value={new Date(booking.createdAt).toLocaleString()} />
-//             </div>
-//           </div>
-
-//           {/* ✅ Payment Overview Pie Chart */}
-//           <div className="card bg-base-100 shadow-md p-4 min-w-[200px] flex-1 max-w-[400px]">
-//             <h2 className="text-lg font-semibold mb-1">Payment Overview</h2>
-//             <div className='flex'>
-//               <div className="text-xs ml-auto ">
-//               <p><strong> Paid:</strong> ₹{totalPaid.toLocaleString()}</p>
-//               <p><strong>Remaining:</strong> ₹{totalDue.toLocaleString()}</p>
-//               <p><strong>Total Amount:</strong> ₹{(totalPaid + totalDue).toLocaleString()}</p>
-//             </div>
-//             </div>
-//             <PieChart
-//               series={[
-//                 {
-//                    innerRadius: 60,
-//                   data: [
-//                     { id: 0, value: totalPaid, label: 'Paid' },
-//                     { id: 1, value: totalDue, label: 'Due' },
-//                   ],
-//                 },
-//               ]}
-//               width={300}
-//               height={200}
-//             />
-           
-//           </div>
-//         </div>
-
-//         {/* Campaign Cards */}
-//         {booking.campaigns.map((campaign, idx) => (
-//           <div
-//             key={idx}
-//             className="card w-[50%] bg-base-100 shadow-md p-4 mb-6 hover:shadow-lg cursor-pointer transition duration-200"
-//             // onClick={() => navigate(`/pipeline/${campaign._id}`)}
-//             onClick={() => navigate(`/campaign-details/${campaign._id}`)}
-
-//           >
-//             <h2 className="text-lg font-semibold mb-4 text-blue-700">
-//               Campaign: {campaign.campaignName}
-//             </h2>
-//             <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-//               <Info label="Description" value={campaign.description} />
-//               <Info label="Start Date" value={campaign.startDate} />
-//               <Info label="End Date" value={campaign.endDate} />
-//             </div>
-//           </div>
-//         ))}
-//       </main>
-//       {showDeletePopup && (
-//   <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-//     <div className="bg-white p-6 rounded shadow-lg w-96">
-//       <h2 className="text-xl font-bold mb-4">Confirm Deletion</h2>
-//       <p className="mb-4 text-sm text-gray-700">Are you sure you want to delete this booking? This action cannot be undone.</p>
-//       <div className="flex justify-end gap-4">
-//         <button className="btn btn-outline" onClick={() => setShowDeletePopup(false)}>Cancel</button>
-//         <button className="btn btn-error" onClick={handleDelete}>Yes, Delete</button>
-//       </div>
-//     </div>
-//   </div>
-// )}
-//     </div>
-//   );
-// }
-
-// const Info = ({ label, value }) => (
-//   <div>
-//     <span className="">{label}:</span> {value || 'N/A'}
-//   </div>
-// );
 
 
 import React, { useState, useEffect } from 'react';
@@ -173,6 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Navbar from './Navbar';
 import { PieChart } from '@mui/x-charts/PieChart';
+import InventorySelector from './BookingFormAddSpaces';
 
 // MODIFIED InfoDetail component for Key-Above-Value display
 const InfoDetail = ({ label, value }) => (
@@ -187,6 +22,36 @@ export default function BookingDetails() {
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
   const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [campaignDrafts, setCampaignDrafts] = useState([]);
+const [spaces, setSpaces] = useState([]);
+ useEffect(() => {
+  const fetchSpaces = async () => {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces`);
+    const data = await res.json();
+    const transformed = data.map(space => ({
+      id: space._id,
+      name: space.spaceName,
+      facia: space.faciaTowards,
+      city: space.city,
+      category: space.category,
+      spaceType: space.spaceType,
+      unit: space.unit,
+      occupiedUnits: space.occupiedUnits,
+      ownershipType: space.ownershipType,
+      price: space.price,
+      traded: space.traded,
+      overlappingBooking: space.overlappingBooking,
+      availableFrom: space.dates?.[0],
+      availableTo: space.dates?.[space.dates.length - 1],
+      status: space.occupiedUnits === 0 ? 'Completely available' :
+              space.occupiedUnits < space.unit ? 'Partialy available' : 'Completely booked'
+    }));
+    setSpaces(transformed);
+  };
+
+  fetchSpaces();
+}, []);
+
 
   useEffect(() => {
     const fetchBooking = async () => {
@@ -206,6 +71,41 @@ export default function BookingDetails() {
 
     fetchBooking();
   }, [id]);
+const addDraftCampaign = () => {
+  setCampaignDrafts([...campaignDrafts, {
+    campaignName: '', industry: '', description: '',
+    startDate: '', endDate: '', selectedSpaces: [], searchQuery: ''
+  }]);
+};
+
+const updateDraftCampaign = (index, updated) => {
+  const updatedList = [...campaignDrafts];
+  updatedList[index] = updated;
+  setCampaignDrafts(updatedList);
+};
+
+const removeDraftCampaign = (index) => {
+  setCampaignDrafts(campaignDrafts.filter((_, i) => i !== index));
+};
+
+const saveDraftCampaign = async (index) => {
+  const campaign = campaignDrafts[index];
+
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings/${booking._id}/campaigns`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(campaign),
+  });
+
+  if (res.ok) {
+    toast.success('Campaign added successfully');
+    setCampaignDrafts([]);
+    const updatedBooking = await res.json();
+    setBooking(prev => ({ ...prev, campaigns: [...(prev.campaigns || []), updatedBooking] }));
+  } else {
+    toast.error('Failed to save campaign');
+  }
+};
 
   const handleDelete = async () => {
     try {
@@ -349,6 +249,80 @@ export default function BookingDetails() {
             </div>
           </div>
         )}
+        {campaignDrafts.map((campaign, index) => (
+  <div key={index} className="border rounded mt-[5%] p-4 mb-6 shadow-sm">
+    <div className="grid grid-cols-2 gap-4">
+      <Input label="Campaign Name" value={campaign.campaignName} onChange={e => {
+        const updated = { ...campaign, campaignName: e.target.value };
+        updateDraftCampaign(index, updated);
+      }} />
+      <Input label="Industry" value={campaign.industry} onChange={e => {
+        const updated = { ...campaign, industry: e.target.value };
+        updateDraftCampaign(index, updated);
+      }} />
+      <Input label="Start Date" type="date" value={campaign.startDate} onChange={e => {
+        const updated = { ...campaign, startDate: e.target.value };
+        updateDraftCampaign(index, updated);
+      }} />
+      <Input label="End Date" type="date" value={campaign.endDate} onChange={e => {
+        const updated = { ...campaign, endDate: e.target.value };
+        updateDraftCampaign(index, updated);
+      }} />
+      <div className="col-span-2">
+        <label className="text-xs font-medium">Description</label>
+        <textarea value={campaign.description} onChange={e => {
+          const updated = { ...campaign, description: e.target.value };
+          updateDraftCampaign(index, updated);
+        }} className="w-full border rounded p-2" />
+      </div>
+    </div>
+
+    <InventorySelector
+      campaignIndex={index}
+      campaign={campaign}
+      spaces={spaces}
+      globalAvailability={{}} // optionally compute if needed
+      startDate={campaign.startDate}
+      endDate={campaign.endDate}
+      onToggleSpaceSelection={(i, id) => {
+        const updated = { ...campaign };
+        const exists = updated.selectedSpaces?.find(s => s.id === id);
+        updated.selectedSpaces = exists
+          ? updated.selectedSpaces.filter(s => s.id !== id)
+          : [...(updated.selectedSpaces || []), { ...spaces.find(s => s.id === id), selectedUnits: 1 }];
+        updateDraftCampaign(index, updated);
+      }}
+      onUpdateSelectedUnits={(i, id, units) => {
+        const updated = { ...campaign };
+        updated.selectedSpaces = updated.selectedSpaces.map(s =>
+          s.id === id ? { ...s, selectedUnits: units } : s
+        );
+        updateDraftCampaign(index, updated);
+      }}
+      onSearchChange={(i, query) => {
+        const updated = { ...campaign, searchQuery: query };
+        updateDraftCampaign(index, updated);
+      }}
+    />
+
+    <div className="flex mt-4">
+      <button onClick={() => removeDraftCampaign(index)} className="mr-auto text-red-500 hover:text-red-700">🗑️</button>
+      <button
+        onClick={() => saveDraftCampaign(index)}
+        className="bg-blue-500 ml-auto text-white text-xs px-4 py-1 rounded hover:bg-blue-600"
+      >
+        Save Campaign
+      </button>
+    </div>
+  </div>
+))}
+<button
+  onClick={addDraftCampaign}
+  className="border px-3 py-2 rounded text-sm mt-4"
+>
+  + Add Campaign
+</button>
+
       </main>
 
       {showDeletePopup && (
@@ -373,6 +347,15 @@ export default function BookingDetails() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function Input({ label, ...props }) {
+  return (
+    <div>
+      <label className="text-xs font-medium">{label}</label>
+      <input {...props} className="w-full border px-3 py-2 rounded mt-1" />
     </div>
   );
 }

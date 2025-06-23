@@ -564,8 +564,26 @@ export const getBookingById = async (req, res) => {
 };
 router.get('/campaign/:id', getCampaignById);
 
-// routes/spaces.js
 
+router.post('/:bookingId/campaigns',  async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const campaignData = req.body;
+
+    // 1. Create the campaign
+    const newCampaign = await Campaign.create({ ...campaignData });
+
+    // 2. Attach to the booking
+    await Booking.findByIdAndUpdate(bookingId, {
+      $push: { campaigns: newCampaign._id }
+    });
+
+    res.status(201).json(newCampaign);
+  } catch (err) {
+    console.error('Error creating campaign:', err);
+    res.status(500).json({ message: 'Failed to create and link campaign' });
+  }
+});
 
 
 router.get('/',getAllBookings);

@@ -20,6 +20,13 @@ const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+app.use((req, res, next) => {
+  console.log(`📥 Express received: ${req.method} ${req.url}`);
+   if (req.url.startsWith('/default')) {
+    req.url = req.url.replace(/^\/default/, '');
+  }
+  next();
+});
 
 app.get('/uploads/:filename', (req, res) => {
   const filePath = path.join(__dirname, 'uploads', req.params.filename);
