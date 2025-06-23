@@ -18,6 +18,7 @@ const bookingSchema = new Schema({
   bookingMode: { type: String },
   bookingSource: { type: String },
   reminderTimeline:{type:Number},
+  isFOCBooking:{type:Boolean,default:false},
 
   industry: {
     type: String,

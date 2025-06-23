@@ -159,6 +159,7 @@ export const BookingFormProvider = ({ children }) => {
     clientType: '',
     bookingMode:'',
     bookingSource:'',
+    isFOCBooking: false,
     campaignImages: [],
   });
 
@@ -184,6 +185,7 @@ export const BookingFormProvider = ({ children }) => {
       brandName: '',
       clientType: '',
       campaignImages: [],
+      isFOCBooking: false,
     });
 
     setOrderInfo({ campaigns: [] });

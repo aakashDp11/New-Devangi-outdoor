@@ -241,7 +241,8 @@ export const createBooking = async (req, res) => {
       brandName,
       clientType,
       campaigns = [],
-      user: userId
+      user: userId,
+      isFOCBooking = false
     } = req.body;
 
     if (!companyName) throw new Error('Company Name is required');
@@ -274,6 +275,7 @@ export const createBooking = async (req, res) => {
       brandDisplayName: brandName,
       clientType,
       companyLogo,
+      isFOCBooking,
       campaigns: [],
       user: userId
     });

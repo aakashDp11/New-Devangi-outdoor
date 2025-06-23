@@ -33,11 +33,20 @@ app.get('/uploads/:filename', (req, res) => {
   res.download(filePath);
 });
 
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174','https://new-devangi-outdoor-1.onrender.com','https://new-devangi-outdoor.onrender.com'];
+
 app.use(cors({
-  origin: 'http://localhost:5173', // change to frontend URL in production
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
-
 app.use(express.json());
 
 app.use('/api/spaces', spaceRoutes);

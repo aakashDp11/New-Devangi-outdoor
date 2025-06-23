@@ -62,6 +62,7 @@ const [spaces, setSpaces] = useState([]);
           throw new Error(errorData.message || `Failed to fetch booking (status: ${res.status})`);
         }
         const data = await res.json();
+        console.log("Booking data is",data);
         setBooking(data);
       } catch (err) {
         console.error(err);
@@ -187,7 +188,10 @@ const saveDraftCampaign = async (index) => {
           {/* Payment Overview Card */}
           <div className="card bg-white shadow-xl p-6 rounded-lg flex-grow lg:w-1/3 lg:max-w-md">
             <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-3">Payment Overview</h2>
-            {(totalPaid === 0 && totalDue === 0 && grandTotal === 0) ? (
+            {booking.isFOCBooking? <div className="flex items-center justify-center h-48">
+                <p className="text-gray-500 text-md text-center"> This is a FOC booking </p>
+              </div>:<div>
+          {(totalPaid === 0 && totalDue === 0 && grandTotal === 0) ? (
               <div className="flex items-center justify-center h-48">
                 <p className="text-gray-500 text-md text-center"> Please enter the payment details </p>
               </div>
@@ -223,6 +227,9 @@ const saveDraftCampaign = async (index) => {
                 </div>
               </>
             )}
+    </div>} 
+              
+          
           </div>
         </div>
 

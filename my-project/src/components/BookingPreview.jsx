@@ -174,6 +174,9 @@ console.log("FormData before submission is",formData);
         value={value}
       />
     ))}
+    {/* {basicInfo.isFOCBooking && (
+  <PreviewField label="FOC (Free of Cost) Booking" value="Yes" />
+)} */}
 </div>
 
         {assignedUser && (
@@ -236,7 +239,7 @@ console.log("FormData before submission is",formData);
                       <th className="px-2 py-2">Occupied</th>
                       <th className="px-2 py-2">Total</th>
                       <th className="px-2 py-2">Selected</th>
-                      <th className="px-2 py-2">Price</th>
+                      {/* <th className="px-2 py-2">Price</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -252,16 +255,16 @@ console.log("FormData before submission is",formData);
                         <td className="px-2 py-2">{space.occupiedUnits}</td>
                         <td className="px-2 py-2">{space.unit}</td>
                         <td className="px-2 py-2">{space.selectedUnits}</td>
-                        <td className="px-2 py-2">₹{(space.price * (space.selectedUnits || 1)).toLocaleString()}</td>
+                        {/* <td className="px-2 py-2">₹{(space.price * (space.selectedUnits || 1)).toLocaleString()}</td> */}
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-gray-50 font-semibold">
+                  {/* <tfoot className="bg-gray-50 font-semibold">
                     <tr>
                       <td colSpan="10" className="text-right px-2 py-2">Campaign Total:</td>
                       <td className="px-2 py-2">₹{campaignTotal.toLocaleString()}</td>
                     </tr>
-                  </tfoot>
+                  </tfoot> */}
                 </table>
               </div>
             </div>
@@ -269,9 +272,9 @@ console.log("FormData before submission is",formData);
         })}
 
         {/* Grand Total */}
-        <div className="text-right font-semibold text-lg mb-6">
+        {/* <div className="text-right font-semibold text-lg mb-6">
           Grand Total: ₹{grandTotalPrice.toLocaleString()}
-        </div>
+        </div> */}
 
         {/* Actions */}
         <div className="flex text-xs justify-between mt-6">

@@ -474,6 +474,20 @@ export default function CreateOrderBasicInfo() {
               
             </select>
           </div>
+          <div className="col-span-2 mt-2 flex items-center">
+  <input
+    id="focBooking"
+    type="checkbox"
+    checked={basicInfo.isFOCBooking || false}
+    onChange={(e) =>
+      setBasicInfo({ ...basicInfo, isFOCBooking: e.target.checked })
+    }
+    className="mr-2 h-4 w-4 accent-black"
+  />
+  <label htmlFor="focBooking" className="text-xs font-normal">
+    FOC (Free of Cost) booking
+  </label>
+</div>
         </div>
 
         <div className="mt-8 text-sm flex">
