@@ -88,7 +88,7 @@ export default function Navbar() {
 // console.log("Auth details are",auth);
   const navItems = [
     { label: 'Home', path: '/home', icon: <FaHome /> },
-    { label: 'Inventories', path: '/', icon: <FaBoxOpen /> },
+    { label: 'Inventories', path: '/inventory', icon: <FaBoxOpen /> },
     { label: 'Bookings', path: '/booking-dashboard', icon: <FaCalendarCheck /> },
     { label: 'Proposals', path: '/proposal-dashboard', icon: <FaFileAlt /> },
     { label: 'Users', path: '/users', icon: <FaUsers /> },

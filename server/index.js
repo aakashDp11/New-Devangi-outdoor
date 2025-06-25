@@ -17,6 +17,7 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import debugRoutes from './routes/debug.routes.js'
 import Campaign from './models/campign.model.js';
+import { authenticate } from './middleware/authenticate.middleware.js';
 
 dotenv.config();
 const app = express();
@@ -31,10 +32,7 @@ const __dirname = dirname(__filename);
   const filePath = path.join(__dirname, 'uploads', req.params.filename);
   res.download(filePath); // ✅ Force download
 });
-// app.use(cors({
-//   origin: 'http://localhost:5173', // your Vite frontend URL
-//   credentials: true,              // if you’re using cookies or auth headers
-// }));
+
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174','https://new-devangi-outdoor-1.onrender.com','https://new-devangi-outdoor.onrender.com'];
 
 app.use(cors({
@@ -49,6 +47,9 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+
+ 
 let db;
 app.use(express.json()); // for parsing application/json
 

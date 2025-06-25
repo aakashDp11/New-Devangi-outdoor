@@ -7,6 +7,7 @@ import User from '../models/user.model.js';
 import mongoose from 'mongoose';
 import Campaign from '../models/campign.model.js';
 import { uploadToS3 } from '../utils/s3uploader.js';
+import { authenticate } from '../middleware/authenticate.middleware.js';
 const router = express.Router();
 // CREATE - POST /api/bookings
 export const getAllBookings = async (req, res) => {
@@ -564,6 +565,133 @@ export const getBookingById = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
   }
 };
+
+export const getAllBookings1 = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+
+    // Build search filter
+    const searchFilter = {
+      $or: [
+        { companyName: { $regex: search, $options: 'i' } },
+        { clientName: { $regex: search, $options: 'i' } },
+        { brandDisplayName: { $regex: search, $options: 'i' } }
+      ]
+    };
+
+    // Projection: only required fields
+    const projection = {
+      _id: 1,
+      companyName: 1,
+      clientName: 1,
+      brandDisplayName: 1,
+      createdAt: 1,
+      // companyLogo: 1,
+      campaigns: 1
+    };
+
+    const totalCount = await Booking.countDocuments(searchFilter);
+
+    const bookings = await Booking.find(searchFilter, projection)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .populate({
+        path: 'campaigns',
+        select: 'campaignName', // Include campaignName only if needed
+        populate: [
+          {
+            path: 'spaces.id',
+            model: 'Space',
+            select: 'spaceName' // select required fields if needed
+          },
+          {
+            path: 'pipeline',
+            model: 'Pipeline',
+            options: { strictPopulate: false }
+          }
+        ]
+      });
+
+    return res.status(200).json({
+      bookings,
+      totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / limit)
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch bookings' });
+  }
+};
+
+export const getBookingDashboardStats = async (req, res) => {
+  try {
+    const bookings = await Booking.find({}, { createdAt: 1, campaigns: 1 })
+      .populate({
+        path: 'campaigns',
+        select: 'pipeline spaces',
+        populate: [
+          {
+            path: 'pipeline',
+            select: 'payment bookingStatus artwork po invoice'
+          },
+          {
+            path: 'spaces.id',
+            select: 'printingStatus mountingStatus'
+          }
+        ]
+      });
+
+    const bookingStats = [];
+
+    bookings.forEach((booking) => {
+      const createdAt = booking.createdAt;
+
+      booking.campaigns?.forEach((campaign) => {
+        const pipeline = campaign.pipeline || {};
+        const spaces = campaign.spaces || [];
+
+        const payment = pipeline.payment || {};
+        const bookingStatus = pipeline.bookingStatus || {};
+        const artwork = pipeline.artwork || {};
+        const po = pipeline.po || {};
+        const invoice = pipeline.invoice || {};
+
+        const statusSummary = {
+          createdAt,
+          totalPaid: payment.totalPaid || 0,
+          paymentDue: payment.paymentDue || 0,
+          bookingConfirmed: !!bookingStatus.confirmed,
+          artworkReceived: !!artwork.confirmed,
+          poReceived: !!po.documentUrl,
+          invoiceReceived: !!invoice.invoiceNumber,
+          printingStatus: 0,
+          mountingStatus: 0,
+        };
+
+        spaces.forEach((space) => {
+          const s = space?.id || {};
+          if (s.printingStatus?.confirmed) statusSummary.printingStatus++;
+          if (s.mountingStatus?.confirmed) statusSummary.mountingStatus++;
+        });
+
+        bookingStats.push(statusSummary);
+      });
+    });
+
+    return res.status(200).json({ bookingStats });
+  } catch (error) {
+    console.error('Error in booking dashboard stats:', error);
+    res.status(500).json({ error: 'Failed to generate booking dashboard stats' });
+  }
+};
+router.get('/dashboard-stats', authenticate, getBookingDashboardStats);
+
 router.get('/campaign/:id', getCampaignById);
 
 
@@ -588,7 +716,8 @@ router.post('/:bookingId/campaigns',  async (req, res) => {
 });
 
 
-router.get('/',getAllBookings);
+router.get('/',authenticate,getAllBookings);
+router.get('/optimized',authenticate,getAllBookings1);
 router.post('/',upload.single('companyLogo'),  // Limit to 10 images
   createBooking
 );

@@ -206,8 +206,33 @@ export default function BookingsDashboard1() {
 
   useEffect(() => {
     const fetchBookings = async () => {
+      const token = localStorage.getItem('accessToken');
+     console.log("Token sent is",token);
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`);
+    //     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`,{
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${token}`,
+    //   },
+    // });
+    const response = await fetch(
+  `${import.meta.env.VITE_API_BASE_URL}/api/bookings/optimized?page=${currentPage}&limit=10&search=${search}`,
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
+    if (response.status === 403) {
+      const errorData = await response.json();
+      if (errorData.message === 'Invalid or expired token') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userEmail');
+        navigate('/login'); // or use router.navigate('/login') if using React Router
+        return;
+      }
+    }
+
+    
         const data = await response.json();
         data.bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setBookings(data.bookings);
@@ -268,7 +293,7 @@ export default function BookingsDashboard1() {
           <table className="table-auto bg-white w-full border border-gray-300 rounded-md">
             <thead className="bg-white">
               <tr className='text-xs'>
-                <th className="border border-gray-300 px-4 py-2 text-left">Client Logo</th>
+               
 
                 <th className="border border-gray-300 px-4 py-2 text-left cursor-pointer">
                   <div
@@ -291,7 +316,7 @@ export default function BookingsDashboard1() {
                     </span>
                   </div>
                 </th>
-
+ <th className="border border-gray-300 px-4 py-2 text-left">Company Name</th>
                 <th className="border border-gray-300 px-4 py-2 text-left cursor-pointer">
                   <div
                     onClick={() =>
@@ -345,8 +370,11 @@ export default function BookingsDashboard1() {
                   onClick={() => navigate(`/booking/${item._id}`)}
                   className="cursor-pointer transition duration-200 ease-in-out hover:bg-gray-200 hover:shadow-sm"
                 >
+                  
+
+                  <td className="border border-gray-300 px-4 py-2">{item._id?.substring(0, 6)}</td>
                   <td className="border border-gray-300 px-4 py-2">
-                    {item.companyLogo ? (
+                    {/* {item.companyLogo ? (
                       <div className="avatar">
                         <div className="mask mask-squircle w-8 h-8 overflow-hidden">
                           <img
@@ -358,10 +386,9 @@ export default function BookingsDashboard1() {
                       </div>
                     ) : (
                       <span>No Image</span>
-                    )}
+                    )} */}
+                    {item.companyName || 'No Client'}
                   </td>
-
-                  <td className="border border-gray-300 px-4 py-2">{item._id?.substring(0, 6)}</td>
                   <td className="border border-gray-300 px-4 py-2">{item.clientName || 'No Client'}</td>
                   <td className="border border-gray-300 px-4 py-2">
                     {new Date(item.createdAt).toLocaleDateString()}

@@ -258,7 +258,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
           </p>
 
           <div className="mt-4">
-            <h2 className="text-sm font-semibold mb-1">Estimate Document</h2>
+            <h2 className="text-sm font-semibold mb-1">Booking confirmed Document</h2>
             {pipelineData.bookingStatus.estimateDocument ? (
               <a
                 href={pipelineData.bookingStatus.estimateDocument}

@@ -170,18 +170,23 @@ export default function App() {
           <Route path='/create-user' element={<Register />} />
           <Route path='/register' element={<Register />} />
           <Route path='/login' element={<Login />} />
-          
+           <Route path='/' element={
+            <ProtectedRoute>
+              <InventoryDashboard/>
+            </ProtectedRoute>
+          } />
           {/* Protected Routes */}
           <Route path='/home' element={
             <ProtectedRoute>
               <HomePage />
             </ProtectedRoute>
           } />
-          <Route path='/' element={
+          <Route path='/inventory' element={
             <ProtectedRoute>
               <InventoryDashboard/>
             </ProtectedRoute>
           } />
+         
           {/* <Route path='/' element={
             <ProtectedRoute>
               <HomePage />

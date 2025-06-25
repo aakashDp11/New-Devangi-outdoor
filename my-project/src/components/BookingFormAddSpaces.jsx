@@ -1,4 +1,8 @@
+
+
+
 // import React from 'react';
+
 // export default function InventorySelector({
 //   campaignIndex,
 //   campaign,
@@ -10,54 +14,31 @@
 //   onUpdateSelectedUnits,
 //   onSearchChange
 // }) {
-//   console.log("🚀 InventorySelector loaded",spaces);
-// console.log("📦 Campaign Index:", campaignIndex);
-// console.log("🧾 Campaign:", campaign);
-// console.log("📆 Selected Start Date:", startDate);
-// console.log("📆 Selected End Date:", endDate);
-// console.log("📦 Total Spaces received:", spaces?.length);
-
 //   const parseDDMMYY = (str) => {
-//   const [dd, mm, yy] = str.split("-");
-//   const fullYear = yy.length === 2 ? `20${yy}` : yy;
-//   return new Date(`${fullYear}-${mm}-${dd}`);
-// };
+//     const [dd, mm, yy] = str.split("-");
+//     const fullYear = yy.length === 2 ? `20${yy}` : yy;
+//     return new Date(`${fullYear}-${mm}-${dd}`);
+//   };
 
-// const isSpaceAvailableInRange = (space) => {
-//   try {
-//     if (!startDate || !endDate) return false;
-//     if (!space.availableFrom || !space.availableTo) return false;
+//   const isSpaceAvailableInRange = (space) => {
+//     try {
+//       if (!startDate || !endDate) return false;
+//       if (!space.availableFrom || !space.availableTo) return false;
 
-//     const selectedStart = new Date(startDate);
-//     const selectedEnd = new Date(endDate);
-//     const spaceStart = parseDDMMYY(space.availableFrom);
-//     const spaceEnd = parseDDMMYY(space.availableTo);
+//       const selectedStart = new Date(startDate);
+//       const selectedEnd = new Date(endDate);
+//       const spaceStart = parseDDMMYY(space.availableFrom);
+//       const spaceEnd = parseDDMMYY(space.availableTo);
 
-//     console.log("🔍 Checking:", space.name);
-//     console.log("📆 Campaign:", selectedStart.toDateString(), "→", selectedEnd.toDateString());
-//     console.log("📍 Available:", spaceStart.toDateString(), "→", spaceEnd.toDateString());
-
-//     if (!(selectedStart >= spaceStart && selectedEnd <= spaceEnd)) {
-//       console.log("❌ Outside availability");
+//       return selectedStart >= spaceStart && selectedEnd <= spaceEnd;
+//     } catch (err) {
+//       console.error("Error checking availability range:", err);
 //       return false;
 //     }
+//   };
 
-//     // Skip campaignDates check since not present in BookingFormOrderInfo
-
-//     console.log("✅ Passed");
-//     return true;
-
-//   } catch (err) {
-//     console.error("🚨 Error:", err);
-//     return false;
-//   }
-// };
-
-
-//  const filteredSpaces = (spaces || []).filter(space => {
-//   console.log("Space is",space);
-//   console.log("🔍 Checking space:", space?.name);
-
+//   const filteredSpaces = (spaces || []).filter(space => {
+//     console.log("Sample inventory space is",space);
 //     if (!isSpaceAvailableInRange(space)) return false;
 //     if (space.overlappingBooking && space.status === 'Completely booked') return false;
 //     if ((space.status === 'Completely available' || space.status === 'Partialy available') && space.traded) return false;
@@ -100,7 +81,7 @@
 //               <th className="px-2 py-2">Status</th>
 //               <th className="px-2 py-2">Facia</th>
 //               <th className="px-2 py-2">City</th>
-//               <th className="px-2 py-2">Category</th>
+//               <th className="px-2 py-2">Ownership</th>
 //               <th className="px-2 py-2">Occupied</th>
 //               <th className="px-2 py-2">Total</th>
 //               <th className="px-2 py-2">Select Units</th>
@@ -121,6 +102,7 @@
 //                   : 'Partialy available';
 
 //               const canSelectUnits = remainingUnits > 0;
+//               const isDOOH = space.spaceType === 'DOOH';
 
 //               return (
 //                 <tr key={space.id} className="border-t text-center">
@@ -145,25 +127,41 @@
 //                   <td className="px-2 py-2">{space.facia}</td>
 //                   <td className="px-2 py-2">{space.city}</td>
 //                   <td className="px-2 py-2">
-//                     <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-//                       {space.category}
+//                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+//                       {space.ownershipType}
 //                     </span>
 //                   </td>
-//                   <td className="px-2 py-2">{updatedOccupiedUnits}</td>
-//                   <td className="px-2 py-2">{space.unit}</td>
 //                   <td className="px-2 py-2">
-//                     {updatedStatus === "Completely booked" || !canSelectUnits ? (
+//                     {!isDOOH ? (
 //                       <span className="text-gray-400 italic">N/A</span>
 //                     ) : (
-//                       <input
-//                         type="number"
-//                         min={1}
-//                         max={remainingUnits}
-//                         value={currentCampaignUnits || 1}
-//                         onChange={(e) => onUpdateSelectedUnits(campaignIndex, space.id, parseInt(e.target.value))}
-//                         className="w-16 border rounded px-1"
-//                         disabled={!campaign.selectedSpaces?.some(s => s.id === space.id)}
-//                       />
+//                       updatedOccupiedUnits
+//                     )}
+//                   </td>
+//                   <td className="px-2 py-2">
+//                     {!isDOOH ? (
+//                       <span className="text-gray-400 italic">N/A</span>
+//                     ) : (
+//                       space.unit
+//                     )}
+//                   </td>
+//                   <td className="px-2 py-2">
+//                     {!isDOOH ? (
+//                       <span className="text-gray-400 italic">N/A</span>
+//                     ) : (
+//                       updatedStatus === "Completely booked" || !canSelectUnits ? (
+//                         <span className="text-gray-400 italic">N/A</span>
+//                       ) : (
+//                         <input
+//                           type="number"
+//                           min={1}
+//                           max={remainingUnits}
+//                           value={currentCampaignUnits || 1}
+//                           onChange={(e) => onUpdateSelectedUnits(campaignIndex, space.id, parseInt(e.target.value))}
+//                           className="w-16 border rounded px-1"
+//                           disabled={!campaign.selectedSpaces?.some(s => s.id === space.id)}
+//                         />
+//                       )
 //                     )}
 //                   </td>
 //                 </tr>
@@ -176,7 +174,8 @@
 //   );
 // }
 
-import React from 'react';
+
+import React, { useState } from 'react';
 
 export default function InventorySelector({
   campaignIndex,
@@ -189,12 +188,7 @@ export default function InventorySelector({
   onUpdateSelectedUnits,
   onSearchChange
 }) {
-  console.log("🚀 InventorySelector loaded",spaces);
-  console.log("📦 Campaign Index:", campaignIndex);
-  console.log("🧾 Campaign:", campaign);
-  console.log("📆 Selected Start Date:", startDate);
-  console.log("📆 Selected End Date:", endDate);
-  console.log("📦 Total Spaces received:", spaces?.length);
+  const [selectedSpace, setSelectedSpace] = useState(null); // State to manage selected space for the modal
 
   const parseDDMMYY = (str) => {
     const [dd, mm, yy] = str.split("-");
@@ -212,28 +206,15 @@ export default function InventorySelector({
       const spaceStart = parseDDMMYY(space.availableFrom);
       const spaceEnd = parseDDMMYY(space.availableTo);
 
-      console.log("🔍 Checking:", space.name);
-      console.log("📆 Campaign:", selectedStart.toDateString(), "→", selectedEnd.toDateString());
-      console.log("📍 Available:", spaceStart.toDateString(), "→", spaceEnd.toDateString());
-
-      if (!(selectedStart >= spaceStart && selectedEnd <= spaceEnd)) {
-        console.log("❌ Outside availability");
-        return false;
-      }
-
-      console.log("✅ Passed");
-      return true;
-
+      return selectedStart >= spaceStart && selectedEnd <= spaceEnd;
     } catch (err) {
-      console.error("🚨 Error:", err);
+      console.error("Error checking availability range:", err);
       return false;
     }
   };
 
   const filteredSpaces = (spaces || []).filter(space => {
-    console.log("Space is", space);
-    console.log("🔍 Checking space:", space?.name);
-
+    console.log("Sample inventory space is", space);
     if (!isSpaceAvailableInRange(space)) return false;
     if (space.overlappingBooking && space.status === 'Completely booked') return false;
     if ((space.status === 'Completely available' || space.status === 'Partialy available') && space.traded) return false;
@@ -248,6 +229,16 @@ export default function InventorySelector({
     }
     return true;
   });
+
+  // Function to handle space click
+  const handleSpaceClick = (space) => {
+    setSelectedSpace(space); // Set selected space for modal
+  };
+
+  // Close the modal
+  const closeModal = () => {
+    setSelectedSpace(null);
+  };
 
   return (
     <div className="mt-6">
@@ -300,7 +291,7 @@ export default function InventorySelector({
               const isDOOH = space.spaceType === 'DOOH';
 
               return (
-                <tr key={space._id || space.id} className="border-t text-center">
+                <tr key={space.id} className="border-t text-center">
                   <td className="px-2 py-2">
                     <input
                       type="checkbox"
@@ -308,7 +299,9 @@ export default function InventorySelector({
                       onChange={() => onToggleSpaceSelection(campaignIndex, space.id)}
                     />
                   </td>
-                  <td className="px-2 py-2 text-left">{space.name}</td>
+                  <td className="px-2 py-2 text-left" onClick={() => handleSpaceClick(space)}>
+                    {space.name}
+                  </td>
                   <td className="px-2 py-2">{space.spaceType}</td>
                   <td className="px-2 py-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -323,7 +316,7 @@ export default function InventorySelector({
                   <td className="px-2 py-2">{space.city}</td>
                   <td className="px-2 py-2">
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                      {space.ownershipType }
+                      {space.ownershipType}
                     </span>
                   </td>
                   <td className="px-2 py-2">
@@ -365,6 +358,65 @@ export default function InventorySelector({
           </tbody>
         </table>
       </div>
+
+      {/* Custom Modal to show the main photo */}
+      {selectedSpace && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <button className="modal-close" onClick={closeModal}>×</button>
+            <h2>{selectedSpace.name}</h2>
+            <img src={selectedSpace.mainPhoto} alt={selectedSpace.name} className="modal-image" />
+          </div>
+        </div>
+      )}
+
+      {/* Modal Styling */}
+      <style jsx>{`
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background-color: white;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          max-width: 80%;
+          text-align: center;
+        }
+
+        .modal-close {
+        
+          top: 10px;
+          right: 10px;
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #333;
+          cursor: pointer;
+        }
+
+        .modal-image {
+          width: 100%;
+          height: auto;
+          max-width: 500px;
+          margin-top: 20px;
+        }
+
+        h2 {
+          font-size: 1.5rem;
+          margin-bottom: 10px;
+        }
+      `}</style>
     </div>
   );
 }
