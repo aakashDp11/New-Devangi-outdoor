@@ -996,6 +996,7 @@ const BookingGraphDashboard = () => {
   }, [range, bookingStats]);
 
   const fetchData = async () => {
+     
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');

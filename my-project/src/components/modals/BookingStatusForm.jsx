@@ -245,7 +245,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
   return (
     <div className="w-full h-full flex items-center justify-center p-4">
       {pipelineData?.bookingStatus?.confirmed ? (
-        <div className="text-center bg-white p-6 max-w-md w-full rounded-xl shadow">
+        <div className="text-center bg-white p-6 max-w-md w-full rounded-xl ">
           <h1 className="text-xl font-semibold text-green-700">
             Already Booked
           </h1>
@@ -283,7 +283,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
           </div>
         </div>
       ) : (
-        <div className="max-w-md w-full bg-white px-4 py-6 rounded-xl shadow">
+        <div className="max-w-md w-full bg-white px-4 py-6 rounded-xl ">
           <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
             Booking Status
           </h2>

@@ -272,7 +272,7 @@ export default function SpaceDetails() {
 
   if (!space) {
     return (
-      <div className="min-h-screen h-full w-full bg-gray-100 text-black flex flex-col lg:flex-row overflow-x-hidden">
+      <div className="min-h-screen h-full w-full  text-black flex flex-col lg:flex-row overflow-x-hidden">
         <Navbar />
         <main className="flex-1 flex items-center justify-center ml-0 lg:ml-64 p-6">
             <div className="text-xl text-gray-600">Loading space details...</div>
@@ -283,9 +283,9 @@ export default function SpaceDetails() {
 
   return (
    
-    <div className="min-h-screen  h-screen w-screen bg-gray-100 text-black flex flex-col ">
+    <div className="min-h-screen  h-screen w-screen  text-black flex flex-col ">
       <Navbar />
-      <main className="flex-1 overflow-y-auto px-4 md:px-10 py-8 ml-0 lg:ml-64 bg-gray-100">
+      <main className="flex-1 overflow-y-auto px-4 md:px-10 py-8 ml-0 lg:ml-64 ">
         <div className="flex justify-between items-center mb-6">
             <button
             onClick={() => navigate(-1)}

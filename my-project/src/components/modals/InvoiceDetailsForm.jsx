@@ -105,12 +105,12 @@ console.log("Changelog data from fr is",changeLogData);
   return (
     <div className="relative max-w-xl mx-auto mt-1 bg-white px-4 pt-0 pb-2 ">
       {/* Close Icon */}
-      <button
+      {/* <button
         onClick={onClose}
         className="absolute top-0 right-0 text-red-600 hover:text-red-800 text-xl font-semibold focus:outline-none"
       >
         &times;
-      </button>
+      </button> */}
 
       <h2 className="text-2xl mr-auto font-semibold mb-4 text-gray-800">Invoice Details</h2>
 
@@ -142,6 +142,15 @@ console.log("Changelog data from fr is",changeLogData);
               </div>
             </div>
           )}
+          <div className="flex justify-end gap-4 mt-4">
+            <button
+              onClick={onClose}
+              className="w-[40%] mx-auto text-xs bg-gray-400 text-white py-2 rounded-xl  transition duration-200"
+            >
+              Close
+            </button>
+            
+          </div>
         </div>
       ) : (
         <div className="space-y-5">
@@ -187,6 +196,12 @@ console.log("Changelog data from fr is",changeLogData);
           </div>
 
           <div className="flex justify-end gap-4 mt-2">
+            <button
+              onClick={onClose}
+              className="w-[40%] mr-auto text-xs bg-gray-400 text-white py-2 rounded-xl  transition duration-200"
+            >
+              Close
+            </button>
             <button
               onClick={handleSave}
               className="w-[40%] text-xs bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700 transition duration-200"

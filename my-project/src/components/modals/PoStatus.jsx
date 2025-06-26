@@ -122,7 +122,7 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
 </button>
         </div>
       ) : (
-        <div className="max-w-md w-full bg-white p-4 ">
+        <div className="max-w-md w-full bg-white p-4 py-0 ">
           <h2 className="text-xl font-semibold text-gray-800 mb-5 text-center">PO Status</h2>
 
           <div className="flex items-center space-x-3 mb-5 text-sm">

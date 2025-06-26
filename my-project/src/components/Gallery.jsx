@@ -48,8 +48,21 @@ export default function Gallery() {
 
   useEffect(() => {
     const fetchBookings = async () => {
+      const token = localStorage.getItem('accessToken');
+     console.log("Token sent is",token);
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`,{ headers: { Authorization: `Bearer ${token}` }});
+        if (response.status === 403) {
+      const errorData = await response.json();
+      if (errorData.message === 'Invalid or expired token') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userEmail');
+        navigate('/login'); // or use router.navigate('/login') if using React Router
+        return;
+      }
+    }
         const data = await response.json();
         const sorted = data.bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setBookings(sorted);

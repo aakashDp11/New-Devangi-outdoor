@@ -290,113 +290,109 @@ export default function BookingsDashboard1() {
         />
 
         <div className="overflow-x-auto mt-[3%]">
-          <table className="table-auto bg-white w-full border border-gray-300 rounded-md">
-            <thead className="bg-white">
-              <tr className='text-xs'>
-               
+           <table className="table-auto bg-white w-full rounded-md">
+    <thead className="bg-gray-100">
+      <tr className="text-xs">
+        <th className="px-4 py-2 text-left cursor-pointer">
+          <div
+            onClick={() =>
+              setSortConfig((prev) => ({
+                key: '_id',
+                direction:
+                  prev.key === '_id' && prev.direction === 'asc' ? 'desc' : 'asc',
+              }))
+            }
+            className="flex items-center gap-1 select-none"
+          >
+            Booking ID
+            <span className="text-xs">
+              {sortConfig.key === '_id'
+                ? sortConfig.direction === 'asc'
+                  ? '▲'
+                  : '▼'
+                : '⇅'}
+            </span>
+          </div>
+        </th>
+        <th className="px-4 py-2 text-left">Company Name</th>
+        <th className="px-4 py-2 text-left cursor-pointer">
+          <div
+            onClick={() =>
+              setSortConfig((prev) => ({
+                key: 'clientName',
+                direction:
+                  prev.key === 'clientName' && prev.direction === 'asc' ? 'desc' : 'asc',
+              }))
+            }
+            className="flex items-center gap-1 select-none"
+          >
+            Client Name
+            <span className="text-xs">
+              {sortConfig.key === 'clientName'
+                ? sortConfig.direction === 'asc'
+                  ? '▲'
+                  : '▼'
+                : '⇅'}
+            </span>
+          </div>
+        </th>
 
-                <th className="border border-gray-300 px-4 py-2 text-left cursor-pointer">
-                  <div
-                    onClick={() =>
-                      setSortConfig((prev) => ({
-                        key: '_id',
-                        direction:
-                          prev.key === '_id' && prev.direction === 'asc' ? 'desc' : 'asc',
-                      }))
-                    }
-                    className="flex items-center gap-1 select-none"
-                  >
-                    Booking ID
-                    <span className="text-xs">
-                      {sortConfig.key === '_id'
-                        ? sortConfig.direction === 'asc'
-                          ? '▲'
-                          : '▼'
-                        : '⇅'}
-                    </span>
-                  </div>
-                </th>
- <th className="border border-gray-300 px-4 py-2 text-left">Company Name</th>
-                <th className="border border-gray-300 px-4 py-2 text-left cursor-pointer">
-                  <div
-                    onClick={() =>
-                      setSortConfig((prev) => ({
-                        key: 'clientName',
-                        direction:
-                          prev.key === 'clientName' && prev.direction === 'asc' ? 'desc' : 'asc',
-                      }))
-                    }
-                    className="flex items-center gap-1 select-none"
-                  >
-                    Client Name
-                    <span className="text-xs">
-                      {sortConfig.key === 'clientName'
-                        ? sortConfig.direction === 'asc'
-                          ? '▲'
-                          : '▼'
-                        : '⇅'}
-                    </span>
-                  </div>
-                </th>
+        <th className="px-4 py-2 text-left cursor-pointer">
+          <div
+            onClick={() =>
+              setSortConfig((prev) => ({
+                key: 'createdAt',
+                direction:
+                  prev.key === 'createdAt' && prev.direction === 'asc' ? 'desc' : 'asc',
+              }))
+            }
+            className="flex items-center gap-1 select-none"
+          >
+            Booking Date
+            <span className="text-xs">
+              {sortConfig.key === 'createdAt'
+                ? sortConfig.direction === 'asc'
+                  ? '▲'
+                  : '▼'
+                : '⇅'}
+            </span>
+          </div>
+        </th>
+      </tr>
+    </thead>
 
-                <th className="border border-gray-300 px-4 py-2 text-left cursor-pointer">
-                  <div
-                    onClick={() =>
-                      setSortConfig((prev) => ({
-                        key: 'createdAt',
-                        direction:
-                          prev.key === 'createdAt' && prev.direction === 'asc' ? 'desc' : 'asc',
-                      }))
-                    }
-                    className="flex items-center gap-1 select-none"
-                  >
-                    Booking Date
-                    <span className="text-xs">
-                      {sortConfig.key === 'createdAt'
-                        ? sortConfig.direction === 'asc'
-                          ? '▲'
-                          : '▼'
-                        : '⇅'}
-                    </span>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className='text-xs'>
-              {paginatedData.map((item) => (
-                <tr
-                  key={item._id}
-                  onClick={() => navigate(`/booking/${item._id}`)}
-                  className="cursor-pointer transition duration-200 ease-in-out hover:bg-gray-200 hover:shadow-sm"
-                >
-                  
-
-                  <td className="border border-gray-300 px-4 py-2">{item._id?.substring(0, 6)}</td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    {/* {item.companyLogo ? (
-                      <div className="avatar">
-                        <div className="mask mask-squircle w-8 h-8 overflow-hidden">
-                          <img
-                            src={item.companyLogo}
-                            alt="Client logo"
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <span>No Image</span>
-                    )} */}
-                    {item.companyName || 'No Client'}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2">{item.clientName || 'No Client'}</td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <tbody className="text-xs">
+      {paginatedData.map((item) => (
+        <tr
+          key={item._id}
+          onClick={() => navigate(`/booking/${item._id}`)}
+          className="cursor-pointer transition duration-200 ease-in-out hover:bg-gray-200 hover:shadow-sm"
+        >
+          <td className="px-4 py-2">{item._id?.substring(0, 6)}</td>
+          <td className="px-4 py-2">
+            {/* {item.companyLogo ? (
+              <div className="avatar">
+                <div className="mask mask-squircle w-8 h-8 overflow-hidden">
+                  <img
+                    src={item.companyLogo}
+                    alt="Client logo"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
+            ) : (
+              <span>No Image</span>
+            )} */}
+            {item.companyName || 'No Client'}
+          </td>
+          <td className="px-4 py-2">{item.clientName || 'No Client'}</td>
+          <td className="px-4 py-2">
+            {new Date(item.createdAt).toLocaleDateString()}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
         </div>
 
         <div className="mt-6 flex justify-center gap-2">

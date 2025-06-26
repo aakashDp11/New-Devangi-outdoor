@@ -56,6 +56,7 @@ export default function CampaignDetails() {
   useEffect(() => {
     const fetchPipelineData = async () => {
       try {
+        const token = localStorage.getItem('accessToken');
         const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${id}`);
         const data = await res.json();
         setPipelineData(data);
@@ -71,25 +72,7 @@ export default function CampaignDetails() {
   const getCostItem = (spaceId) =>
     inventoryCosts.find(cost => cost.id === spaceId || cost.id?._id === spaceId);
 
-//   const updateCostField = (spaceId, field, value) => {
-//     setInventoryCosts(prev => {
-//       const index = prev.findIndex(cost => cost.id === spaceId || cost.id?._id === spaceId);
-//       const updated = [...prev];
-//       if (index !== -1) {
-//         updated[index] = { ...updated[index], [field]: value };
-//       } else {
-//         updated.push({
-//           id: spaceId,
-//           displayCost: 0,
-//           printingcostpersquareFeet: 0,
-//           mountingcostpersquareFeet: 0,
-//           area: 0,
-//           [field]: value
-//         });
-//       }
-//       return updated;
-//     });
-//   };
+
 const updateCostField = (spaceId, field, value) => {
   setInventoryCosts(prev => {
     const index = prev.findIndex(cost => cost.id === spaceId || cost.id?._id === spaceId);
@@ -163,7 +146,7 @@ const updateCostField = (spaceId, field, value) => {
   const { campaignName, description, startDate, endDate } = campaignData;
 
   return (
-    <div className="text-xs min-h-screen   w-screen text-black flex flex-col lg:flex-row ">
+    <div className="text-xs min-h-screen  w-screen text-black flex flex-col lg:flex-row ">
       <Navbar />
       <main className="ml-64 w-full flex-1 px-8 py-4">
         <div className="flex justify-between items-center mb-6">

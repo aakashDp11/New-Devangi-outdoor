@@ -488,7 +488,7 @@ function CampaignPipelineInternal({ campaignId }) {
   if (!pipelineData) return <div>Loading Campaign Pipeline Data...</div>;
 
   return (
-    <div className="w-[130%] bg-white h-[100vh] relative">
+    <div className="w-full bg-white h-[100vh] relative">
       <button
         onClick={() => setShowDeleteModal(true)}
         className="absolute top-4 right-6 bg-red-600 text-white text-sm px-4 py-1 rounded shadow hover:bg-red-700 z-50"
@@ -584,7 +584,7 @@ const modalContentStyle = {
   borderRadius: '12px',
   display: 'inline-flex',
   flexDirection: 'column',
-  maxHeight: '80vh',
+  maxHeight: '90vh',
   maxWidth: '90vw',
   overflowY: 'auto',
   boxSizing: 'border-box',
