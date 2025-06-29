@@ -15,13 +15,13 @@ const spaceSchema = new Schema({
   mediaType: { type: String, enum: ['Static', 'Digital',""],default:"" }, // removed `required`
   price: { type: Number },
   footfall: { type: Number },
-  audience: { type: String, enum: ['Youth', 'Working Professionals'] },
+  audience: { type: String},
   demographics: { type: String, enum: ['Urban', 'Rural'] },
   description: { type: String },
   illuminations: { type: String, enum: ['Front lit', 'Back lit','Non lit'] },
 
   unit: { type: Number,default:1 }, // removed custom validator
-
+  specification:{type:String,enum: ['LHS', 'RHS'],required:true },
   occupiedUnits: { type: Number, default: 0 }, // removed validator
 
   width: { type: Number },

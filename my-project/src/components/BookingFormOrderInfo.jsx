@@ -230,6 +230,7 @@ import Navbar from './Navbar';
 import { useNavigate } from 'react-router-dom';
 import { useBookingForm } from '../context/BookingFormContext';
 import InventorySelector from './BookingFormAddSpaces';
+import Select from "react-select";
 
 function Stepper({ currentStep }) {
   const stepOrder = ['Basic', 'Order'];
@@ -260,6 +261,25 @@ export default function BookingFormOrderInfo() {
   const { orderInfo, setOrderInfo } = useBookingForm();
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
+const industryOptions = [
+  { value: "Tourism", label: "Tourism" },
+  { value: "Retail", label: "Retail" },
+  { value: "Real Estate", label: "Real Estate" },
+  { value: "Other", label: "Other" },
+  { value: "Movie", label: "Movie" },
+  { value: "Media and Entertainment", label: "Media and Entertainment" },
+  { value: "FMCG", label: "FMCG" },
+  { value: "Finance", label: "Finance" },
+  { value: "Financial Services", label: "Financial Services" },
+  { value: "Healthcare", label: "Healthcare" },
+  { value: "Hospitality", label: "Hospitality" },
+  { value: "IT Industry", label: "IT Industry" },
+  { value: "Automobile", label: "Automobile" },
+  { value: "Clothing & Apparel", label: "Clothing & Apparel" },
+  { value: "Ecommerce", label: "Ecommerce" },
+  { value: "Edtech", label: "Edtech" },
+  { value: "Entertainment", label: "Entertainment" },
+];
 
   useEffect(() => {
     const fetchSpaces = async () => {
@@ -419,12 +439,20 @@ export default function BookingFormOrderInfo() {
                       value={campaign.campaignName}
                       onChange={(e) => handleCampaignChange(index, e)}
                     />
-                    <Input
+                    {/* <Input
                       label="Industry"
                       name="industry"
                       value={campaign.industry}
                       onChange={(e) => handleCampaignChange(index, e)}
-                    />
+                    /> */}
+                    <CustomSelect
+  label="Industry"
+  name="industry"
+  value={campaign.industry}
+  onChange={(e) => handleCampaignChange(index, e)}
+  options={industryOptions}
+/>
+
                     <Input
                       label="Start Date"
                       name="startDate"
@@ -504,6 +532,28 @@ function Input({ label, ...props }) {
     <div>
       <label className="text-xs font-medium">{label}</label>
       <input {...props} className="w-full border px-3 py-2 rounded mt-1" />
+    </div>
+  );
+}
+export function CustomSelect({ mandatory, label, value, onChange, name, options }) {
+  const selected = options.find((o) => o.value === value) || null;
+
+  return (
+    <div className="mb-2">
+      <label className="text-sm block mb-1">
+        {label}
+        {mandatory === "true" && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      <Select
+        className="w-3/4"
+        name={name}
+        options={options}
+        value={selected}
+        onChange={(option) =>
+          onChange({ target: { name, value: option?.value || "" } })
+        }
+        isSearchable
+      />
     </div>
   );
 }

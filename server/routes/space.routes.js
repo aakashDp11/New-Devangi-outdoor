@@ -6,6 +6,8 @@ import excelUpload from '../middleware/excelUpload.middleware.js';
 import Campaign from '../models/campign.model.js';
 import { authenticate } from '../middleware/authenticate.middleware.js';
 import * as XLSX from 'xlsx';
+import { uploadToS3 } from '../utils/s3uploader.js';
+
 const router = express.Router();
 
 const cpUpload = upload.fields([
@@ -382,6 +384,7 @@ router.get('/listInventory', authenticate, async (req, res) => {
       overlappingBooking: 1,
       createdAt: 1,
       campaignDates: 1,
+      specification:1
     };
 
     const filters = {};
@@ -676,6 +679,44 @@ router.put('/:id/remove-tag', async (req, res) => {
  
 
   // PUT /api/spaces/:id
+// router.put('/:id', upload.fields([
+//   { name: 'mainPhoto', maxCount: 1 },
+//   { name: 'longShot', maxCount: 1 },
+//   { name: 'closeShot', maxCount: 1 },
+//   { name: 'otherPhotos', maxCount: 10 }
+// ]), async (req, res) => {
+//   try {
+//     const space = await Space.findById(req.params.id);
+//     if (!space) {
+//       return res.status(404).json({ error: 'Space not found' });
+//     }
+
+//     // Update normal text fields
+//     for (const key in req.body) {
+//       space[key] = req.body[key];
+//     }
+
+//     // Update photos if new ones are uploaded
+//     if (req.files['mainPhoto']) {
+//       space.mainPhoto = req.files['mainPhoto'][0].filename;
+//     }
+//     if (req.files['longShot']) {
+//       space.longShot = req.files['longShot'][0].filename;
+//     }
+//     if (req.files['closeShot']) {
+//       space.closeShot = req.files['closeShot'][0].filename;
+//     }
+//     if (req.files['otherPhotos']) {
+//       space.otherPhotos = req.files['otherPhotos'].map(file => file.filename);
+//     }
+
+//     await space.save();
+//     res.json(space);
+//   } catch (error) {
+//     console.error('Error updating space:', error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// });
 router.put('/:id', upload.fields([
   { name: 'mainPhoto', maxCount: 1 },
   { name: 'longShot', maxCount: 1 },
@@ -693,18 +734,28 @@ router.put('/:id', upload.fields([
       space[key] = req.body[key];
     }
 
+    // Helper to upload a file and return S3 URL
+    const uploadAndReturnUrl = async (file) => {
+      const localPath = file.path;
+      const s3Key = `spaces/${req.params.id}/${file.filename}`;
+      const url = await uploadToS3(localPath, s3Key);
+      // fs.unlinkSync(localPath); // delete local file after upload
+      return url;
+    };
+
     // Update photos if new ones are uploaded
     if (req.files['mainPhoto']) {
-      space.mainPhoto = req.files['mainPhoto'][0].filename;
+      space.mainPhoto = await uploadAndReturnUrl(req.files['mainPhoto'][0]);
     }
     if (req.files['longShot']) {
-      space.longShot = req.files['longShot'][0].filename;
+      space.longShot = await uploadAndReturnUrl(req.files['longShot'][0]);
     }
     if (req.files['closeShot']) {
-      space.closeShot = req.files['closeShot'][0].filename;
+      space.closeShot = await uploadAndReturnUrl(req.files['closeShot'][0]);
     }
     if (req.files['otherPhotos']) {
-      space.otherPhotos = req.files['otherPhotos'].map(file => file.filename);
+      const uploads = req.files['otherPhotos'].map(file => uploadAndReturnUrl(file));
+      space.otherPhotos = await Promise.all(uploads);
     }
 
     await space.save();

@@ -409,6 +409,7 @@ import Navbar from './Navbar';
 import { useSpaceForm } from '../context/SpaceFormContext';
 import { toast } from 'sonner';
 import MapPreview from './MapPreview';
+import Select from "react-select";
 
 export default function AddSpaceForm() {
   const navigate = useNavigate();
@@ -510,6 +511,110 @@ export default function AddSpaceForm() {
       toast.error('Something went wrong!');
     }
   };
+  const audienceOptions = [
+  { value: "", label: "Select..." },
+  { value: "Youth", label: "Youth" },
+  { value: "Working Professionals", label: "Working Professionals" },
+  { value: "Business Professional", label: "Business Professional" },
+  { value: "College Students", label: "College Students" },
+  { value: "Elite", label: "Elite" },
+  { value: "Families", label: "Families" },
+  { value: "Fashion Enthusiast", label: "Fashion Enthusiast" },
+  { value: "Female focused", label: "Female focused" },
+  { value: "Government official", label: "Government official" },
+  { value: "Male focused", label: "Male focused" },
+  { value: "Middle class", label: "Middle class" },
+  { value: "Rural", label: "Rural" },
+  { value: "Students", label: "Students" },
+  { value: "Tourists", label: "Tourists" },
+  { value: "Working", label: "Working" },
+];
+
+const categoryOptions= [
+   { value: "", label: "Select..." },
+  { value: "Retail", label: "Retail" },
+  { value: "Transit", label: "Transit" },
+]
+const illuminationOptions= [
+   { value: "", label: "Select..." },
+  { value: "Front Lit", label: "Front Lit" },
+  { value: "Back Lit", label: "Back Lit" },
+  { value: "Non Lit", label: "Non Lit" },
+]
+const ownershipOptions= [
+   { value: "", label: "Select..." },
+  { value: "Owned", label: "Owned" },
+  { value: "Leased", label: "Leased" },
+  { value: "Traded", label: "Traded" },
+]
+const spaceOptions= [
+   { value: "", label: "Select..." },
+  { value: "Billboard", label: "Billboard" },
+  { value: "DOOH", label: "DOOH" },
+  { value: "Pole Kiosk", label: "Pole Kiosk" },
+  { value: "Gantry", label: "Gantry" },
+]
+ const zoneOptions = [
+  { value: "West", label: "West" },
+  { value: "East", label: "East" },
+];
+
+ const tierOptions = [
+  { value: "Tier 1", label: "Tier 1" },
+  { value: "Tier 2", label: "Tier 2" },
+];
+
+ const facingOptions = [
+  { value: "Single facing", label: "Single facing" },
+  { value: "Double facing", label: "Double facing" },
+];
+
+ const stateOptions = [
+  { value: "", label: "Select..." },
+  { value: "Andhra Pradesh", label: "Andhra Pradesh" },
+  { value: "Arunachal Pradesh", label: "Arunachal Pradesh" },
+  { value: "Assam", label: "Assam" },
+  { value: "Bihar", label: "Bihar" },
+  { value: "Chhattisgarh", label: "Chhattisgarh" },
+  { value: "Goa", label: "Goa" },
+  { value: "Gujarat", label: "Gujarat" },
+  { value: "Haryana", label: "Haryana" },
+  { value: "Himachal Pradesh", label: "Himachal Pradesh" },
+  { value: "Jharkhand", label: "Jharkhand" },
+  { value: "Karnataka", label: "Karnataka" },
+  { value: "Kerala", label: "Kerala" },
+  { value: "Madhya Pradesh", label: "Madhya Pradesh" },
+  { value: "Maharashtra", label: "Maharashtra" },
+  { value: "Manipur", label: "Manipur" },
+  { value: "Meghalaya", label: "Meghalaya" },
+  { value: "Mizoram", label: "Mizoram" },
+  { value: "Nagaland", label: "Nagaland" },
+  { value: "Odisha", label: "Odisha" },
+  { value: "Punjab", label: "Punjab" },
+  { value: "Rajasthan", label: "Rajasthan" },
+  { value: "Sikkim", label: "Sikkim" },
+  { value: "Tamil Nadu", label: "Tamil Nadu" },
+  { value: "Telangana", label: "Telangana" },
+  { value: "Tripura", label: "Tripura" },
+  { value: "Uttar Pradesh", label: "Uttar Pradesh" },
+  { value: "Uttarakhand", label: "Uttarakhand" },
+  { value: "West Bengal", label: "West Bengal" },
+  { value: "Andaman and Nicobar Islands", label: "Andaman and Nicobar Islands" },
+  { value: "Chandigarh", label: "Chandigarh" },
+  { value: "Dadra and Nagar Haveli and Daman and Diu", label: "Dadra and Nagar Haveli and Daman and Diu" },
+  { value: "Delhi", label: "Delhi" },
+  { value: "Jammu and Kashmir", label: "Jammu and Kashmir" },
+  { value: "Ladakh", label: "Ladakh" },
+  { value: "Lakshadweep", label: "Lakshadweep" },
+  { value: "Puducherry", label: "Puducherry" },
+];
+
+const specificationOptions= [
+   { value: "", label: "Select..." },
+  { value: "LHS", label: "LHS" },
+  { value: "RHS", label: "RHS" },
+
+]
 
   return (
     <div className="p-6 md:ml-64   min-h-screen">
@@ -543,19 +648,35 @@ export default function AddSpaceForm() {
                 <Input label="Landlord" name="landlord" mandatory="true" value={form.landlord} onChange={handleInputChange} />
                 <Input label="Inventory Owner (Organization)" name="organization" value={form.organization} disabled />
                 <Input label="Peer Media Owner" name="peerMediaOwner" value={form.peerMediaOwner} onChange={handleInputChange} />
-                <Select label="Space Type" mandatory="true" name="spaceType" value={form.spaceType} onChange={handleInputChange} required>
+                {/* <Select1 label="Space Type" mandatory="true" name="spaceType" value={form.spaceType} onChange={handleInputChange} required>
                   <option value="">Select...</option>
                   <option value="Billboard">Billboard</option>
                   <option value="DOOH">DOOH</option>
                   <option value="Pole kiosk">Pole kiosk</option>
                   <option value="Gantry">Gantry</option>
-                </Select>
-                <Select label="Ownership Type" mandatory="true" name="ownershipType" value={form.ownershipType} onChange={handleInputChange} required>
+                </Select1> */}
+                <CustomSelect
+  label="Space Type"
+  name="spaceType"
+  value={form.spaceType}
+  onChange={handleInputChange}
+  options={spaceOptions}
+  mandatory="true"
+/>
+                {/* <Select1 label="Ownership Type" mandatory="true" name="Ownership Type" value={form.ownershipType} onChange={handleInputChange} required>
                   <option value="">Select...</option>
                   <option value="Owned">Owned</option>
                   <option value="Leased">Leased</option>
                   <option value="Traded">Traded</option>
-                </Select>
+                </Select1> */}
+                <CustomSelect
+  label="Ownership Type"
+  name="ownershipType"
+  value={form.ownershipType}
+  onChange={handleInputChange}
+  options={ownershipOptions}
+  mandatory="true"
+/>
                 <Input
                   mandatory="true"
                   label={`${form.ownershipType || ''} Start Date`}
@@ -574,23 +695,48 @@ export default function AddSpaceForm() {
                   onChange={handleInputChange}
                   required
                 />
-                <Select label="Category" name="category" value={form.category} onChange={handleInputChange} required>
+                {/* <Select1 label="Category" name="category" value={form.category} onChange={handleInputChange} required>
                   <option value="">Select...</option>
                   <option value="Retail">Retail</option>
                   <option value="Transit">Transit</option>
-                </Select>
+                </Select1> */}
+                <CustomSelect
+  label="Category"
+  name="category"
+  value={form.category}
+  onChange={handleInputChange}
+  options={categoryOptions}
+  mandatory="true"
+/>
+                <CustomSelect
+  label="Specification"
+  name="specification"
+  value={form.specification}
+  onChange={handleInputChange}
+  options={specificationOptions}
+  mandatory="true"
+/>
                 <Input label="Price" name="price" value={form.price} onChange={handleInputChange} />
                 <Input label="Footfall" name="footfall" value={form.footfall} onChange={handleInputChange} />
-                <Select label="Audience" name="audience" value={form.audience} onChange={handleInputChange}>
+                {/* <Select label="Audience" name="audience" value={form.audience} onChange={handleInputChange}>
                   <option value="">Select...</option>
                   <option value="Youth">Youth</option>
                   <option value="Working Professionals">Working Professionals</option>
-                </Select>
-                <Select label="Demographics" name="demographics" value={form.demographics} onChange={handleInputChange} required>
+                </Select> */}
+                <CustomSelect
+  label="Audience"
+  name="audience"
+  value={form.audience}
+  onChange={handleInputChange}
+  options={audienceOptions}
+  mandatory="true"
+/>
+
+                <Select1 label="Demographics" name="demographics" value={form.demographics} onChange={handleInputChange} required>
                   <option value="">Select...</option>
                   <option value="Urban">Urban</option>
                   <option value="Rural">Rural</option>
-                </Select>
+                </Select1>
                 <div>
                   <label className="text-sm">Description</label>
                   <textarea name="description" value={form.description} onChange={handleInputChange} className="w-full border px-3 py-2 rounded mt-1" rows={4} maxLength={400} />
@@ -620,12 +766,20 @@ export default function AddSpaceForm() {
         {step === 'Specifications' && (
           <div className="space-y-6 w-full text-xs">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Select label="Illumination" name="illumination" mandatory="true" value={form.illumination} onChange={handleInputChange} required>
+              {/* <Select label="Illumination" name="Illumination" mandatory="true" value={form.illumination} onChange={handleInputChange} required>
                 <option value="">Select...</option>
                 <option value="Front Lit">Front Lit</option>
                 <option value="Back Lit">Back Lit</option>
                 <option value="Non Lit">Non Lit</option>
-              </Select>
+              </Select> */}
+                <CustomSelect
+  label="Illumination"
+  name="illumination"
+  value={form.illumination}
+  onChange={handleInputChange}
+  options={illuminationOptions}
+  mandatory="true"
+/>
 
               {form.spaceType === 'DOOH' && (
                 <>
@@ -670,7 +824,7 @@ export default function AddSpaceForm() {
           <div className="grid text-xs grid-cols-1 md:grid-cols-2 gap-6">
             <Input label="Address" mandatory="true" name="address" value={form.address} onChange={handleInputChange} />
             <Input label="City" mandatory="true" name="city" value={form.city} onChange={handleInputChange} required />
-            <Select label="State" mandatory="true" name="state" value={form.state} onChange={handleInputChange} required>
+            {/* <Select label="State" mandatory="true" name="state" value={form.state} onChange={handleInputChange} required>
              //   <option value="">-- Select State --</option>
    <option value="Andhra Pradesh">Andhra Pradesh</option>
    <option value="Arunachal Pradesh">Arunachal Pradesh</option>
@@ -707,7 +861,16 @@ export default function AddSpaceForm() {
    <option value="Ladakh">Ladakh</option>
    <option value="Lakshadweep">Lakshadweep</option>
    <option value="Puducherry">Puducherry</option>
-            </Select>
+            </Select> */}
+            <CustomSelect
+  label="State"
+  name="state"
+  value={form.state}
+  onChange={handleInputChange}
+  options={stateOptions}
+  mandatory="true"
+/>
+
             <Input label="Pin-code" mandatory="true" name="zip" value={form.zip} onChange={handleInputChange} />
             <Input label="Latitude" mandatory="true" name="latitude" value={form.latitude} onChange={handleInputChange} />
             <Input label="Longitude" mandatory="true" name="longitude" value={form.longitude} onChange={handleInputChange} />
@@ -725,18 +888,44 @@ export default function AddSpaceForm() {
 
 
             <Input label="Landmark" name="landmark" value={form.landmark} onChange={handleInputChange} />
-            <Select label="Zone" name="zone" value={form.zone} onChange={handleInputChange} required>
+            {/* <Select label="Zone" name="zone" value={form.zone} onChange={handleInputChange} required>
               <option value="West">West</option>
               <option value="East">East</option>
-            </Select>
+            </Select> */}
+            <CustomSelect
+  label="Zone"
+  name="zone"
+  value={form.zone}
+  onChange={handleInputChange}
+  options={zoneOptions}
+
+/>
+{/* 
             <Select label="Tier" name="tier" value={form.tier} onChange={handleInputChange} required>
               <option value="Tier 1">Tier 1</option>
               <option value="Tier 2">Tier 2</option>
-            </Select>
-            <Select label="Facing" name="facing" value={form.facing} onChange={handleInputChange} required>
+            </Select> */}
+            <CustomSelect
+  label="Tier"
+  name="tier"
+  value={form.tier}
+  onChange={handleInputChange}
+  options={tierOptions}
+  mandatory="true"
+/>
+            {/* <Select label="Facing" name="facing" value={form.facing} onChange={handleInputChange} required>
               <option value="Single facing">Single facing</option>
               <option value="Double facing">Double facing</option>
-            </Select>
+            </Select> */}
+            <CustomSelect
+  label="Facing"
+  name="facing"
+  value={form.facing}
+  onChange={handleInputChange}
+  options={facingOptions}
+  mandatory="true"
+/>
+
             <Input label="Facia towards" name="faciaTowards" value={form.faciaTowards} onChange={handleInputChange} />
           </div>
         )}
@@ -794,7 +983,7 @@ function Input({ mandatory, label, ...props }) {
   );
 }
 
-function Select({ mandatory, label, children, ...props }) {
+function Select1({ mandatory, label, children, ...props }) {
   return (
     <div>
       <label className="text-sm">{label}</label>
@@ -837,6 +1026,29 @@ function ImageUpload({ label, name, multiple = false }) {
           </div>
         )}
       </label>
+    </div>
+  );
+}
+
+export function CustomSelect({ mandatory, label, value, onChange, name, options }) {
+  const formattedValue = options.find((option) => option.value === value);
+
+  return (
+    <div className="mb-2">
+      <label className="text-sm block mb-1">
+        {label}
+        {mandatory === "true" && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      <Select
+        className="w-3/4 h-[3%]"
+        name={name}
+        options={options}
+        value={formattedValue}
+        onChange={(selectedOption) =>
+          onChange({ target: { name, value: selectedOption?.value || "" } })
+        }
+        isSearchable
+      />
     </div>
   );
 }
