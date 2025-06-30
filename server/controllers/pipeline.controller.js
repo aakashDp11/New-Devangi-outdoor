@@ -387,6 +387,39 @@ export const updateInvoice = async (req, res) => {
 //   }
 // };
 
+// export const updatePayment = async (req, res) => {
+//   try {
+//     const campaignId = req.params.campaignId;
+//     const {
+//       totalAmount,
+//       payments = [],
+//       totalPaid,
+//       paymentDue
+//     } = req.body;
+
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: campaignId },
+//       {
+//         payment: {
+//           totalAmount,
+//           payments,
+//           totalPaid,
+//           paymentDue
+//         }
+//       },
+//       { new: true }
+//     );
+
+//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+//     res.status(200).json(pipeline);
+//   } catch (err) {
+//     console.error('Error updating payment:', err);
+//     res.status(500).json({ error: 'Server error during payment update' });
+//   }
+// };
+
+
 export const updatePayment = async (req, res) => {
   try {
     const campaignId = req.params.campaignId;
@@ -394,14 +427,24 @@ export const updatePayment = async (req, res) => {
       totalAmount,
       payments = [],
       totalPaid,
-      paymentDue
+      paymentDue,
+      gstValue,
+      finalAmountWithGST,
+      displayAmount,
+      printingAmount,
+      mountingAmount
     } = req.body;
 
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
       {
         payment: {
+          displayAmount,
+          printingAmount,
+          mountingAmount,
           totalAmount,
+          gstValue,
+          finalAmountWithGST,
           payments,
           totalPaid,
           paymentDue

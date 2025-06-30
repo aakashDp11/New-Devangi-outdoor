@@ -22,7 +22,7 @@ const bookingSchema = new Schema({
 
   industry: {
     type: String,
-    enum: ['Automotive', 'Clothing & Apparel', 'Ecommerce', 'EdTech', 'Entertainment', 'FMCG']
+   
   },
   user: {
   type: mongoose.Schema.Types.ObjectId,

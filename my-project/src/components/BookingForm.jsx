@@ -441,6 +441,8 @@ export default function CreateOrderBasicInfo() {
               <option>Select...</option>
               <option>Corporate</option>
               <option>Agency</option>
+              <option>Direct</option>
+              <option>Government</option>
             </select>
             
           </div>

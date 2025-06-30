@@ -59,6 +59,7 @@ export default function CampaignDetails() {
         const token = localStorage.getItem('accessToken');
         const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${id}`);
         const data = await res.json();
+        console.log("Campaign data is", data);
         setPipelineData(data);
       } catch (err) {
         console.error('Failed to load pipeline data:', err);
@@ -201,7 +202,7 @@ const updateCostField = (spaceId, field, value) => {
                       height={200}
                     />
                     <div className="text-xs mt-2">
-                      <p><strong>Total:</strong> ₹{pipelineData.payment.totalAmount || 0}</p>
+                      <p><strong>Total:</strong> ₹{pipelineData.payment.finalAmountWithGST || 0}</p>
                       <p><strong>Paid:</strong> ₹{pipelineData.payment.totalPaid || 0}</p>
                       <p><strong>Due:</strong> ₹{pipelineData.payment.paymentDue || 0}</p>
                     </div>

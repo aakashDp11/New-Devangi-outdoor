@@ -222,9 +222,12 @@ export default function InventorySelector({
     if (campaign.searchQuery?.trim()) {
       const query = campaign.searchQuery.toLowerCase();
       return (
-        space.name.toLowerCase().includes(query) ||
-        space.city.toLowerCase().includes(query) ||
-        space.category.toLowerCase().includes(query)
+        (space.name || '').toLowerCase().includes(query) ||
+(space.city || '').toLowerCase().includes(query) ||
+(space.category || '').toLowerCase().includes(query) ||
+(space.specification || '').toLowerCase().includes(query) ||
+(space.facia || '').toLowerCase().includes(query)
+
       );
     }
     return true;
@@ -249,7 +252,7 @@ export default function InventorySelector({
         <div className="w-1/3">
           <input
             type="text"
-            placeholder="Search by space name, city, category"
+            placeholder="Search by space name, city, specification, tft"
             className="w-full border px-3 py-1 rounded text-sm"
             value={campaign.searchQuery || ''}
             onChange={(e) => onSearchChange(campaignIndex, e.target.value)}
@@ -265,8 +268,9 @@ export default function InventorySelector({
               <th className="px-2 py-2">Space Name</th>
               <th className="px-2 py-2">Space Type</th>
               <th className="px-2 py-2">Status</th>
-              <th className="px-2 py-2">Facia</th>
+              <th className="px-2 py-2">TFT</th>
               <th className="px-2 py-2">City</th>
+              <th className="px-2 py-2">Specification</th>
               <th className="px-2 py-2">Ownership</th>
               <th className="px-2 py-2">Occupied</th>
               <th className="px-2 py-2">Total</th>
@@ -314,6 +318,7 @@ export default function InventorySelector({
                   </td>
                   <td className="px-2 py-2">{space.facia}</td>
                   <td className="px-2 py-2">{space.city}</td>
+                  <td className="px-2 py-2">{space.specification}</td>
                   <td className="px-2 py-2">
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                       {space.ownershipType}

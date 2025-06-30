@@ -210,6 +210,7 @@ router.get('/selectcampaignSpaces', async (req, res) => {
       unit: 1,
       occupiedUnits: 1,
       ownershipType: 1,
+      specification:1,
       price: 1,
       traded: 1,
       overlappingBooking: 1,

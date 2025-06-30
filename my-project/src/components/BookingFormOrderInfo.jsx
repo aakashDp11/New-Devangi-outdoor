@@ -285,6 +285,7 @@ const industryOptions = [
     const fetchSpaces = async () => {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/selectcampaignSpaces`);
       const data = await res.json();
+      console.log("Recieved data is",data);
       const transformed = data.map(space => ({
         id: space._id,
         name: space.spaceName,
@@ -295,6 +296,7 @@ const industryOptions = [
         unit: space.unit,
         occupiedUnits: space.occupiedUnits,
         ownershipType: space.ownershipType,
+        specification:space.specification,
         price: space.price,
         traded: space.traded,
         mainPhoto:space.mainPhoto,

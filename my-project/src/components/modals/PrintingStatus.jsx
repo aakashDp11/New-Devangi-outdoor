@@ -182,8 +182,12 @@ export default function PrintingStatus({ campaignId,spaceId, onConfirm, onClose 
               }
             >
               <option>Select...</option>
-              <option>Material 1</option>
-              <option>Material 2</option>
+              <option>Normal Flex</option>
+              <option>Black Back Flex </option>
+              <option>Black Lit Flex </option>
+              <option>Normal SAV</option>
+              <option>Black Back SAV </option>
+              <option>Star Flex </option>
             </select>
             
           </div>

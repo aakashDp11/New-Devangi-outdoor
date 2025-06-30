@@ -26,7 +26,13 @@ export default function BookingDetails() {
 const [spaces, setSpaces] = useState([]);
  useEffect(() => {
   const fetchSpaces = async () => {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces,`);
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces`,{
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
     const data = await res.json();
     const transformed = data.map(space => ({
       id: space._id,

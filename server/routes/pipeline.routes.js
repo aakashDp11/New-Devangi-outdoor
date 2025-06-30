@@ -221,7 +221,7 @@ router.put('/campaign/:id/update-costs', async (req, res) => {
       { new: true }
     );
 
-    // Calculate total cost with 18% GST
+   
     let totalAmount = 0;
 
     for (const cost of inventoryCosts) {
@@ -229,8 +229,8 @@ router.put('/campaign/:id/update-costs', async (req, res) => {
       const printing = (cost.printingcostpersquareFeet || 0) * (cost.area || 0);
       const mounting = (cost.mountingcostpersquareFeet || 0) * (cost.area || 0);
       const base = display + printing + mounting;
-      const withGST = base * 1.18;
-      totalAmount += withGST;
+      // const withGST = base * 1.18;
+      totalAmount += base;
     }
 
     // Update payment.totalAmount in related pipeline
