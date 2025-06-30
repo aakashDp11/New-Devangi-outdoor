@@ -598,15 +598,14 @@ export const getAllBookings1 = async (req, res) => {
     const bookings = await Booking.find(searchFilter, projection)
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 })
-      .populate({
+      .sort({ createdAt: -1 }).populate({
         path: 'campaigns',
-        select: 'campaignName', // Include campaignName only if needed
+        select: 'campaignName startDate endDate', // Include startDate and endDate
         populate: [
           {
             path: 'spaces.id',
             model: 'Space',
-            select: 'spaceName' // select required fields if needed
+            select: 'spaceName'
           },
           {
             path: 'pipeline',
@@ -614,7 +613,24 @@ export const getAllBookings1 = async (req, res) => {
             options: { strictPopulate: false }
           }
         ]
-      });
+      })
+      
+      // .populate({
+      //   path: 'campaigns',
+      //   select: 'campaignName', // Include campaignName only if needed
+      //   populate: [
+      //     {
+      //       path: 'spaces.id',
+      //       model: 'Space',
+      //       select: 'spaceName' // select required fields if needed
+      //     },
+      //     {
+      //       path: 'pipeline',
+      //       model: 'Pipeline',
+      //       options: { strictPopulate: false }
+      //     }
+      //   ]
+      // });
 
     return res.status(200).json({
       bookings,
@@ -690,6 +706,9 @@ export const getBookingDashboardStats = async (req, res) => {
     res.status(500).json({ error: 'Failed to generate booking dashboard stats' });
   }
 };
+
+
+
 router.get('/dashboard-stats', authenticate, getBookingDashboardStats);
 
 router.get('/campaign/:id', getCampaignById);
