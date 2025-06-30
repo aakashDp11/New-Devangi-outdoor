@@ -615,22 +615,6 @@ export const getAllBookings1 = async (req, res) => {
         ]
       })
       
-      // .populate({
-      //   path: 'campaigns',
-      //   select: 'campaignName', // Include campaignName only if needed
-      //   populate: [
-      //     {
-      //       path: 'spaces.id',
-      //       model: 'Space',
-      //       select: 'spaceName' // select required fields if needed
-      //     },
-      //     {
-      //       path: 'pipeline',
-      //       model: 'Pipeline',
-      //       options: { strictPopulate: false }
-      //     }
-      //   ]
-      // });
 
     return res.status(200).json({
       bookings,
@@ -706,6 +690,7 @@ export const getBookingDashboardStats = async (req, res) => {
     res.status(500).json({ error: 'Failed to generate booking dashboard stats' });
   }
 };
+
 
 
 

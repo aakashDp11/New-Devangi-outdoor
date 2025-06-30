@@ -578,32 +578,101 @@ router.get('/listInventory', authenticate, async (req, res) => {
 // });
 
 
-  router.get('/dashboard-stats', async (req, res) => {
+//   router.get('/dashboard-stats', async (req, res) => {
+//   try {
+//     const spaces = await Space.find({}, {
+//       spaceType: 1,
+//       unit: 1,
+//       occupiedUnits: 1,
+//       overlappingBooking: 1
+//     });
+
+//     // DOOH Utilization
+//     let totalUnits = 0;
+//     let bookedUnits = 0;
+
+//     // Static Site Availability
+//     let available = 0;
+//     let booked = 0;
+//     let overlapping = 0;
+
+//     spaces.forEach(space => {
+//       const units = space.unit || 0;
+//       const occupied = space.occupiedUnits || 0;
+
+//       if (space.spaceType === 'DOOH') {
+//         totalUnits += units;
+//         bookedUnits += occupied;
+//       } else {
+//         if (occupied === 0) {
+//           available++;
+//         } else if (space.overlappingBooking) {
+//           overlapping++;
+//         } else {
+//           booked++;
+//         }
+//       }
+//     });
+
+//     const dashboardStats = {
+//       doohUtilization: {
+//         totalUnits,
+//         bookedUnits,
+//         freeUnits: totalUnits - bookedUnits
+//       },
+//       staticAvailability: {
+//         available,
+//         booked,
+//         overlapping
+//       }
+//     };
+
+//     res.json(dashboardStats);
+//   } catch (error) {
+//     res.status(500).json({ error: 'Failed to compute dashboard stats', details: error.message });
+//   }
+// });
+router.get('/dashboard-stats', async (req, res) => {
   try {
     const spaces = await Space.find({}, {
       spaceType: 1,
       unit: 1,
       occupiedUnits: 1,
-      overlappingBooking: 1
+      overlappingBooking: 1,
+      ownershipType: 1,
+      traded: 1
     });
 
-    // DOOH Utilization
     let totalUnits = 0;
     let bookedUnits = 0;
-
-    // Static Site Availability
     let available = 0;
     let booked = 0;
     let overlapping = 0;
+
+    // New: DOOH availability status counts
+    let doohCompletelyAvailable = 0;
+    let doohPartiallyAvailable = 0;
+    let doohCompletelyBooked = 0;
+
+    // New: Ownership/trade status counts (all inventories)
+    let tradedCount = 0;
+    let ownedCount = 0;
+    let leasedCount = 0;
 
     spaces.forEach(space => {
       const units = space.unit || 0;
       const occupied = space.occupiedUnits || 0;
 
+      // For DOOH
       if (space.spaceType === 'DOOH') {
         totalUnits += units;
         bookedUnits += occupied;
+
+        if (occupied === 0) doohCompletelyAvailable++;
+        else if (occupied < units) doohPartiallyAvailable++;
+        else if (occupied === units) doohCompletelyBooked++;
       } else {
+        // For Static
         if (occupied === 0) {
           available++;
         } else if (space.overlappingBooking) {
@@ -611,6 +680,15 @@ router.get('/listInventory', authenticate, async (req, res) => {
         } else {
           booked++;
         }
+      }
+
+      // Ownership/trade status
+      if (space.traded) {
+        tradedCount++;
+      } else if (space.ownershipType === 'Owned') {
+        ownedCount++;
+      } else if (space.ownershipType === 'Leased') {
+        leasedCount++;
       }
     });
 
@@ -624,6 +702,16 @@ router.get('/listInventory', authenticate, async (req, res) => {
         available,
         booked,
         overlapping
+      },
+      doohAvailabilityStatus: {
+        completelyAvailable: doohCompletelyAvailable,
+        partiallyAvailable: doohPartiallyAvailable,
+        completelyBooked: doohCompletelyBooked
+      },
+      ownershipDistribution: {
+        traded: tradedCount,
+        owned: ownedCount,
+        leased: leasedCount
       }
     };
 
@@ -632,7 +720,7 @@ router.get('/listInventory', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Failed to compute dashboard stats', details: error.message });
   }
 });
-  
+
   // READ ONE - GET /api/space/:id
   router.get('/:id', async (req, res) => {
     try {
