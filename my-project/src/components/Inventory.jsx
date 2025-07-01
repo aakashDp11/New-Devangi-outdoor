@@ -1447,7 +1447,7 @@ export default function InventoryDashboard() {
       <Navbar />
       <main className="flex-1 h-screen overflow-y-auto px-4 md:px-6 py-8 ml-0 lg:ml-64">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <h2 className="text-2xl md:text-3xl font-sans font-normal">List of Spaces</h2>
+          <h2 className="text-2xl md:text-3xl font-sans font-normal">Inventories </h2>
           <div className="flex items-center gap-2 text-xs">
             <Button onClick={() => navigate('/add-space')}>+ Add Space</Button>
             <input type="file" accept=".xlsx, .csv" id="excel-upload" onChange={(e) => {

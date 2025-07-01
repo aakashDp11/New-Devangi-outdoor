@@ -18,6 +18,7 @@ import { fileURLToPath } from 'url';
 import debugRoutes from './routes/debug.routes.js'
 import Campaign from './models/campign.model.js';
 import { authenticate } from './middleware/authenticate.middleware.js';
+import campaignRoutes from './routes/campaign.routes.js'
 
 dotenv.config();
 const app = express();
@@ -60,6 +61,7 @@ app.use('/api/proposals', proposalRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/debug', debugRoutes);
+app.use('/api/campaigns', campaignRoutes);
 
 
 app.use((req, res, next) => {

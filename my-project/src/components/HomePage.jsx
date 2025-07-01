@@ -7,6 +7,11 @@ import { PieChart } from '@mui/x-charts/PieChart';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { LineChart } from '@mui/x-charts/LineChart';
+import {
+  FiChevronLeft,
+  FiChevronRight,
+  FiChevronDown,
+} from 'react-icons/fi';
 const Card = ({ children, className = '', ...props }) => (
   <div className={`bg-white border shadow-sm rounded-xl w-full ${className}`} {...props}>
     {children}
@@ -26,10 +31,379 @@ const CardContent = ({ children, className = '' }) => (
 const ShimmerCard = () => (
   <div className="bg-gray-200 animate-pulse rounded-xl w-full h-[400px] max-w-[500px]" />
 );
+const DashboardCalendar = ({ currentDate, setCurrentDate }) => {
+  const [days, setDays] = useState([]);
+  const [events, setEvents] = useState(new Map());
+  const [campaigns, setCampaigns] = useState([]);  // Store campaigns fetched from the API
+  const [tooltip, setTooltip] = useState({
+    visible: false,
+    content: '',
+    x: 0,
+    y: 0,
+  });
 
+  const navigate = useNavigate();
+
+  // Fetch campaigns (bookings) from the backend API
+  useEffect(() => {
+   
+    const fetchCampaigns = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns`);  // Adjust URL if necessary
+        const data = await response.json(); // Parse the response body
+        console.log("Fetched campaigns data:", data);  // Log the response data to see structure
+        setCampaigns(data.campaigns);  // Access the 'campaigns' array from the response and set it in state
+      } catch (err) {
+        console.error('Error fetching campaigns:', err);
+      }
+    };
+    fetchCampaigns(); // Fetch the campaigns when the component mounts
+  }, []);  // Empty dependency array means this runs once when the component mounts
+
+  // Handle campaign events (starting and ending)
+  useEffect(() => {
+    const eventMap = new Map();
+  
+    if (Array.isArray(campaigns)) {
+      console.log("Campaigns data is", campaigns);
+  
+      campaigns.forEach(campaign => {
+        // Build the campaign info for each campaign
+        const campaignInfo = {
+          id: campaign._id,
+          campaignName: campaign.campaignName || 'Unnamed Campaign',
+        };
+  
+        // Process campaigns starting on a day
+        if (campaign.startDate) {
+          const startDateStr = dayjs(campaign.startDate).format('YYYY-MM-DD');
+          console.log(`Processing campaign: ${campaign.campaignName}, startDate: ${startDateStr}`);
+  
+          const dayEvents = eventMap.get(startDateStr) || { startingCampaigns: [], endingCampaigns: [] };
+          dayEvents.startingCampaigns.push(campaignInfo);
+          eventMap.set(startDateStr, dayEvents);
+        }
+  
+        // Process campaigns ending on a day
+        if (campaign.endDate) {
+          const endDateStr = dayjs(campaign.endDate).format('YYYY-MM-DD');
+          console.log(`Processing campaign: ${campaign.campaignName}, endDate: ${endDateStr}`);
+  
+          const dayEvents = eventMap.get(endDateStr) || { startingCampaigns: [], endingCampaigns: [] };
+          dayEvents.endingCampaigns.push(campaignInfo);
+          eventMap.set(endDateStr, dayEvents);
+        }
+      });
+    }
+  
+    setEvents(eventMap);  // Update the events map
+  }, [campaigns]);  // This effect will run whenever 'campaigns' changes
+   // This effect will run whenever 'campaigns' changes
+  
+    // useEffect(() => {
+    //   const eventMap = new Map();
+    
+    //   // Ensure that campaigns is an array before processing
+    //   if (Array.isArray(campaigns)) {
+    //     console.log("Campaigns data is", campaigns);
+    
+    //     campaigns.forEach(campaign => {
+    //       // Build the campaign info for each campaign
+    //       const campaignInfo = {
+    //         id: campaign._id,
+    //         campaignName: campaign.campaignName || 'Unnamed Campaign',
+    //       };
+    
+    //       // Process campaigns starting on a day
+    //       if (campaign.startDate) {
+    //         const startDateStr = dayjs(campaign.startDate).format('YYYY-MM-DD');
+    //         const dayEvents = eventMap.get(startDateStr) || { startingCampaigns: [], endingCampaigns: [] };
+    //         dayEvents.startingCampaigns.push(campaignInfo);
+    //         eventMap.set(startDateStr, dayEvents);
+    //       }
+    
+    //       // Process campaigns ending on a day
+    //       if (campaign.endDate) {
+    //         const endDateStr = dayjs(campaign.endDate).format('YYYY-MM-DD');
+    //         const dayEvents = eventMap.get(endDateStr) || { startingCampaigns: [], endingCampaigns: [] };
+    //         dayEvents.endingCampaigns.push(campaignInfo);
+    //         eventMap.set(endDateStr, dayEvents);
+    //       }
+    //     });
+    //   }
+    
+    //   setEvents(eventMap);  // Update the events map
+    // }, [campaigns]);  // This effect will run whenever 'campaigns' changes
+    
+  // Generate the days of the current month
+  useEffect(() => {
+    const start = currentDate.startOf('month'),
+      end = currentDate.endOf('month'),
+      first = start.startOf('week'),
+      last = end.endOf('week');
+    const d = [];
+    let day = first;
+    while (day.isBefore(last) || day.isSame(last, 'day')) {
+      d.push(day);
+      day = day.add(1, 'day');
+    }
+    setDays(d);
+  }, [currentDate]);
+
+  // Navigate to the previous and next month
+  const p = () => setCurrentDate(currentDate.subtract(1, 'month'));
+  const n = () => setCurrentDate(currentDate.add(1, 'month'));
+
+  // Navigate to the campaign details page
+  const handleNavigate = (bookingId) => {
+    if (bookingId) {
+      navigate(`/campaign-details/${bookingId}`);
+    }
+  };
+
+  // Show tooltip when hovering over a dot
+  const handleMouseOver = (e, campaigns) => {
+    if (!campaigns || campaigns.length === 0) return;
+    const campaignNames = campaigns.map(c => c.campaignName).join(', ');
+    setTooltip({
+      visible: true,
+      content: campaignNames,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  // Hide tooltip
+  const handleMouseOut = () => {
+    setTooltip(prev => ({ ...prev, visible: false }));
+  };
+
+  
+  return (
+    <>
+      <Card className="h-full w-full">
+        <CardContent>
+          <div className="flex items-center w-full justify-between mb-4">
+            <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 gap-x-4 gap-y-1">
+              <span className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div> Campaign Starting
+              </span>
+              <span className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Campaign Ending
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={p} className="p-1 rounded-md hover:bg-gray-100">
+                <FiChevronLeft />
+              </button>
+              <span className="font-semibold text-sm sm:text-base">{currentDate.format('MMMM YYYY')}</span>
+              <button onClick={n} className="p-1 rounded-md hover:bg-gray-100">
+                <FiChevronRight />
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 text-center text-sm font-medium text-gray-500 border-b">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+              <div key={d} className="py-2">
+                {d}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 border-l">
+            {days.map((day, i) => {
+              const k = day.format('YYYY-MM-DD');  // Get the formatted date for each day
+              const e = events.get(k); // Get the events for this day
+              const cm = day.month() === currentDate.month();  // Check if the day is in the current month
+              const t = day.isSame(dayjs(), 'day');  // Check if the day is today
+  
+              console.log(`Checking events for date: ${k}`, e);  // Log to check the events for each day
+  
+              return (
+                <div
+                  key={i}
+                  className={`h-24 border-b border-r p-1 relative ${!cm ? 'bg-gray-50 text-gray-400' : 'text-black'}`}
+                >
+                  <span
+                    className={`text-sm absolute top-1.5 right-1.5 ${
+                      t ? 'bg-blue-500 text-white rounded-full h-6 w-6 flex items-center justify-center' : ''
+                    }`}
+                  >
+                    {day.format('D')}
+                  </span>
+  
+                  <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1">
+                    {e?.startingCampaigns?.length > 0 && (
+                      <div
+                        className="w-2 h-2 rounded-full bg-green-500 cursor-pointer"
+                        onMouseEnter={(event) => handleMouseOver(event, e.startingCampaigns)}
+                        onMouseLeave={handleMouseOut}
+                        onClick={() => handleNavigate(e.startingCampaigns[0].id)}  // Navigate to the first campaign
+                      ></div>
+                    )}
+  
+                    {e?.endingCampaigns?.length > 0 && (
+                      <div
+                        className="w-2 h-2 rounded-full bg-red-500 cursor-pointer"
+                        onMouseEnter={(event) => handleMouseOver(event, e.endingCampaigns)}
+                        onMouseLeave={handleMouseOut}
+                        onClick={() => handleNavigate(e.endingCampaigns[0].id)}  // Navigate to the first campaign
+                      ></div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+  
+      {tooltip.visible && (
+        <div
+          className="fixed z-50 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg pointer-events-none"
+          style={{
+            top: `${tooltip.y + 15}px`,
+            left: `${tooltip.x + 15}px`  // Adjust position of the tooltip
+          }}
+        >
+          {tooltip.content}
+        </div>
+      )}
+    </>
+  );
+  
+  
+  
+};
+// const DashboardCalendar = ({ bookings, currentDate, setCurrentDate }) => {
+//   const [days, setDays] = useState([]);
+//   const [events, setEvents] = useState(new Map());
+//   const navigate = useNavigate();
+  
+//   const [tooltip, setTooltip] = useState({
+//     visible: false,
+//     content: '',
+//     x: 0,
+//     y: 0,
+//   });
+
+//   useEffect(() => {
+//     const eventMap = new Map();
+    
+//     bookings.forEach(booking => {
+//         (booking.campaigns || []).forEach(campaign => {
+//             const campaignInfo = {
+//                 id: `${booking._id}-${campaign.name || 'unnamed'}`,
+//                 bookingId: booking._id,
+//                 brandName: booking.brandName || 'Unknown Brand',
+//                 campaignName: campaign.name || 'Unnamed Campaign',
+//             };
+
+//             if (campaign.startDate) {
+//                 const startDateStr = dayjs(campaign.startDate).format('YYYY-MM-DD');
+//                 const dayEvents = eventMap.get(startDateStr) || {};
+//                 const starting = dayEvents.startingCampaigns || [];
+//                 eventMap.set(startDateStr, { ...dayEvents, startingCampaigns: [...starting, campaignInfo] });
+//             }
+//             if (campaign.endDate) {
+//                 const endDateStr = dayjs(campaign.endDate).format('YYYY-MM-DD');
+//                 const dayEvents = eventMap.get(endDateStr) || {};
+//                 const ending = dayEvents.endingCampaigns || [];
+//                 eventMap.set(endDateStr, { ...dayEvents, endingCampaigns: [...ending, campaignInfo] });
+//             }
+//         });
+//     });
+
+//     setEvents(eventMap);
+//   }, [bookings]);
+
+//   useEffect(() => {
+//     const start=currentDate.startOf('month'),end=currentDate.endOf('month'),first=start.startOf('week'),last=end.endOf('week');const d=[];let day=first;
+//     while(day.isBefore(last)||day.isSame(last,'day')){d.push(day);day=day.add(1,'day')}setDays(d);
+//   }, [currentDate]);
+
+//   const p=()=>setCurrentDate(currentDate.subtract(1,'month')),n=()=>setCurrentDate(currentDate.add(1,'month'));
+  
+//   const handleNavigate = (bookingId) => {
+//     if (bookingId) {
+//       navigate(`/campaign/${bookingId}`);
+//     }
+//   };
+  
+//   const handleMouseOver = (e, campaigns) => {
+//     if (!campaigns || campaigns.length === 0) return;
+//     const campaignNames = campaigns.map(c => c.campaignName).join(', ');
+//     setTooltip({
+//       visible: true,
+//       content: campaignNames,
+//       x: e.clientX,
+//       y: e.clientY,
+//     });
+//   };
+
+//   const handleMouseOut = () => {
+//     setTooltip(prev => ({ ...prev, visible: false }));
+//   };
+
+//   return (<>
+//     <Card className="h-full w-full">
+//       <CardContent>
+//         <div className="flex items-center w-full justify-between mb-4">
+//           <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 gap-x-4 gap-y-1">
+//             <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div> Campaign Starting</span>
+//             <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Campaign Ending</span>
+//           </div>
+//           <div className="flex items-center gap-2">
+//             <button onClick={p} className="p-1 rounded-md hover:bg-gray-100"><FiChevronLeft /></button>
+//             <span className="font-semibold text-sm sm:text-base">{currentDate.format('MMMM YYYY')}</span>
+//             <button onClick={n} className="p-1 rounded-md hover:bg-gray-100"><FiChevronRight /></button>
+//           </div>
+//         </div>
+//         <div className="grid grid-cols-7 text-center text-sm font-medium text-gray-500 border-b">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=><div key={d} className="py-2">{d}</div>)}</div>
+//         <div className="grid grid-cols-7 border-l">
+//           {days.map((day,i)=>{const k=day.format('YYYY-MM-DD'),e=events.get(k),cm=day.month()===currentDate.month(),t=day.isSame(dayjs(),'day');
+//             return(<div key={i} className={`h-24 border-b border-r p-1 relative ${!cm?'bg-gray-50 text-gray-400':'text-black'}`}><span className={`text-sm absolute top-1.5 right-1.5 ${t?'bg-blue-500 text-white rounded-full h-6 w-6 flex items-center justify-center':''}`}>{day.format('D')}</span>
+//               <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1">
+//                 {e?.startingCampaigns?.length > 0 && 
+//                   <div 
+//                     className="w-2 h-2 rounded-full bg-green-500 cursor-pointer"
+//                     onMouseEnter={(event) => handleMouseOver(event, e.startingCampaigns)}
+//                     onMouseLeave={handleMouseOut}
+//                     onClick={() => handleNavigate(e.startingCampaigns[0].bookingId)}>
+//                   </div>
+//                 }
+//                 {e?.endingCampaigns?.length > 0 && 
+//                   <div 
+//                     className="w-2 h-2 rounded-full bg-red-500 cursor-pointer"
+//                     onMouseEnter={(event) => handleMouseOver(event, e.endingCampaigns)}
+//                     onMouseLeave={handleMouseOut}
+//                     onClick={() => handleNavigate(e.endingCampaigns[0].bookingId)}>
+//                   </div>
+//                 }
+//               </div>
+//             </div>);
+//           })}
+//         </div>
+//       </CardContent>
+//     </Card>
+    
+//     {tooltip.visible && (
+//       <div
+//         className="fixed z-50 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg pointer-events-none"
+//         style={{
+//           top: `${tooltip.y + 15}px`,
+//           left: `${tooltip.x + 15}px`,
+//         }}
+//       >
+//         {tooltip.content}
+//       </div>
+//     )}
+//   </>);
+// };
 const BookingGraphDashboard = () => {
   const [bookingStats, setBookingStats] = useState([]);
   const [range, setRange] = useState('month');
+  const [allBookings, setAllBookings] = useState([]);
+  const [currentDate, setCurrentDate] = useState(dayjs());
   const [muiBookingData, setMuiBookingData] = useState({ xLabels: [], yData: [] });
   const [muiProposalData, setMuiProposalData] = useState({ xLabels: [], yData: [] });
   const [loading, setLoading] = useState(true);
@@ -100,6 +474,7 @@ const [revenueChartData, setRevenueChartData] = useState({ xLabels: [], yData: [
       }
 
       const bookingData = await bookingRes.json();
+      console.log("Booking data is",bookingData);
       const statsData = await spaceRes.json();
 
       setBookingStats(bookingData.bookingStats || []);
@@ -148,17 +523,34 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
     setMuiProposalData(muiBookingData);
   };
 
+  // const getPaymentStats = () => {
+  //   let totalReceived = 0;
+  //   let totalDue = 0;
+
+  //   bookingStats.forEach((b) => {
+  //     totalReceived += b.totalPaid || 0;
+  //     totalDue += b.paymentDue || 0;
+  //   });
+
+  //   return { totalReceived, totalDue };
+  // };
+  
   const getPaymentStats = () => {
     let totalReceived = 0;
     let totalDue = 0;
-
+  
     bookingStats.forEach((b) => {
+      const created = dayjs(b.createdAt);
+      const rangeStart = getRangeStart(dayjs());  // apply same filter to payments
+      if (!created.isValid() || created.isBefore(rangeStart)) return;  // Filter out older payments
+  
       totalReceived += b.totalPaid || 0;
       totalDue += b.paymentDue || 0;
     });
-
+  
     return { totalReceived, totalDue };
   };
+  
   const processRevenueData = () => {
     const revenueMap = new Map();
   
@@ -184,6 +576,193 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
     setRevenueChartData({ xLabels, yData });
   };
   
+  const processAllStats = () => {
+    const now = dayjs();
+    const bStatus = { ongoing: 0, completed: 0, upcoming: 0 };
+    allBookings.forEach(booking => {
+        (booking.campaigns || []).forEach(campaign => {
+            const s = dayjs(campaign.startDate);
+            const e = dayjs(campaign.endDate);
+            if (s.isValid() && e.isValid()) {
+                if (now.isAfter(e, 'day')) {
+                    bStatus.completed++;
+                } else if (now.isBefore(s, 'day')) {
+                    bStatus.upcoming++;
+                } else {
+                    bStatus.ongoing++;
+                }
+            }
+        });
+    });
+    setBookingStatus(bStatus);
+
+    const paymentStartDate = getStartDateForRange(paymentOverviewRange);
+    const filteredBookingsForPayments = paymentStartDate
+      ? allBookings.filter(booking => dayjs(booking.createdAt).isAfter(paymentStartDate))
+      : allBookings;
+
+    const totalPayments = filteredBookingsForPayments.reduce((acc, booking) => {
+        const payment = booking.campaigns?.[0]?.pipeline?.payment;
+        if (payment) {
+            acc.totalReceived += payment.totalPaid || 0;
+            acc.totalDue += payment.paymentDue || 0;
+        }
+        return acc;
+    }, { totalReceived: 0, totalDue: 0 });
+    setPaymentStats(totalPayments);
+    
+    const rStart = dayjs().subtract(range === 'week' ? 7 : range === 'month' ? 30 : 90, 'day').startOf('day');
+    const processForBarChart = (items) => {
+        const map = new Map();
+        items.forEach(({ createdAt }) => {
+            const date = dayjs(createdAt);
+            if (date.isValid() && date.isAfter(rStart)) {
+                const key = date.format('YYYY-MM-DD');
+                map.set(key, (map.get(key) || 0) + 1);
+            }
+        });
+        const sortedKeys = Array.from(map.keys()).sort((a, b) => dayjs(a).unix() - dayjs(b).unix());
+        return {
+            xLabels: sortedKeys.map(k => dayjs(k).format('DD MMM')),
+            yData: sortedKeys.map(k => map.get(k))
+        };
+    };
+    setMuiBookingData(processForBarChart(allBookings));
+    setMuiProposalData(processForBarChart(proposals));
+    
+    const pipelineStartDate = getStartDateForRange(campaignStatusRange);
+    const filteredBookingsForPipeline = allBookings.filter(booking => dayjs(booking.createdAt).isAfter(pipelineStartDate));
+
+    const pCounts = filteredBookingsForPipeline.reduce((counts, booking) => {
+        const pipeline = booking.campaigns?.[0]?.pipeline;
+        if (pipeline) {
+            if (pipeline.bookingStatus?.confirmed) counts.bookingConfirmed++;
+            if (pipeline.artwork?.confirmed) counts.artworkReceived++;
+            if (pipeline.po?.documentUrl) counts.poReceived++;
+            if (pipeline.invoice?.invoiceNumber) counts.invoiceReceived++;
+            booking.campaigns.forEach(c => {
+                c.spaces?.forEach(s => {
+                    if (s?.id?.printingStatus?.confirmed) counts.printingStatus++;
+                    if (s?.id?.mountingStatus?.confirmed) counts.mountingStatus++;
+                });
+            });
+        }
+        return counts;
+    }, { bookingConfirmed: 0, artworkReceived: 0, printingStatus: 0, mountingStatus: 0, poReceived: 0, invoiceReceived: 0 });
+    setPipelineBarData({
+        labels: ['Booking Confirmed', 'Artwork', 'Printing', 'Mounting', 'PO', 'Invoice'],
+        values: [pCounts.bookingConfirmed, pCounts.artworkReceived, pCounts.printingStatus, pCounts.mountingStatus, pCounts.poReceived, pCounts.invoiceReceived]
+    });
+    
+    const activeCampaigns = allBookings.flatMap(b => b.campaigns || []).filter(c => {
+      const s = dayjs(c.startDate);
+      const e = dayjs(c.endDate);
+      return s.isValid() && e.isValid() && now.isBetween(s, e, null, '[]');
+    });
+
+    const bookedSpaceIds = new Set(activeCampaigns.flatMap(c => c.spaces.map(s => s.spaceId)));
+
+    // --- MODIFIED LOGIC FOR DOOH AVAILABILITY ---
+    const invStats = { fullVacant: 0, fullBooked: 0, partialBooked: 0 };
+    allSpaces.forEach(space => {
+      // We now check if the space *type* is DOOH first.
+      if (space.spaceType === 'DOOH') {
+          // Check if it has units to determine partial/full booking
+          if (space.units && space.units.length > 0) {
+              const totalUnits = space.units.length;
+              const bookedUnitsCount = space.units.filter(unit => bookedSpaceIds.has(unit._id)).length;
+              
+              if (bookedUnitsCount === 0) {
+                  invStats.fullVacant++;
+              } else if (bookedUnitsCount === totalUnits) {
+                  invStats.fullBooked++;
+              } else {
+                  invStats.partialBooked++;
+              }
+          } else {
+              // If it's a DOOH space with no units, it is by definition Fully Vacant.
+              invStats.fullVacant++;
+          }
+      }
+    });
+    
+    setInventoryBookingStats({
+      labels: ['Full Vacant', 'Full Booked', 'Partial Booked'],
+      values: [invStats.fullVacant, invStats.fullBooked, invStats.partialBooked],
+    });
+
+    const ownershipCounts = allSpaces.reduce((acc, space) => {
+      const ownership = space.ownership?.toLowerCase() || 'owned'; // Default to owned if undefined
+      if (ownership === 'leased') {
+          acc.leased++;
+      } else if (ownership === 'traded') {
+          acc.traded++;
+      } else {
+          acc.owned++;
+      }
+      return acc;
+    }, { owned: 0, leased: 0, traded: 0 });
+
+    setInventoryDistributionStats(ownershipCounts);
+
+    const isYearly = revenueView === 'yearly';
+
+    if (isYearly) {
+      let startOfFY;
+      const currentMonth = now.month();
+      if (currentMonth >= 3) {
+          startOfFY = dayjs().month(3).startOf('month');
+      } else {
+          startOfFY = dayjs().subtract(1, 'year').month(3).startOf('month');
+      }
+      const endOfFY = startOfFY.add(1, 'year').subtract(1, 'day');
+
+      const fyMonths = [];
+      for (let i = 0; i < 12; i++) {
+          fyMonths.push(startOfFY.add(i, 'month').format('MMM'));
+      }
+
+      const revMap = new Map();
+      fyMonths.forEach(month => revMap.set(month, 0));
+
+      allBookings.forEach(booking => {
+          const date = dayjs(booking.createdAt);
+          if (date.isBetween(startOfFY, endOfFY, null, '[]')) {
+              const key = date.format('MMM');
+              const paidAmount = booking.campaigns?.reduce((sum, c) => sum + (c.pipeline?.payment?.totalPaid || 0), 0) || 0;
+              if (revMap.has(key)) {
+                  revMap.set(key, revMap.get(key) + paidAmount);
+              }
+          }
+      });
+      
+      setRevenueChartData({ xLabels: Array.from(revMap.keys()), yData: Array.from(revMap.values()) });
+    } else {
+      const timeUnits = 30;
+      const timePeriod = 'day';
+      const timeFormat = 'D MMM';
+      const startPeriod = now.subtract(timeUnits - 1, timePeriod).startOf(timePeriod);
+      
+      const revMap = new Map();
+      const sortedLabels = [];
+      for(let i = 29; i >= 0; i--) {
+          sortedLabels.push(now.subtract(i, 'day').format(timeFormat))
+      }
+      sortedLabels.forEach(label => revMap.set(label, 0));
+
+      allBookings.forEach(booking => {
+          const date = dayjs(booking.createdAt);
+          if (date.isAfter(startPeriod)) {
+              const key = date.format(timeFormat);
+              const paidAmount = booking.campaigns?.reduce((sum, c) => sum + (c.pipeline?.payment?.totalPaid || 0), 0) || 0;
+              if (revMap.has(key)) {
+                  revMap.set(key, revMap.get(key) + paidAmount);
+              }
+          }
+      });
+      setRevenueChartData({ xLabels: Array.from(revMap.keys()), yData: Array.from(revMap.values()) });
+    }
+  };
   
   const getPipelineStatusCounts = () => {
     const counts = {
@@ -276,7 +855,7 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
           ) : (
             <>
               {/* Payment Overview */}
-              <Card className="max-w-[270px] h-[30%] shadow-md mt-4">
+              {/* <Card className="max-w-[270px] h-[30%] shadow-md mt-4">
                 <CardContent>
                   <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
                   <div className='flex mt-4'>
@@ -287,40 +866,28 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
                   </div>
                   <PieChart series={[{ data: paymentPieData, innerRadius: 40 }]} height={200} width={150} />
                 </CardContent>
-              </Card>
-
+              </Card> */}
+<Card className="max-w-[320px] h-[30%] shadow-md mt-4">
+  <CardContent>
+    <h2 className="text-sm font-medium mb-2">Ownership Distribution</h2>
+    <div className="w-full">
+      <div className='flex mt-4'>
+        <div className="ml-auto text-[0.7rem]">
+          <p><strong>Traded:</strong> {ownershipDistribution.traded}</p>
+          <p><strong>Owned:</strong> {ownershipDistribution.owned}</p>
+          <p><strong>Leased:</strong> {ownershipDistribution.leased}</p>
+        </div>
+      </div>
+      <PieChart series={[{ data: ownershipDistributionPieData, innerRadius: 40 }]} height={190} width={150} />
+    </div>
+  </CardContent>
+</Card>
+<div className="flex-grow">{loading ? <ShimmerCard height="h-full min-h-[424px]" /> : <DashboardCalendar bookings={allBookings} currentDate={currentDate} setCurrentDate={setCurrentDate} />}</div>
               {/* DOOH Unit Utilization */}
-              <Card className="max-w-[275px] h-[30%] shadow-md mt-4">
-                <CardContent>
-                  <h2 className="text-sm font-medium mb-2">DOOH Unit Utilization</h2>
-                  <div className="w-full">
-                    <div className='flex mt-4'>
-                      <div className="ml-auto text-[0.8rem]">
-                        <p><strong>Booked Units:</strong> {unitUtilizationStats.bookedUnits}</p>
-                        <p><strong>Free Units:</strong> {unitUtilizationStats.freeUnits}</p>
-                      </div>
-                    </div>
-                    <PieChart series={[{ data: unitUtilizationPieData, innerRadius: 40 }]} height={200} width={150} />
-                  </div>
-                </CardContent>
-              </Card>
+              
 
               {/* Static Space Availability */}
-              <Card className="max-w-[320px] h-[30%] shadow-md mt-4">
-                <CardContent>
-                  <h2 className="text-sm font-medium mb-2">Static Space Availability</h2>
-                  <div className="w-full">
-                    <div className='flex mt-4'>
-                      <div className="ml-auto text-[0.7rem]">
-                        <p><strong>Available:</strong> {availabilityStats.available}</p>
-                        <p><strong>Booked:</strong> {availabilityStats.booked}</p>
-                        <p><strong>Overlapping booking:</strong> {availabilityStats.overlapping}</p>
-                      </div>
-                    </div>
-                    <PieChart series={[{ data: availabilityPieData, innerRadius: 40 }]} height={190} width={150} />
-                  </div>
-                </CardContent>
-              </Card>
+             
               
             </>
           )}
@@ -342,9 +909,38 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
     </div>
   </CardContent>
 </Card>
+<Card className="max-w-[275px] h-[30%] shadow-md mt-4">
+                <CardContent>
+                  <h2 className="text-sm font-medium mb-2">DOOH Unit Utilization</h2>
+                  <div className="w-full">
+                    <div className='flex mt-4'>
+                      <div className="ml-auto text-[0.8rem]">
+                        <p><strong>Booked Units:</strong> {unitUtilizationStats.bookedUnits}</p>
+                        <p><strong>Free Units:</strong> {unitUtilizationStats.freeUnits}</p>
+                      </div>
+                    </div>
+                    <PieChart series={[{ data: unitUtilizationPieData, innerRadius: 40 }]} height={200} width={150} />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="max-w-[320px] h-[30%] shadow-md mt-4">
+                <CardContent>
+                  <h2 className="text-sm font-medium mb-2">Static Space Availability</h2>
+                  <div className="w-full">
+                    <div className='flex mt-4'>
+                      <div className="ml-auto text-[0.7rem]">
+                        <p><strong>Available:</strong> {availabilityStats.available}</p>
+                        <p><strong>Booked:</strong> {availabilityStats.booked}</p>
+                        <p><strong>Overlapping booking:</strong> {availabilityStats.overlapping}</p>
+                      </div>
+                    </div>
+                    <PieChart series={[{ data: availabilityPieData, innerRadius: 40 }]} height={190} width={150} />
+                  </div>
+                </CardContent>
+              </Card>
 
 {/* Ownership Distribution */}
-<Card className="max-w-[320px] h-[30%] shadow-md mt-4">
+{/* <Card className="max-w-[320px] h-[30%] shadow-md mt-4">
   <CardContent>
     <h2 className="text-sm font-medium mb-2">Ownership Distribution</h2>
     <div className="w-full">
@@ -358,7 +954,7 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
       <PieChart series={[{ data: ownershipDistributionPieData, innerRadius: 40 }]} height={190} width={150} />
     </div>
   </CardContent>
-</Card>
+</Card> */}
 
         </div>
 
@@ -406,6 +1002,18 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
                       slotProps={{ bar: { width: 30 } }}
                     />
                   </div>
+                </CardContent>
+              </Card>
+              <Card className="max-w-[270px] h-[30%] shadow-md mt-4">
+                <CardContent>
+                  <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
+                  <div className='flex mt-4'>
+                    <div className='ml-auto text-[0.8rem]'>
+                      <p><strong>Received:</strong> ₹{totalReceived.toLocaleString()}</p>
+                      <p><strong>Due:</strong> ₹{totalDue.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <PieChart series={[{ data: paymentPieData, innerRadius: 40 }]} height={200} width={150} />
                 </CardContent>
               </Card>
             </div>
