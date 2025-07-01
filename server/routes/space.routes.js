@@ -383,6 +383,7 @@ router.get('/listInventory', authenticate, async (req, res) => {
       tags: 1,
       mainPhoto: 1,
       overlappingBooking: 1,
+      ownershipType:1,
       createdAt: 1,
       campaignDates: 1,
       specification:1
