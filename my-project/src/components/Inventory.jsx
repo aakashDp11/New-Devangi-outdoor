@@ -1148,7 +1148,7 @@ const InventoryGridView = ({ data, onTagUpdate, navigate }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 text-xs gap-5">
       {data.map((item) => {
         const tags = Array.isArray(item.tags)
           ? item.tags
@@ -1157,7 +1157,7 @@ const InventoryGridView = ({ data, onTagUpdate, navigate }) => {
         return (
           <div
             key={item._id}
-            className="bg-white border border-gray-200 shadow-sm rounded-lg hover:shadow-md cursor-pointer transition-shadow flex flex-col"
+            className="bg-white border border-gray-200 shadow-sm rounded-lg text-xs hover:shadow-md cursor-pointer transition-shadow flex flex-col"
             onClick={() => navigate(`/space/${item._id}`)}
           >
             <img src={item.mainPhoto || 'https://via.placeholder.com/300x200'} alt="Space" className="w-full h-40 object-cover rounded-t-lg bg-gray-100" />
@@ -1171,7 +1171,7 @@ const InventoryGridView = ({ data, onTagUpdate, navigate }) => {
                 </div>
                 <p className="text-sm text-gray-500 mt-1 mb-3">{item.address || 'No address provided'}</p>
 
-                <div className="flex gap-2 flex-wrap mb-2">
+                <div className="flex gap-2 text-xs flex-wrap mb-2">
                   <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">{item.city || 'N/A'}</span>
                   <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800">{item.spaceType || 'N/A'}</span>
                 </div>
@@ -1321,8 +1321,8 @@ export default function InventoryDashboard() {
   const [showDateModal, setShowDateModal] = useState(false);
   
   // State for the date range picker
-  const [dateRange, setDateRange] = useState([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
-  const [tempDateRange, setTempDateRange] = useState([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
+  const [dateRange, setDateRange] = useState([{ startDate: new Date(), endDate: '', key: 'selection' }]);
+  const [tempDateRange, setTempDateRange] = useState([{ startDate: new Date(), endDate: '', key: 'selection' }]);
 
 
   // --- DATA FETCHING ---
@@ -1529,7 +1529,7 @@ export default function InventoryDashboard() {
         {/* Date Picker Modal */}
         {showDateModal && (
           <div
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+            className="fixed inset-0 text-xs flex items-center justify-center bg-black bg-opacity-50 z-50"
             onClick={handleCancelDateFilter}
           >
             <div
@@ -1548,8 +1548,8 @@ export default function InventoryDashboard() {
              
 
               <div className="flex justify-end gap-2 p-2 border-t">
-                <button onClick={handleCancelDateFilter} className="px-4 py-1.5 rounded-md bg-gray-200 text-black hover:bg-gray-300 font-medium text-sm">Cancel</button>
-                <button onClick={handleApplyDateFilter} className="px-4 py-1.5 rounded-md bg-black text-white hover:bg-gray-800 font-medium text-sm">Apply</button>
+                <button onClick={handleCancelDateFilter} className="px-4 py-1.5 rounded-md bg-gray-200 text-black hover:bg-gray-300 font-medium text-xs">Cancel</button>
+                <button onClick={handleApplyDateFilter} className="px-4 py-1.5 rounded-md bg-black text-white hover:bg-gray-800 font-medium text-xs">Apply</button>
               </div>
             </div>
           </div>

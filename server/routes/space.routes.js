@@ -363,6 +363,7 @@ router.get('/listInventory', authenticate, async (req, res) => {
     const region = req.query.region || '';
     const availability = req.query.availability || '';
     const spaceType = req.query.spaceType || '';
+    const ownershipType = req.query.ownershipType || '';  // Added ownershipType
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
 
@@ -383,10 +384,10 @@ router.get('/listInventory', authenticate, async (req, res) => {
       tags: 1,
       mainPhoto: 1,
       overlappingBooking: 1,
-      ownershipType:1,
+      ownershipType: 1,  // Ensure ownershipType is projected
       createdAt: 1,
       campaignDates: 1,
-      specification:1
+      specification: 1
     };
 
     const filters = {};
@@ -418,6 +419,11 @@ router.get('/listInventory', authenticate, async (req, res) => {
     // Space Type
     if (spaceType) {
       filters.spaceType = spaceType;
+    }
+
+    // Ownership Type filter
+    if (ownershipType) {
+      filters.ownershipType = ownershipType;  // Added ownershipType filter
     }
 
     // Availability (we compute after fetching below)
@@ -465,6 +471,120 @@ router.get('/listInventory', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
   }
 });
+
+
+// router.get('/listInventory', authenticate, async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+
+//     const search = req.query.search || '';
+//     const region = req.query.region || '';
+//     const availability = req.query.availability || '';
+//     const spaceType = req.query.spaceType || '';
+//     const startDate = req.query.startDate;
+//     const endDate = req.query.endDate;
+
+//     const projection = {
+//       spaceName: 1,
+//       address: 1,
+//       city: 1,
+//       state: 1,
+//       zone: 1,
+//       spaceType: 1,
+//       unit: 1,
+//       occupiedUnits: 1,
+//       availability: 1,
+//       footfall: 1,
+//       audience: 1,
+//       demographics: 1,
+//       dates: 1,
+//       tags: 1,
+//       mainPhoto: 1,
+//       overlappingBooking: 1,
+//       ownershipType:1,
+//       createdAt: 1,
+//       campaignDates: 1,
+//       specification:1
+//     };
+
+//     const filters = {};
+
+//     // Search text
+//     if (search) {
+//       filters.$or = [
+//         { spaceName: { $regex: search, $options: 'i' } },
+//         { address: { $regex: search, $options: 'i' } },
+//         { city: { $regex: search, $options: 'i' } },
+//         { state: { $regex: search, $options: 'i' } },
+//         { zone: { $regex: search, $options: 'i' } },
+//         { tags: { $regex: search, $options: 'i' } },
+//       ];
+//     }
+
+//     // Region filter (match in city, state, or zone)
+//     if (region) {
+//       filters.$and = filters.$and || [];
+//       filters.$and.push({
+//         $or: [
+//           { city: { $regex: region, $options: 'i' } },
+//           { state: { $regex: region, $options: 'i' } },
+//           { zone: { $regex: region, $options: 'i' } },
+//         ],
+//       });
+//     }
+
+//     // Space Type
+//     if (spaceType) {
+//       filters.spaceType = spaceType;
+//     }
+
+//     // Availability (we compute after fetching below)
+//     const rawData = await Space.find(filters, projection).sort({ createdAt: -1 });
+//     const totalFiltered = rawData.length;
+
+//     // Date Filter + Availability Logic
+//     const filtered = rawData.filter((item) => {
+//       // Computed availability
+//       const totalUnits = item.unit || 0;
+//       const occupied = item.occupiedUnits || 0;
+//       let computedAvailability = 'Completely available';
+//       if (item.overlappingBooking) computedAvailability = 'Overlapping booking';
+//       else if (totalUnits === occupied && occupied !== 0) computedAvailability = 'Completely booked';
+//       else if (occupied > 0 && occupied < totalUnits) computedAvailability = 'Partially available';
+
+//       if (availability && computedAvailability !== availability) return false;
+
+//       // Date filtering
+//       if (startDate && endDate && item.dates?.length >= 2) {
+//         const [d1, m1, y1] = item.dates[0].split('-');
+//         const [d2, m2, y2] = item.dates[1].split('-');
+//         const invStart = new Date(`${y1}-${m1}-${d1}`);
+//         const invEnd = new Date(`${y2}-${m2}-${d2}`);
+//         const selectedStart = new Date(startDate);
+//         const selectedEnd = new Date(endDate);
+
+//         const inRange = selectedStart >= invStart && selectedEnd <= invEnd;
+
+//         const overlapWithCampaign = (item.campaignDates || []).some(c => {
+//           const campStart = new Date(c.startDate);
+//           const campEnd = new Date(c.endDate);
+//           return selectedStart <= campEnd && selectedEnd >= campStart;
+//         });
+
+//         if (!inRange || overlapWithCampaign) return false;
+//       }
+
+//       return true;
+//     });
+
+//     const paginated = filtered.slice(skip, skip + limit);
+//     res.json({ spaces: paginated, totalCount: filtered.length });
+//   } catch (error) {
+//     res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
+//   }
+// });
 
 
 // router.get('/', authenticate, async (req, res) => {
