@@ -166,46 +166,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
     }
   };
 
-  // Show tooltip when hovering over a dot
-  // const handleMouseOver = (e, campaigns) => {
-  //   if (!campaigns || campaigns.length === 0) return;
-  //   const campaignNames = campaigns.map(c => c.campaignName).join(', ');
-  //   setTooltip({
-  //     visible: true,
-  //     content: campaignNames,
-  //     x: e.clientX,
-  //     y: e.clientY,
-  //   });
-  // };
-  // const handleMouseOver = (e, campaigns) => {
-  //   if (!campaigns || campaigns.length === 0) return;
   
-  //   setTooltip({
-  //     visible: true,
-  //     content: (
-  //       <div className="space-y-1"> {/* Adds space between campaign names */}
-  //         {campaigns.map((campaign, index) => {
-  //           console.log("Campaign onclick is", campaign);
-  //           return ( // Return the div with the campaign name
-  //             <div
-  //               key={index}
-  //               className="cursor-pointer text-sm text-blue-500 hover:underline"
-  //               onClick={() => {
-  //                 console.log("Navigating to campaign:", campaign.id); // Debugging navigate
-  //                 handleNavigate(campaign.id); // Navigate to the campaign details
-  //               }} // Navigate to the campaign details
-  //             >
-  //               {campaign.campaignName}
-  //             </div>
-  //           );
-  //         })}
-  //       </div>
-  //     ),
-  //     x: e.clientX,
-  //     y: e.clientY,
-  //   });
-  //   console.log("Tooltip Content:", tooltip.content);
-  // };
   const handleMouseOver = (e, campaigns) => {
     if (!campaigns || campaigns.length === 0) return;
   
@@ -790,7 +751,39 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
 
     return counts;
   };
-
+  const processCombinedData = () => {
+    const now = dayjs();
+    const rangeStart = getRangeStart(now);
+    const dataMap = new Map();
+  
+    // Process bookings
+    bookingStats.forEach(({ createdAt }) => {
+      const created = dayjs(createdAt);
+      if (!created.isValid() || created.isBefore(rangeStart)) return;
+      const key = created.format('YYYY-MM-DD');
+      dataMap.set(key, { bookings: (dataMap.get(key)?.bookings || 0) + 1 });
+    });
+  
+    // Process proposals
+    proposals.forEach(({ createdAt }) => {
+      const created = dayjs(createdAt);
+      if (!created.isValid() || created.isBefore(rangeStart)) return;
+      const key = created.format('YYYY-MM-DD');
+      if (!dataMap.has(key)) {
+        dataMap.set(key, { bookings: 0, proposals: 0 });
+      }
+      dataMap.set(key, { ...dataMap.get(key), proposals: (dataMap.get(key)?.proposals || 0) + 1 });
+    });
+  
+    const sortedKeys = Array.from(dataMap.keys()).sort((a, b) => dayjs(a).unix() - dayjs(b).unix());
+    const xLabels = sortedKeys.map((key) => dayjs(key).format('DD MMM'));
+    const yBookingData = sortedKeys.map((key) => dataMap.get(key)?.bookings || 0);
+    const yProposalData = sortedKeys.map((key) => dataMap.get(key)?.proposals || 0);
+  
+    setMuiBookingData({ xLabels, yData: yBookingData });
+    setMuiProposalData({ xLabels, yData: yProposalData });
+  };
+  
   const { totalReceived, totalDue } = getPaymentStats();
   const pipelineCounts = getPipelineStatusCounts();
 
@@ -908,12 +901,7 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
         </div>       
 
 <div className="flex-grow">{loading ? <ShimmerCard height="h-full min-h-[424px]" /> : <DashboardCalendar campaigns={campaigns} bookings={allBookings} currentDate={currentDate} setCurrentDate={setCurrentDate} />}</div>
-              {/* DOOH Unit Utilization */}
-              
-
-              {/* Static Space Availability */}
-             
-              
+         
             </>
           )}
         </div>
@@ -998,37 +986,32 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
             </div>
 
             <div className="flex w-full gap-[10%] ">
-              {/* Booking Chart */}
-              <Card className="w-full shadow-md">
-                <CardContent>
-                  <h2 className="text-sm font-medium mb-2">Bookings</h2>
-                  <div className="w-full h-[400px]">
-                    <BarChart
-                      xAxis={[{ scaleType: 'band', data: muiBookingData.xLabels, categoryGapRatio: 0.8, barGapRatio: 0.2 }]}
-                      series={[{ data: muiBookingData.yData, label: 'Number of Bookings' }]}
-                      height={400}
-                      borderRadius={10}
-                      slotProps={{ bar: { width: 30 } }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Proposals Chart */}
-              <Card className="w-full shadow-md">
-                <CardContent>
-                  <h2 className="text-sm font-medium mb-2">Proposals</h2>
-                  <div className="w-full h-[400px]">
-                    <BarChart
-                      xAxis={[{ scaleType: 'band', data: muiProposalData.xLabels, categoryGapRatio: 0.9, barGapRatio: 0.2 }]}
-                      series={[{ data: muiProposalData.yData, label: 'Number of Proposals' }]}
-                      height={400}
-                      borderRadius={10}
-                      slotProps={{ bar: { width: 30 } }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+            <Card className="w-full shadow-md">
+  <CardContent>
+    <h2 className="text-sm font-medium mb-2">Bookings & Open Proposals</h2>
+    <div className="w-full h-[400px]">
+      <BarChart
+        xAxis={[{ scaleType: 'band', data: muiBookingData.xLabels, categoryGapRatio: 0.8, barGapRatio: 0.2 }]}
+        series={[
+          {
+            data: muiBookingData.yData,
+            label: 'Number of Bookings',
+            color: '#4caf50', // Optional: color for bookings bars
+          },
+          {
+            data: muiProposalData.yData,
+            label: 'Number of Proposals',
+            color: '#2196f3', // Optional: color for proposals bars
+          },
+        ]}
+        height={400}
+        borderRadius={10}
+        slotProps={{ bar: { width: 30 } }}
+      />
+    </div>
+  </CardContent>
+</Card>
+             
               <Card className="max-w-[270px] h-[30%] shadow-md mt-4">
                 <CardContent>
                   <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
