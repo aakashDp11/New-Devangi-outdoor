@@ -98,7 +98,7 @@ const DashboardCalendar = ({ currentDate, setCurrentDate }) => {
   
     setEvents(eventMap);  // Update the events map
   }, [campaigns]);  // This effect will run whenever 'campaigns' changes
-   // This effect will run whenever 'campaigns' changes
+
   
     // useEffect(() => {
     //   const eventMap = new Map();
@@ -274,134 +274,10 @@ const DashboardCalendar = ({ currentDate, setCurrentDate }) => {
   
   
 };
-// const DashboardCalendar = ({ bookings, currentDate, setCurrentDate }) => {
-//   const [days, setDays] = useState([]);
-//   const [events, setEvents] = useState(new Map());
-//   const navigate = useNavigate();
-  
-//   const [tooltip, setTooltip] = useState({
-//     visible: false,
-//     content: '',
-//     x: 0,
-//     y: 0,
-//   });
-
-//   useEffect(() => {
-//     const eventMap = new Map();
-    
-//     bookings.forEach(booking => {
-//         (booking.campaigns || []).forEach(campaign => {
-//             const campaignInfo = {
-//                 id: `${booking._id}-${campaign.name || 'unnamed'}`,
-//                 bookingId: booking._id,
-//                 brandName: booking.brandName || 'Unknown Brand',
-//                 campaignName: campaign.name || 'Unnamed Campaign',
-//             };
-
-//             if (campaign.startDate) {
-//                 const startDateStr = dayjs(campaign.startDate).format('YYYY-MM-DD');
-//                 const dayEvents = eventMap.get(startDateStr) || {};
-//                 const starting = dayEvents.startingCampaigns || [];
-//                 eventMap.set(startDateStr, { ...dayEvents, startingCampaigns: [...starting, campaignInfo] });
-//             }
-//             if (campaign.endDate) {
-//                 const endDateStr = dayjs(campaign.endDate).format('YYYY-MM-DD');
-//                 const dayEvents = eventMap.get(endDateStr) || {};
-//                 const ending = dayEvents.endingCampaigns || [];
-//                 eventMap.set(endDateStr, { ...dayEvents, endingCampaigns: [...ending, campaignInfo] });
-//             }
-//         });
-//     });
-
-//     setEvents(eventMap);
-//   }, [bookings]);
-
-//   useEffect(() => {
-//     const start=currentDate.startOf('month'),end=currentDate.endOf('month'),first=start.startOf('week'),last=end.endOf('week');const d=[];let day=first;
-//     while(day.isBefore(last)||day.isSame(last,'day')){d.push(day);day=day.add(1,'day')}setDays(d);
-//   }, [currentDate]);
-
-//   const p=()=>setCurrentDate(currentDate.subtract(1,'month')),n=()=>setCurrentDate(currentDate.add(1,'month'));
-  
-//   const handleNavigate = (bookingId) => {
-//     if (bookingId) {
-//       navigate(`/campaign/${bookingId}`);
-//     }
-//   };
-  
-//   const handleMouseOver = (e, campaigns) => {
-//     if (!campaigns || campaigns.length === 0) return;
-//     const campaignNames = campaigns.map(c => c.campaignName).join(', ');
-//     setTooltip({
-//       visible: true,
-//       content: campaignNames,
-//       x: e.clientX,
-//       y: e.clientY,
-//     });
-//   };
-
-//   const handleMouseOut = () => {
-//     setTooltip(prev => ({ ...prev, visible: false }));
-//   };
-
-//   return (<>
-//     <Card className="h-full w-full">
-//       <CardContent>
-//         <div className="flex items-center w-full justify-between mb-4">
-//           <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 gap-x-4 gap-y-1">
-//             <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div> Campaign Starting</span>
-//             <span className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Campaign Ending</span>
-//           </div>
-//           <div className="flex items-center gap-2">
-//             <button onClick={p} className="p-1 rounded-md hover:bg-gray-100"><FiChevronLeft /></button>
-//             <span className="font-semibold text-sm sm:text-base">{currentDate.format('MMMM YYYY')}</span>
-//             <button onClick={n} className="p-1 rounded-md hover:bg-gray-100"><FiChevronRight /></button>
-//           </div>
-//         </div>
-//         <div className="grid grid-cols-7 text-center text-sm font-medium text-gray-500 border-b">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=><div key={d} className="py-2">{d}</div>)}</div>
-//         <div className="grid grid-cols-7 border-l">
-//           {days.map((day,i)=>{const k=day.format('YYYY-MM-DD'),e=events.get(k),cm=day.month()===currentDate.month(),t=day.isSame(dayjs(),'day');
-//             return(<div key={i} className={`h-24 border-b border-r p-1 relative ${!cm?'bg-gray-50 text-gray-400':'text-black'}`}><span className={`text-sm absolute top-1.5 right-1.5 ${t?'bg-blue-500 text-white rounded-full h-6 w-6 flex items-center justify-center':''}`}>{day.format('D')}</span>
-//               <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1">
-//                 {e?.startingCampaigns?.length > 0 && 
-//                   <div 
-//                     className="w-2 h-2 rounded-full bg-green-500 cursor-pointer"
-//                     onMouseEnter={(event) => handleMouseOver(event, e.startingCampaigns)}
-//                     onMouseLeave={handleMouseOut}
-//                     onClick={() => handleNavigate(e.startingCampaigns[0].bookingId)}>
-//                   </div>
-//                 }
-//                 {e?.endingCampaigns?.length > 0 && 
-//                   <div 
-//                     className="w-2 h-2 rounded-full bg-red-500 cursor-pointer"
-//                     onMouseEnter={(event) => handleMouseOver(event, e.endingCampaigns)}
-//                     onMouseLeave={handleMouseOut}
-//                     onClick={() => handleNavigate(e.endingCampaigns[0].bookingId)}>
-//                   </div>
-//                 }
-//               </div>
-//             </div>);
-//           })}
-//         </div>
-//       </CardContent>
-//     </Card>
-    
-//     {tooltip.visible && (
-//       <div
-//         className="fixed z-50 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg pointer-events-none"
-//         style={{
-//           top: `${tooltip.y + 15}px`,
-//           left: `${tooltip.x + 15}px`,
-//         }}
-//       >
-//         {tooltip.content}
-//       </div>
-//     )}
-//   </>);
-// };
 const BookingGraphDashboard = () => {
   const [bookingStats, setBookingStats] = useState([]);
   const [range, setRange] = useState('month');
+  const [campaigns, setCampaigns] = useState([]);
   const [allBookings, setAllBookings] = useState([]);
   const [currentDate, setCurrentDate] = useState(dayjs());
   const [muiBookingData, setMuiBookingData] = useState({ xLabels: [], yData: [] });
