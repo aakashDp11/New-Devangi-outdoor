@@ -12,6 +12,9 @@ import {
   FiChevronRight,
   FiChevronDown,
 } from 'react-icons/fi';
+
+
+import moment from 'moment';
 const Card = ({ children, className = '', ...props }) => (
   <div className={`bg-white border shadow-sm rounded-xl w-full ${className}`} {...props}>
     {children}
@@ -31,10 +34,10 @@ const CardContent = ({ children, className = '' }) => (
 const ShimmerCard = () => (
   <div className="bg-gray-200 animate-pulse rounded-xl w-full h-[400px] max-w-[500px]" />
 );
-const DashboardCalendar = ({ currentDate, setCurrentDate }) => {
+const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
   const [days, setDays] = useState([]);
   const [events, setEvents] = useState(new Map());
-  const [campaigns, setCampaigns] = useState([]);  // Store campaigns fetched from the API
+  // const [campaigns, setCampaigns] = useState([]);  
   const [tooltip, setTooltip] = useState({
     visible: false,
     content: '',
@@ -45,20 +48,20 @@ const DashboardCalendar = ({ currentDate, setCurrentDate }) => {
   const navigate = useNavigate();
 
   // Fetch campaigns (bookings) from the backend API
-  useEffect(() => {
+  // useEffect(() => {
    
-    const fetchCampaigns = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns`);  // Adjust URL if necessary
-        const data = await response.json(); // Parse the response body
-        console.log("Fetched campaigns data:", data);  // Log the response data to see structure
-        setCampaigns(data.campaigns);  // Access the 'campaigns' array from the response and set it in state
-      } catch (err) {
-        console.error('Error fetching campaigns:', err);
-      }
-    };
-    fetchCampaigns(); // Fetch the campaigns when the component mounts
-  }, []);  // Empty dependency array means this runs once when the component mounts
+  //   const fetchCampaigns = async () => {
+  //     try {
+  //       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns`);  // Adjust URL if necessary
+  //       const data = await response.json(); // Parse the response body
+  //       console.log("Fetched campaigns data:", data);  // Log the response data to see structure
+  //       setCampaigns(data.campaigns);  // Access the 'campaigns' array from the response and set it in state
+  //     } catch (err) {
+  //       console.error('Error fetching campaigns:', err);
+  //     }
+  //   };
+  //   fetchCampaigns(); // Fetch the campaigns when the component mounts
+  // }, []);  // Empty dependency array means this runs once when the component mounts
 
   // Handle campaign events (starting and ending)
   useEffect(() => {
@@ -77,7 +80,7 @@ const DashboardCalendar = ({ currentDate, setCurrentDate }) => {
         // Process campaigns starting on a day
         if (campaign.startDate) {
           const startDateStr = dayjs(campaign.startDate).format('YYYY-MM-DD');
-          console.log(`Processing campaign: ${campaign.campaignName}, startDate: ${startDateStr}`);
+          // console.log(`Processing campaign: ${campaign.campaignName}, startDate: ${startDateStr}`);
   
           const dayEvents = eventMap.get(startDateStr) || { startingCampaigns: [], endingCampaigns: [] };
           dayEvents.startingCampaigns.push(campaignInfo);
@@ -87,7 +90,7 @@ const DashboardCalendar = ({ currentDate, setCurrentDate }) => {
         // Process campaigns ending on a day
         if (campaign.endDate) {
           const endDateStr = dayjs(campaign.endDate).format('YYYY-MM-DD');
-          console.log(`Processing campaign: ${campaign.campaignName}, endDate: ${endDateStr}`);
+          // console.log(`Processing campaign: ${campaign.campaignName}, endDate: ${endDateStr}`);
   
           const dayEvents = eventMap.get(endDateStr) || { startingCampaigns: [], endingCampaigns: [] };
           dayEvents.endingCampaigns.push(campaignInfo);
@@ -216,7 +219,7 @@ const DashboardCalendar = ({ currentDate, setCurrentDate }) => {
               const cm = day.month() === currentDate.month();  // Check if the day is in the current month
               const t = day.isSame(dayjs(), 'day');  // Check if the day is today
   
-              console.log(`Checking events for date: ${k}`, e);  // Log to check the events for each day
+              // console.log(`Checking events for date: ${k}`, e);  // Log to check the events for each day
   
               return (
                 <div
@@ -282,6 +285,11 @@ const BookingGraphDashboard = () => {
   const [currentDate, setCurrentDate] = useState(dayjs());
   const [muiBookingData, setMuiBookingData] = useState({ xLabels: [], yData: [] });
   const [muiProposalData, setMuiProposalData] = useState({ xLabels: [], yData: [] });
+  const [statusData, setStatusData] = useState({
+    completed: 0,
+    ongoing: 0,
+    upcoming: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [doohAvailabilityStatus, setDoohAvailabilityStatus] = useState({
     completelyAvailable: 0,
@@ -315,10 +323,61 @@ const [revenueChartData, setRevenueChartData] = useState({ xLabels: [], yData: [
 
   const { auth, logout } = useAuth();
 
+  const getCampaignStatus = (startDate, endDate) => {
+    const currentDate = moment(); // Current date and time using moment
+  
+    const start = moment(startDate); // Parse startDate with moment
+    const end = moment(endDate); // Parse endDate with moment
+  
+    // Log dates for debugging
+    console.log('Current Date:', currentDate.format());
+    console.log('Start Date:', start.format());
+    console.log('End Date:', end.format());
+  
+    // Check if the start and end dates are valid
+    if (!start.isValid() || !end.isValid()) {
+      console.error('Invalid date(s) detected:', { startDate, endDate });
+      return 'invalid'; // Return 'invalid' if the date is invalid
+    }
+  
+    // Compare current date with start and end dates
+    if (currentDate.isBefore(start)) {
+      return 'upcoming'; // Campaign is upcoming
+    }
+    if (currentDate.isBetween(start, end, null, '[]')) {
+      return 'ongoing'; // Campaign is ongoing
+    }
+    return 'completed'; // Campaign is completed
+  };
+  
+  
+  
+  
   useEffect(() => {
     fetchData();
   }, []);
-
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns`);
+        const data = await response.json();
+        console.log("Fetched campaigns data:", data);
+        setCampaigns(data.campaigns);
+        const statusCounts = data.campaigns.reduce(
+          (acc, campaign) => {
+            const status = getCampaignStatus(campaign.startDate, campaign.endDate);
+            acc[status]++;
+            return acc;
+          },
+          { completed: 0, ongoing: 0, upcoming: 0 }
+        );
+        setStatusData(statusCounts);
+      } catch (err) {
+        console.error('Error fetching campaigns:', err);
+      }
+    };
+    fetchCampaigns();
+  }, []); 
   useEffect(() => {
     if (bookingStats.length) {
       processBookingData();
@@ -399,17 +458,7 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
     setMuiProposalData(muiBookingData);
   };
 
-  // const getPaymentStats = () => {
-  //   let totalReceived = 0;
-  //   let totalDue = 0;
-
-  //   bookingStats.forEach((b) => {
-  //     totalReceived += b.totalPaid || 0;
-  //     totalDue += b.paymentDue || 0;
-  //   });
-
-  //   return { totalReceived, totalDue };
-  // };
+ 
   
   const getPaymentStats = () => {
     let totalReceived = 0;
@@ -731,19 +780,8 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
           ) : (
             <>
               {/* Payment Overview */}
-              {/* <Card className="max-w-[270px] h-[30%] shadow-md mt-4">
-                <CardContent>
-                  <h2 className="text-sm font-medium mb-2">Payment Overview</h2>
-                  <div className='flex mt-4'>
-                    <div className='ml-auto text-[0.8rem]'>
-                      <p><strong>Received:</strong> ₹{totalReceived.toLocaleString()}</p>
-                      <p><strong>Due:</strong> ₹{totalDue.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  <PieChart series={[{ data: paymentPieData, innerRadius: 40 }]} height={200} width={150} />
-                </CardContent>
-              </Card> */}
-<Card className="max-w-[320px] h-[30%] shadow-md mt-4">
+       <div className='h-full'>
+       <Card className="max-w-[320px] h-[30%] shadow-md mt-4">
   <CardContent>
     <h2 className="text-sm font-medium mb-2">Ownership Distribution</h2>
     <div className="w-full">
@@ -758,7 +796,38 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
     </div>
   </CardContent>
 </Card>
-<div className="flex-grow">{loading ? <ShimmerCard height="h-full min-h-[424px]" /> : <DashboardCalendar bookings={allBookings} currentDate={currentDate} setCurrentDate={setCurrentDate} />}</div>
+       <Card className="max-w-[320px] h-[30%] shadow-md mt-4">
+  <CardContent>
+    <h2 className="text-sm font-medium mb-2">Campaign Status</h2>
+    <div className="w-full">
+      <div className="flex mt-4">
+        <div className="ml-auto text-[0.7rem]">
+          <p><strong>Completed:</strong> {statusData.completed}</p>
+          <p><strong>Ongoing:</strong> {statusData.ongoing}</p>
+          <p><strong>Upcoming:</strong> {statusData.upcoming}</p>
+        </div>
+      </div>
+      <PieChart
+        series={[
+          {
+            data: [
+              { id: 0, value: statusData.completed, label: 'Completed' },
+              { id: 1, value: statusData.ongoing, label: 'Ongoing' },
+              { id: 2, value: statusData.upcoming, label: 'Upcoming' },
+            ],
+            innerRadius: 50, // To create a donut chart
+          },
+        ]}
+        height={190}
+        width={150}
+      />
+    </div>
+  </CardContent>
+</Card>
+
+        </div>       
+
+<div className="flex-grow">{loading ? <ShimmerCard height="h-full min-h-[424px]" /> : <DashboardCalendar campaigns={campaigns} bookings={allBookings} currentDate={currentDate} setCurrentDate={setCurrentDate} />}</div>
               {/* DOOH Unit Utilization */}
               
 
