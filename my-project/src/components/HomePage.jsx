@@ -159,22 +159,89 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
 
   // Navigate to the campaign details page
   const handleNavigate = (bookingId) => {
+    console.log("CLicked outside");
     if (bookingId) {
+      console.log("CLicked");
       navigate(`/campaign-details/${bookingId}`);
     }
   };
 
   // Show tooltip when hovering over a dot
+  // const handleMouseOver = (e, campaigns) => {
+  //   if (!campaigns || campaigns.length === 0) return;
+  //   const campaignNames = campaigns.map(c => c.campaignName).join(', ');
+  //   setTooltip({
+  //     visible: true,
+  //     content: campaignNames,
+  //     x: e.clientX,
+  //     y: e.clientY,
+  //   });
+  // };
+  // const handleMouseOver = (e, campaigns) => {
+  //   if (!campaigns || campaigns.length === 0) return;
+  
+  //   setTooltip({
+  //     visible: true,
+  //     content: (
+  //       <div className="space-y-1"> {/* Adds space between campaign names */}
+  //         {campaigns.map((campaign, index) => {
+  //           console.log("Campaign onclick is", campaign);
+  //           return ( // Return the div with the campaign name
+  //             <div
+  //               key={index}
+  //               className="cursor-pointer text-sm text-blue-500 hover:underline"
+  //               onClick={() => {
+  //                 console.log("Navigating to campaign:", campaign.id); // Debugging navigate
+  //                 handleNavigate(campaign.id); // Navigate to the campaign details
+  //               }} // Navigate to the campaign details
+  //             >
+  //               {campaign.campaignName}
+  //             </div>
+  //           );
+  //         })}
+  //       </div>
+  //     ),
+  //     x: e.clientX,
+  //     y: e.clientY,
+  //   });
+  //   console.log("Tooltip Content:", tooltip.content);
+  // };
   const handleMouseOver = (e, campaigns) => {
     if (!campaigns || campaigns.length === 0) return;
-    const campaignNames = campaigns.map(c => c.campaignName).join(', ');
+  
+    const tooltipContent = (
+      <div className="space-y-1">
+        {campaigns.map((campaign, index) => {
+          console.log("Campaign onclick is", campaign); // Ensure the campaign object is logged
+          return (
+            <div
+              key={index}
+              className="cursor-pointer text-sm text-white "
+              onClick={() => {
+                console.log("Navigating to campaign:", campaign.id); // Check if this is triggered
+                handleNavigate(campaign.id); // Navigate to campaign details
+              }}
+            >
+              {campaign.campaignName}
+            </div>
+          );
+        })}
+      </div>
+    );
+  
+    // Log the tooltip content directly before setting it
+    console.log("Tooltip Content before set:", tooltipContent);
+  
+    // Set the tooltip state
     setTooltip({
       visible: true,
-      content: campaignNames,
+      content: tooltipContent,
       x: e.clientX,
       y: e.clientY,
     });
   };
+  
+  
 
   // Hide tooltip
   const handleMouseOut = () => {
@@ -223,6 +290,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
   
               return (
                 <div
+                // onMouseLeave={handleMouseOut}
                   key={i}
                   className={`h-24 border-b border-r p-1 relative ${!cm ? 'bg-gray-50 text-gray-400' : 'text-black'}`}
                 >
@@ -239,7 +307,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
                       <div
                         className="w-2 h-2 rounded-full bg-green-500 cursor-pointer"
                         onMouseEnter={(event) => handleMouseOver(event, e.startingCampaigns)}
-                        onMouseLeave={handleMouseOut}
+                        // onMouseLeave={handleMouseOut}
                         onClick={() => handleNavigate(e.startingCampaigns[0].id)}  // Navigate to the first campaign
                       ></div>
                     )}
@@ -248,7 +316,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
                       <div
                         className="w-2 h-2 rounded-full bg-red-500 cursor-pointer"
                         onMouseEnter={(event) => handleMouseOver(event, e.endingCampaigns)}
-                        onMouseLeave={handleMouseOut}
+                        // onMouseLeave={handleMouseOut}
                         onClick={() => handleNavigate(e.endingCampaigns[0].id)}  // Navigate to the first campaign
                       ></div>
                     )}
@@ -260,7 +328,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
         </CardContent>
       </Card>
   
-      {tooltip.visible && (
+      {/* {tooltip.visible && (
         <div
           className="fixed z-50 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg pointer-events-none"
           style={{
@@ -270,7 +338,19 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
         >
           {tooltip.content}
         </div>
-      )}
+      )} */}
+      {tooltip.visible && (
+  <div
+    className="fixed z-50 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg"
+    style={{
+      top: `${tooltip.y + 15}px`,
+      left: `${tooltip.x + 15}px`,  // Adjust position of the tooltip
+    }}
+  >
+    {tooltip.content} {/* Tooltip content */}
+  </div>
+)}
+
     </>
   );
   
@@ -330,9 +410,9 @@ const [revenueChartData, setRevenueChartData] = useState({ xLabels: [], yData: [
     const end = moment(endDate); // Parse endDate with moment
   
     // Log dates for debugging
-    console.log('Current Date:', currentDate.format());
-    console.log('Start Date:', start.format());
-    console.log('End Date:', end.format());
+    // console.log('Current Date:', currentDate.format());
+    // console.log('Start Date:', start.format());
+    // console.log('End Date:', end.format());
   
     // Check if the start and end dates are valid
     if (!start.isValid() || !end.isValid()) {
@@ -815,7 +895,7 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
               { id: 1, value: statusData.ongoing, label: 'Ongoing' },
               { id: 2, value: statusData.upcoming, label: 'Upcoming' },
             ],
-            innerRadius: 50, // To create a donut chart
+            innerRadius: 40, // To create a donut chart
           },
         ]}
         height={190}
