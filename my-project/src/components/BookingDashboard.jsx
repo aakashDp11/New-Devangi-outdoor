@@ -666,9 +666,9 @@ const filteredData = sortedData.filter((item) => {
           ))}
         </div>
         {showDateModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
-    <div className="bg-white p-4 rounded shadow-lg relative w-[90%] max-w-md">
-      <h2 className="text-lg font-semibold mb-2">Select Date Range</h2>
+  <div className="fixed inset-0 text-xs flex items-center justify-center bg-black bg-opacity-50 z-50">
+    <div className="bg-white rounded-xl shadow-lg p-2 py-[1%]">
+      {/* <h2 className="text-sm mx-auto font-semibold mb-2">Select Date Range</h2> */}
       <DateRange
         editableDateInputs={true}
         onChange={(item) => setDateRange([item.selection])}
@@ -676,18 +676,18 @@ const filteredData = sortedData.filter((item) => {
         ranges={dateRange}
         className="text-xs"
       />
-      <div className="flex justify-end gap-2 mt-4">
+      <div className="flex justify-end gap-2 mt-4 mx-2">
         <button
           onClick={() => {setDateRange([{ startDate: null, endDate: null, key: 'selection' }])
           setShowDateModal(false)
         }}
-          className="text-sm px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
+          className="text-xs px-3 py-1 rounded bg-gray-200 mr-auto hover:bg-gray-300"
         >
           Cancel
         </button>
         <button
           onClick={() => setShowDateModal(false)}
-          className="text-sm px-3 py-1 rounded bg-black text-white hover:bg-gray-900"
+          className="text-xs px-3 py-1 rounded bg-black text-white hover:bg-gray-900"
         >
           Apply
         </button>
