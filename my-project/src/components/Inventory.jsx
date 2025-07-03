@@ -1434,11 +1434,7 @@ export default function InventoryDashboard() {
     setTempDateRange([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
   };
 
-  // const handleShowDateModal = () => {
-  //   // This will open the modal with an empty date range
-  //   setShowDateModal(true);
-  //   setTempDateRange([{ startDate: null, endDate: null, key: 'selection' }]);
-  // };
+ 
   
   const totalPages = Math.ceil(totalCount / limit);
 

@@ -298,7 +298,7 @@ export default function BookingsDashboard1() {
   const [filterStartDate, setFilterStartDate] = useState(null);
   const [filterEndDate, setFilterEndDate] = useState(null);
   const perPage = 10;
-
+  const limit = 10;
   useEffect(() => {
     const fetchBookings = async () => {
       const token = localStorage.getItem('accessToken');
@@ -327,6 +327,30 @@ export default function BookingsDashboard1() {
 
     fetchBookings();
   }, []);
+// src/components/SortableHeader.jsx
+
+const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
+  const isSorting = sortConfig.key === sortKey;
+  const direction = isSorting ? sortConfig.direction : null;
+
+  const handleSort = () => {
+    setSortConfig((prev) => ({
+      key: sortKey,
+      direction: prev.key === sortKey && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  return (
+    <th scope="col" className="px-6 py-3">
+      <div onClick={handleSort} className="flex items-center gap-1.5 cursor-pointer select-none">
+        {title}
+        <span className="text-gray-400">
+          {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '⇅'}
+        </span>
+      </div>
+    </th>
+  );
+};
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
@@ -427,7 +451,7 @@ export default function BookingsDashboard1() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="table-auto bg-white w-full rounded-md">
+          {/* <table className="table-auto bg-white w-full rounded-md">
             <thead className="bg-gray-100">
               <tr className="text-xs">
                 <th className="px-4 py-2 text-left">Booking ID</th>
@@ -502,7 +526,75 @@ export default function BookingsDashboard1() {
                 );
               })}
             </tbody>
-          </table>
+          </table> */}
+ 
+<div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
+  <table className="w-full text-xs text-left text-gray-600">
+    <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+      <tr>
+        <th scope="col" className="px-6 py-3">#</th>
+        <th scope="col" className="px-6 py-3">Booking ID</th>
+        <th scope="col" className="px-6 py-3">Company Name </th>
+        <th scope="col" className="px-6 py-3">Client Name </th>
+        <th scope="col" className="px-6 py-3">Booking Date</th>
+        <SortableHeader 
+          title="Start Date" 
+          sortKey="upcomingStartDate" 
+          sortConfig={sortConfig} 
+          setSortConfig={setSortConfig} 
+        />
+        <SortableHeader 
+          title="End Date" 
+          sortKey="upcomingEndDate" 
+          sortConfig={sortConfig} 
+          setSortConfig={setSortConfig} 
+        />
+      </tr>
+    </thead>
+    <tbody>
+      {/* Assuming you have access to `currentPage` and `limit` for pagination */}
+      {paginatedData.map((item, index) => {
+        const upcomingStart = getUpcomingCampaignDate(item.campaigns, 'startDate');
+        const upcomingEnd = getUpcomingCampaignDate(item.campaigns, 'endDate');
+        
+        return (
+          <tr 
+            key={item._id} 
+            className="bg-white border-b hover:bg-gray-50 cursor-pointer" 
+            onClick={() => navigate(`/booking/${item._id}`)}
+          >
+            <td className="px-6 py-4 text-gray-500">
+              {/* This assumes you have pagination variables. If not, you can just use `index + 1` */}
+              {(currentPage - 1) * limit + index + 1}
+            </td>
+            <td className="px-6 py-4 font-mono text-gray-500">
+              {item._id?.substring(0, 6).toUpperCase() || 'N/A'}
+            </td>
+            <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+              {/* This combined column improves scannability */}
+              <div>
+                <div className="font-semibold text-gray-800">{item.companyName || 'No Company'}</div>
+               
+              </div>
+            </td>
+            <td className="px-6 py-4 font-mono text-gray-500">
+            <div className="text-gray-500 text-xs">{item.clientName || 'No Client'}</div>
+            </td>
+            <td className="px-6 py-4">
+              {formatDate(item.createdAt) || <span className="text-gray-400 italic">Not set</span>}
+            </td>
+            <td className="px-6 py-4">
+              {formatDate(upcomingStart) || <span className="text-gray-400 italic">Not set</span>}
+            </td>
+            <td className="px-6 py-4">
+              {formatDate(upcomingEnd) || <span className="text-gray-400 italic">Not set</span>}
+            </td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
         </div>
 
         <div className="mt-6 flex justify-center gap-2">
