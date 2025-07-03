@@ -284,6 +284,9 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { format, parse } from 'date-fns';
 import Navbar from './Navbar';
+import { DateRange } from 'react-date-range';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
 
 const Input = ({ className = '', ...props }) => (
   <input className={`border px-3 py-2 rounded w-full ${className}`} {...props} />
@@ -296,7 +299,16 @@ export default function BookingsDashboard1() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
   const [filterStartDate, setFilterStartDate] = useState(null);
+  const [showDateModal, setShowDateModal] = useState(false);
   const [filterEndDate, setFilterEndDate] = useState(null);
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: null,
+      endDate: null,
+      key: 'selection',
+    },
+  ]);
+  
   const perPage = 10;
   const limit = 10;
   useEffect(() => {
@@ -327,6 +339,10 @@ export default function BookingsDashboard1() {
 
     fetchBookings();
   }, []);
+
+  
+
+
 // src/components/SortableHeader.jsx
 
 const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
@@ -384,26 +400,48 @@ const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
     if (aVal > bVal) return direction === 'asc' ? 1 : -1;
     return 0;
   });
+  const selectedStart = dateRange[0]?.startDate;
+const selectedEnd = dateRange[0]?.endDate;
 
-  const filteredData = sortedData.filter((item) => {
-    const startDate = getUpcomingCampaignDate(item.campaigns, 'startDate');
-    const endDate = getUpcomingCampaignDate(item.campaigns, 'endDate');
+const filteredData = sortedData.filter((item) => {
+  const startDate = getUpcomingCampaignDate(item.campaigns, 'startDate');
+  const endDate = getUpcomingCampaignDate(item.campaigns, 'endDate');
 
-    const startDateObj = startDate ? new Date(startDate) : null;
-    const endDateObj = endDate ? new Date(endDate) : null;
+  const startDateObj = startDate ? new Date(startDate) : null;
+  const endDateObj = endDate ? new Date(endDate) : null;
 
-    const matchesSearch =
-      item.companyName?.toLowerCase().includes(search.toLowerCase()) ||
-      item.clientName?.toLowerCase().includes(search.toLowerCase()) ||
-      item.brandDisplayName?.toLowerCase().includes(search.toLowerCase()) ||
-      item.campaignName?.toLowerCase().includes(search.toLowerCase());
+  const matchesSearch =
+    item.companyName?.toLowerCase().includes(search.toLowerCase()) ||
+    item.clientName?.toLowerCase().includes(search.toLowerCase()) ||
+    item.brandDisplayName?.toLowerCase().includes(search.toLowerCase()) ||
+    item.campaignName?.toLowerCase().includes(search.toLowerCase());
 
-    const matchesDateFilter =
-      (!filterStartDate || (startDateObj && startDateObj >= filterStartDate)) &&
-      (!filterEndDate || (endDateObj && endDateObj <= filterEndDate));
+  const matchesDateFilter =
+    (!selectedStart || (startDateObj && startDateObj >= selectedStart)) &&
+    (!selectedEnd || (endDateObj && endDateObj <= selectedEnd));
 
-    return matchesSearch && matchesDateFilter;
-  });
+  return matchesSearch && matchesDateFilter;
+});
+
+  // const filteredData = sortedData.filter((item) => {
+  //   const startDate = getUpcomingCampaignDate(item.campaigns, 'startDate');
+  //   const endDate = getUpcomingCampaignDate(item.campaigns, 'endDate');
+
+  //   const startDateObj = startDate ? new Date(startDate) : null;
+  //   const endDateObj = endDate ? new Date(endDate) : null;
+
+  //   const matchesSearch =
+  //     item.companyName?.toLowerCase().includes(search.toLowerCase()) ||
+  //     item.clientName?.toLowerCase().includes(search.toLowerCase()) ||
+  //     item.brandDisplayName?.toLowerCase().includes(search.toLowerCase()) ||
+  //     item.campaignName?.toLowerCase().includes(search.toLowerCase());
+
+  //   const matchesDateFilter =
+  //     (!filterStartDate || (startDateObj && startDateObj >= filterStartDate)) &&
+  //     (!filterEndDate || (endDateObj && endDateObj <= filterEndDate));
+
+  //   return matchesSearch && matchesDateFilter;
+  // });
 
   const paginatedData = filteredData.slice((currentPage - 1) * perPage, currentPage * perPage);
   const totalPages = Math.ceil(filteredData.length / perPage);
@@ -430,6 +468,23 @@ const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <div className="ml-auto">
+  {/* <DateRange
+    editableDateInputs={true}
+    onChange={(item) => setDateRange([item.selection])}
+    moveRangeOnFirstSelection={false}
+    ranges={dateRange}
+    className="z-50 shadow-md"
+  /> */}
+  <button
+  onClick={() => setShowDateModal(true)}
+  className="border px-4 py-1 rounded bg-gray-100 text-sm hover:bg-gray-200"
+>
+  Filter by Date Range
+</button>
+
+</div>
+
           <div className='flex ml-auto gap-4'>
           <DatePicker
             selected={filterStartDate}
@@ -610,7 +665,39 @@ const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
             </button>
           ))}
         </div>
+        {showDateModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
+    <div className="bg-white p-4 rounded shadow-lg relative w-[90%] max-w-md">
+      <h2 className="text-lg font-semibold mb-2">Select Date Range</h2>
+      <DateRange
+        editableDateInputs={true}
+        onChange={(item) => setDateRange([item.selection])}
+        moveRangeOnFirstSelection={false}
+        ranges={dateRange}
+        className="text-xs"
+      />
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={() => {setDateRange([{ startDate: null, endDate: null, key: 'selection' }])
+          setShowDateModal(false)
+        }}
+          className="text-sm px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => setShowDateModal(false)}
+          className="text-sm px-3 py-1 rounded bg-black text-white hover:bg-gray-900"
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       </main>
+
     </div>
   );
 }
