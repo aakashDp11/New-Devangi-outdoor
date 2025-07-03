@@ -480,7 +480,7 @@ const filteredData = sortedData.filter((item) => {
   onClick={() => setShowDateModal(true)}
   className="border px-4 py-1 rounded bg-gray-100 text-sm hover:bg-gray-200"
 >
-  Filter by Date Range
+ Date Filter
 </button>
 
 </div>

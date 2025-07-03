@@ -14,6 +14,7 @@ import userRoutes from './routes/user.routes.js';
 import pipelineRoutes from './routes/pipeline.routes.js';
 import debugRoutes from './routes/debug.routes.js';
 import User from './models/user.model.js';
+import campaignRoutes from './routes/campaign.routes.js'
 
 dotenv.config();
 const app = express();
@@ -33,7 +34,7 @@ app.get('/uploads/:filename', (req, res) => {
   res.download(filePath);
 });
 
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174','https://new-devangi-outdoor-1.onrender.com','https://new-devangi-outdoor.onrender.com'];
+const allowedOrigins = ['http://localhost:5173','http://localhost:4173','http://dooh-frontend.s3-website.ap-south-1.amazonaws.com', 'http://localhost:5174','https://new-devangi-outdoor-1.onrender.com','https://new-devangi-outdoor.onrender.com'];
 
 app.use(cors({
   origin: function (origin, callback) {

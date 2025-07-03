@@ -1,32 +1,4 @@
-// import React, { createContext, useState, useEffect, useContext } from 'react';
-// import { useNavigate } from 'react-router-dom';
 
-// const AuthContext = createContext();
-
-// export const AuthProvider = ({ children }) => {
-//   const [auth, setAuth] = useState(null);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     const storedToken = localStorage.getItem('accessToken');
-//     if (storedToken) {
-//       setAuth({ token: storedToken });
-//     }
-//   }, []);
-
-//   const logout = () => {
-//     localStorage.removeItem('accessToken');
-//     navigate('/login');
-//   };
-
-//   return (
-//     <AuthContext.Provider value={{ auth, setAuth, logout }}>
-//       {children}
-//     </AuthContext.Provider>
-//   );
-// };
-
-// export const useAuth = () => useContext(AuthContext);
 
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';

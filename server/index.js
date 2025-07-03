@@ -34,7 +34,7 @@ const __dirname = dirname(__filename);
   res.download(filePath); // ✅ Force download
 });
 
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174','https://new-devangi-outdoor-1.onrender.com','https://new-devangi-outdoor.onrender.com'];
+const allowedOrigins = ['http://localhost:5173','http://dooh-frontend.s3-website.ap-south-1.amazonaws.com','http://localhost:4173', 'http://localhost:5174','https://new-devangi-outdoor-1.onrender.com','https://new-devangi-outdoor.onrender.com'];
 
 app.use(cors({
   origin: function (origin, callback) {
