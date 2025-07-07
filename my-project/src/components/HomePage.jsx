@@ -1016,4 +1016,3 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
 
 export default BookingGraphDashboard;
 
-

@@ -5,7 +5,7 @@ import {
   updateBookingStatus,
   confirmArtwork,
   confirmPrintingStatus,
-  confirmMountingStatus,uploadInvoice,updateInvoice,updatePayment,uploadPoDocument,confirmPoStatus,deletePipelineAndCleanup
+  confirmMountingStatus,uploadInvoice,updateInvoice,uploadCashMemo,uploadCreditNote,updatePayment,uploadPoDocument,confirmPoStatus,deletePipelineAndCleanup
 } from '../controllers/pipeline.controller.js';
 import upload from '../middleware/multer.middleware.js';
 import { uploadToS3 } from '../utils/s3uploader.js';
@@ -173,6 +173,8 @@ router.get('/change-Log', async (req, res) => {
 });
 router.put('/campaign/:campaignId/mountingStatus', confirmMountingStatus);
 router.post('/campaign/:campaignId/invoice/upload', upload.single('file'), uploadInvoice);
+router.post('/campaign/:campaignId/cash-memo/upload', upload.single('file'), uploadCashMemo);
+router.post('/campaign/:campaignId/credit-note/upload', upload.single('file'), uploadCreditNote)
 router.put('/campaign/:campaignId/invoice', updateInvoice);
 
 // Payment Route

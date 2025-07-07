@@ -378,6 +378,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}`);
         const data = res.data?.payment || {};
+        console.log("Data recieved in Payment Status form is",res.data);
 
         if (Array.isArray(data.payments)) {
           const enriched = data.payments.map(p => ({
@@ -456,6 +457,15 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
     updated[index][field] = value;
     setPayments(updated);
   };
+  const mismatchWarning = (() => {
+    const cashMemoVal = pipelineData?.cashMemo?.value || 0;
+    const invoiceVal = pipelineData?.invoice?.invoiceValue || 0;
+    const creditNoteVal = pipelineData?.creditNote?.value || 0;
+    const finalAmount = pipelineData?.payment?.finalAmountWithGST || 0;
+  
+    return (cashMemoVal + invoiceVal - creditNoteVal) !== finalAmount;
+  })();
+  
 
   const handleFileUpload = async (index, file) => {
     const formData = new FormData();
@@ -650,6 +660,12 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
           ⚠ Total payment exceeds the final amount with GST.
         </p>
       )}
+      {mismatchWarning && (
+  <p className="text-red-600 text-xs font-medium">
+    ⚠ Warning: Total Invoice value does not match the Final Amount with GST.
+  </p>
+)}
+
 
       <div className="flex">
         <button

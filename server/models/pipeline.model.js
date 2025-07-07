@@ -38,6 +38,16 @@ const pipelineSchema = new Schema({
     invoiceDate: {type:String},
     invoiceValue:Number
   },
+  cashMemo: {
+    reference: { type: String },
+    value: Number,
+    documentUrl: { type: String }
+  },
+  creditNote: {
+    reference: { type: String },
+    value: Number,
+    documentUrl: { type: String }
+  },
 
   payment: {
     mountingAmount:Number,

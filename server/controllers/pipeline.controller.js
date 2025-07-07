@@ -38,6 +38,48 @@ export const getPipelineByCampaignId = async (req, res) => {
   }
 };
 
+// export const createPipelineForCampaign = async (req, res) => {
+//   const { campaignId } = req.params;
+//   try {
+//     const campaign = await Campaign.findById(campaignId);
+//     if (!campaign) {
+//       return res.status(404).json({ error: 'Campaign not found' });
+//     }
+
+//     // Check if already exists
+//     let existingPipeline = await Pipeline.findOne({ campaign: campaignId });
+//     if (existingPipeline) {
+//       // ✅ Ensure campaign is linked (in case it's not)
+//       if (!campaign.pipeline) {
+//         campaign.pipeline = existingPipeline._id;
+//         await campaign.save();
+//       }
+//       return res.status(200).json(existingPipeline);
+//     }
+
+//     // Create new pipeline
+//     const newPipeline = new Pipeline({
+//       campaign: campaignId,
+//       spaces: campaign.spaces.map(s => s.id),
+//       bookingStatus: { confirmed: false, reference: '' },
+//       po: { confirmed: false, documentUrl: '' },
+//       artwork: { confirmed: false, documentUrl: '' },
+//       invoice: { invoiceNumber: '', documentUrl: '' },
+//       payment: { payments: [], totalAmount: 0, totalPaid: 0, paymentDue: 0 },
+//     });
+
+//     await newPipeline.save();
+
+//     // ✅ Assign pipeline back to campaign
+//     campaign.pipeline = newPipeline._id;
+//     await campaign.save();
+
+//     res.status(201).json(newPipeline);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message || 'Failed to create pipeline' });
+//   }
+// };
+
 export const createPipelineForCampaign = async (req, res) => {
   const { campaignId } = req.params;
   try {
@@ -46,10 +88,8 @@ export const createPipelineForCampaign = async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
 
-    // Check if already exists
     let existingPipeline = await Pipeline.findOne({ campaign: campaignId });
     if (existingPipeline) {
-      // ✅ Ensure campaign is linked (in case it's not)
       if (!campaign.pipeline) {
         campaign.pipeline = existingPipeline._id;
         await campaign.save();
@@ -57,20 +97,67 @@ export const createPipelineForCampaign = async (req, res) => {
       return res.status(200).json(existingPipeline);
     }
 
-    // Create new pipeline
     const newPipeline = new Pipeline({
       campaign: campaignId,
       spaces: campaign.spaces.map(s => s.id),
-      bookingStatus: { confirmed: false, reference: '' },
-      po: { confirmed: false, documentUrl: '' },
-      artwork: { confirmed: false, documentUrl: '' },
-      invoice: { invoiceNumber: '', documentUrl: '' },
-      payment: { payments: [], totalAmount: 0, totalPaid: 0, paymentDue: 0 },
+
+      artwork: {
+        confirmed: false,
+        documentUrl: '',
+        recievedDate: '', // optional: fix to "receivedDate" in model if needed
+      },
+
+      bookingStatus: {
+        confirmed: false,
+        reference: '',
+        bookingDate: '',
+        estimateDocument: '',
+      },
+
+      po: {
+        confirmed: false,
+        documentUrl: '',
+        poNumber: '',
+        poDate: '',
+        poValue: 0,
+      },
+
+      invoice: {
+        invoiceNumber: '',
+        documentUrl: '',
+        invoiceDate: '',
+        invoiceValue: 0,
+      },
+
+      cashMemo: {
+        reference: '',
+        value: 0,
+        documentUrl: '',
+      },
+
+      creditNote: {
+        reference: '',
+        value: 0,
+        documentUrl: '',
+      },
+
+      payment: {
+        mountingAmount: 0,
+        printingAmount: 0,
+        displayAmount: 0,
+        totalAmount: 0,
+        gstValue: 0,
+        finalAmountWithGST: 0,
+        modeOfPayment: undefined,
+        cashMemoNo: 0,
+        payments: [],
+        totalPaid: 0,
+        paymentDue: 0,
+      },
     });
 
     await newPipeline.save();
 
-    // ✅ Assign pipeline back to campaign
     campaign.pipeline = newPipeline._id;
     await campaign.save();
 
@@ -301,23 +388,131 @@ export const uploadInvoice = async (req, res) => {
   }
 };
 
+export const uploadCashMemo = async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId;
+
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ error: 'No file uploaded for cash memo' });
+    }
+
+    // Upload to S3
+    let fileUrl = '';
+    try {
+      fileUrl = await uploadToS3(req.file.path, req.file.filename);
+    } catch (uploadErr) {
+      console.error('S3 upload for cash memo failed:', uploadErr);
+      return res.status(500).json({ error: 'Failed to upload cash memo to S3' });
+    }
+
+    // Update pipeline document
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { 'cashMemo.documentUrl': fileUrl },
+      { new: true }
+    );
+
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found for this campaign' });
+    }
+
+    res.status(200).json(pipeline);
+  } catch (err) {
+    console.error('Cash memo upload failed:', err);
+    res.status(500).json({ error: 'Server error during cash memo upload' });
+  }
+};
 
 
+export const uploadCreditNote = async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId;
+
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ error: 'No file uploaded for credit note' });
+    }
+
+    // Upload to S3
+    let fileUrl = '';
+    try {
+      fileUrl = await uploadToS3(req.file.path, req.file.filename);
+    } catch (uploadErr) {
+      console.error('S3 upload for credit note failed:', uploadErr);
+      return res.status(500).json({ error: 'Failed to upload credit note to S3' });
+    }
+
+    // Update pipeline document
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      { 'creditNote.documentUrl': fileUrl },
+      { new: true }
+    );
+
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found for this campaign' });
+    }
+
+    res.status(200).json(pipeline);
+  } catch (err) {
+    console.error('Credit note upload failed:', err);
+    res.status(500).json({ error: 'Server error during credit note upload' });
+  }
+};
+
+// export const updateInvoice = async (req, res) => {
+//   try {
+//     const { invoiceNumber, invoiceDate, invoiceValue } = req.body;
+//     const campaignId = req.params.campaignId;
+
+//     const updateData = {
+//       ...(invoiceNumber && { 'invoice.invoiceNumber': invoiceNumber }),
+//       ...(invoiceDate && { 'invoice.invoiceDate': invoiceDate }),
+//       ...(invoiceValue && { 'invoice.invoiceValue': invoiceValue }),
+//     };
+
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: campaignId },
+//       updateData,
+//       { new: true }
+//     );
+
+//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+//     res.status(200).json(pipeline);
+//   } catch (err) {
+//     console.error('Error updating invoice details:', err);
+//     res.status(500).json({ error: 'Server error during invoice update' });
+//   }
+// };
 
 export const updateInvoice = async (req, res) => {
   try {
-    const { invoiceNumber, invoiceDate, invoiceValue } = req.body;
+    const {
+      invoiceNumber,
+      invoiceDate,
+      invoiceValue,
+      cashMemoRef,
+      cashMemoValue,
+      creditNoteRef,
+      creditNoteValue
+    } = req.body;
+
     const campaignId = req.params.campaignId;
 
     const updateData = {
       ...(invoiceNumber && { 'invoice.invoiceNumber': invoiceNumber }),
       ...(invoiceDate && { 'invoice.invoiceDate': invoiceDate }),
       ...(invoiceValue && { 'invoice.invoiceValue': invoiceValue }),
+      ...(cashMemoRef && { 'cashMemo.reference': cashMemoRef }),
+      ...(cashMemoValue && { 'cashMemo.value': cashMemoValue }),
+      ...(creditNoteRef && { 'creditNote.reference': creditNoteRef }),
+      ...(creditNoteValue && { 'creditNote.value': creditNoteValue }),
     };
+    
 
     const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: campaignId },
-      updateData,
+      { $set: updateData }, // ✅ important
       { new: true }
     );
 
@@ -331,93 +526,7 @@ export const updateInvoice = async (req, res) => {
 };
 
 
-// export const updatePayment = async (req, res) => {
-//   try {
-//     const campaignId = req.params.campaignId;
-//     const {
-//       totalAmount,
-//       modeOfPayment,
-//       payments = [],
-//       totalPaid,
-//       paymentDue
-//     } = req.body;
 
-//     const pipeline = await Pipeline.findOneAndUpdate(
-//       { campaign: campaignId },
-//       {
-//         payment: {
-//           totalAmount,
-//           modeOfPayment,
-//           payments,
-//           totalPaid,
-//           paymentDue
-//         }
-//       },
-//       { new: true }
-//     );
-
-//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
-
-//     res.status(200).json(pipeline);
-//   } catch (err) {
-//     console.error('Error updating payment:', err);
-//     res.status(500).json({ error: 'Server error during payment update' });
-//   }
-// };
-
-// export const uploadPoDocument = async (req, res) => {
-//   try {
-//     const campaignId = req.params.campaignId;
-//     if (!req.file) {
-//       return res.status(400).json({ error: 'No file uploaded' });
-//     }
-
-//     const pipeline = await Pipeline.findOneAndUpdate(
-//       { campaign: campaignId },
-//       { 'po.documentUrl': `/uploads/${req.file.filename}` },
-//       { new: true }
-//     );
-
-//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
-
-//     res.status(200).json(pipeline);
-//   } catch (err) {
-//     console.error('Error uploading PO document:', err);
-//     res.status(500).json({ error: 'Server error during PO upload' });
-//   }
-// };
-
-// export const updatePayment = async (req, res) => {
-//   try {
-//     const campaignId = req.params.campaignId;
-//     const {
-//       totalAmount,
-//       payments = [],
-//       totalPaid,
-//       paymentDue
-//     } = req.body;
-
-//     const pipeline = await Pipeline.findOneAndUpdate(
-//       { campaign: campaignId },
-//       {
-//         payment: {
-//           totalAmount,
-//           payments,
-//           totalPaid,
-//           paymentDue
-//         }
-//       },
-//       { new: true }
-//     );
-
-//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
-
-//     res.status(200).json(pipeline);
-//   } catch (err) {
-//     console.error('Error updating payment:', err);
-//     res.status(500).json({ error: 'Server error during payment update' });
-//   }
-// };
 
 
 export const updatePayment = async (req, res) => {

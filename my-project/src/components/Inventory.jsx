@@ -295,7 +295,7 @@
 //             <select className="border px-3 py-2 rounded w-full md:w-40" value={availability} onChange={(e) => setAvailability(e.target.value)}>
 //               <option value="">All</option>
 //               <option value="Completely available">Completely available</option>
-//               <option value="Partialy available">Partialy available</option>
+//               <option value="Partially available">Partially available</option>
 //               <option value="Completely booked">Completely booked</option>
 //               <option value="Overlapping booking">Overlapping booking</option>
              
