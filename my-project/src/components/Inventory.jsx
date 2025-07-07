@@ -1483,7 +1483,7 @@ export default function InventoryDashboard() {
               <option value="">All Space Types</option>
               <option value="Billboard">Billboard</option>
               <option value="DOOH">DOOH</option>
-              <option value="Pole kiosk">Pole kiosk</option>
+              <option value="Pole Kiosk">Pole Kiosk</option>
               <option value="Gantry">Gantry</option>
             </select>
 

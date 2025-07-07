@@ -13,7 +13,7 @@ export const generateTokens = (user) => {
     role: user.role,
   };
 
-  const accessToken = jwt.sign(payload, ACCESS_SECRET, { expiresIn: '15m' });
+  const accessToken = jwt.sign(payload, ACCESS_SECRET, { expiresIn: '1d' });
   const refreshToken = jwt.sign(payload, REFRESH_SECRET, { expiresIn: '7d' });
 
   return { accessToken, refreshToken };

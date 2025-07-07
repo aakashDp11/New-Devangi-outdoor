@@ -98,40 +98,7 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 
 
-// router.post('/campaign/changeLog', async (req, res) => {
-//   console.log('Received request body:', req.body);  // Log the complete request body
-//   const { campaignId, userId, userEmail, userName, changeType, previousValue, newValue } = req.body;
 
-//   // Ensure campaignId and userId are valid ObjectIds
-//   if (!mongoose.Types.ObjectId.isValid(campaignId)) {
-//     console.log('Invalid campaignId:', campaignId);  // Log invalid campaignId
-//     return res.status(400).send({ message: 'Invalid campaignId' });
-//   }
-
-//   if (!mongoose.Types.ObjectId.isValid(userId)) {
-//     console.log('Invalid userId:', userId);  // Log invalid userId
-//     return res.status(400).send({ message: 'Invalid userId' });
-//   }
-
-//   try {
-//     // No need to explicitly cast here if you've already validated
-//     const changeLog = new ChangeLog({
-//       campaignId: mongoose.Types.ObjectId(campaignId),  // Cast to ObjectId
-//       userId: mongoose.Types.ObjectId(userId),  // Cast to ObjectId
-//       userEmail,
-//       userName,
-//       changeType,
-//       previousValue,
-//       newValue,
-//     });
-
-//     await changeLog.save();
-//     res.status(201).send({ message: 'Change log saved successfully' });
-//   } catch (err) {
-//     console.error('Error saving change log:', err);
-//     res.status(500).send({ message: 'Error saving change log' });
-//   }
-// });
 router.post('/change-Log', async(req, res) => {
   console.log('Received test request body:', req.body);
   const { campaignId, userId, userEmail, userName, changeType, previousValue, newValue } = req.body;

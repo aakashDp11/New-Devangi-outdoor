@@ -4,17 +4,7 @@ import Campaign from '../models/campign.model.js';
 const router = express.Router();
 
 // Create Proposal
-// router.post('/', async (req, res) => {
-//   try {
-//     console.log("Proposal body is",req.body);
-//     console.log("Spaces of proposal are",req.body.campaigns[0].selectedSpaces);
-//     const proposal = new Proposal(req.body);
-//     await proposal.save();
-//     res.status(201).json(proposal);
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// });
+
 
 router.post('/', async (req, res) => {
   try {

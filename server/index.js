@@ -19,6 +19,10 @@ import debugRoutes from './routes/debug.routes.js'
 import Campaign from './models/campign.model.js';
 import { authenticate } from './middleware/authenticate.middleware.js';
 import campaignRoutes from './routes/campaign.routes.js'
+import notificationRoutes from './routes/notification.routes.js';
+import { startCampaignReminderJob } from './cron/campaignReminderJob.js';
+import { startSpaceReminderJob } from './cron/spaceReminderJob.js';
+
 
 dotenv.config();
 const app = express();
@@ -62,6 +66,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/campaigns', campaignRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 
 app.use((req, res, next) => {
@@ -118,6 +123,8 @@ async function connectAndStart() {
     });
     console.log('MongoDB connected');
     await createAdminIfNotExists();
+    startCampaignReminderJob();
+startSpaceReminderJob();
       app.listen(port, () => {
         console.log(`Server running at http://localhost:${port}`);
       });

@@ -15,6 +15,7 @@ import pipelineRoutes from './routes/pipeline.routes.js';
 import debugRoutes from './routes/debug.routes.js';
 import User from './models/user.model.js';
 import campaignRoutes from './routes/campaign.routes.js'
+import notificationRoutes from './routes/notification.routes.js';
 
 dotenv.config();
 const app = express();
@@ -58,6 +59,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/pipeline', pipelineRoutes);
 app.use('/debug', debugRoutes);
 app.use('/api/campaigns', campaignRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use((req, res, next) => {
   res.status(404).send({ message: 'Route not found' });
 });

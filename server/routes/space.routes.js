@@ -227,71 +227,7 @@ router.get('/selectcampaignSpaces', async (req, res) => {
 
 
 
-// router.post('/upload-excel', excelUpload.single('file'), async (req, res) => {
-//   if (!req.file) {
-//     return res.status(400).json({ error: 'No Excel file uploaded.' });
-//   }
 
-//   try {
-//     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-//     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-//     const rows = XLSX.utils.sheet_to_json(sheet);
-
-//     const createdSpaces = [];
-//     const failedRows = [];
-
-//     const parseNumber = (val) => {
-//       const num = Number(val);
-//       return isNaN(num) ? undefined : num;
-//     };
-
-//     for (let i = 0; i < rows.length; i++) {
-//       const row = rows[i];
-
-//       const spaceData = {
-//         spaceName: row.spaceName?.toString().trim() || `Unnamed Space ${i + 1}`,
-//         spaceType: row.spaceType || 'Billboard',
-//         category: row.category || 'Retail',
-//         mediaType: row.mediaType || 'Static',
-//         price: parseNumber(row.price),
-//         footfall: parseNumber(row.footfall),
-//         unit: parseNumber(row.unit),
-//         occupiedUnits: parseNumber(row.occupiedUnits),
-//         address: row.address,
-//         city: row.city,
-//         state: row.state,
-//         zone: row.zone,
-//         audience: row.audience,
-//         demographics: row.demographics,
-//         availability: row.availability || 'Completely available',
-//         dates: typeof row.dates === 'string' ? row.dates.split(',').map(d => d.trim()) : [],
-//       };
-
-//       try {
-//         const space = new Space(spaceData);
-//         await space.save();
-//         createdSpaces.push(space);
-//       } catch (err) {
-//         console.warn(`Row ${i + 2} skipped:`, err.message);
-//         failedRows.push({ row: i + 2, error: err.message });
-//       }
-//     }
-
-//     return res.status(207).json({
-//       message: 'Upload complete with soft validation',
-//       createdCount: createdSpaces.length,
-//       skippedCount: failedRows.length,
-//       failedRows,
-//     });
-
-//   } catch (error) {
-//     console.error('Excel upload error:', error);
-//     return res.status(500).json({
-//       error: 'Something went wrong during Excel processing.',
-//       details: error.message
-//     });
-//   }
-// });
 router.get('/',authenticate,async (req, res) => {
     try {
       const spaces = await Space.find();
@@ -301,56 +237,7 @@ router.get('/',authenticate,async (req, res) => {
     }
   });
 
-// router.get('/listInventory', authenticate, async (req, res) => {
-//   try {
-//     const page = parseInt(req.query.page) || 1;
-//     const limit = parseInt(req.query.limit) || 10;
-//     const skip = (page - 1) * limit;
-//     const search = req.query.search || '';
 
-//     const projection = {
-//       spaceName: 1,
-//       address: 1,
-//       city: 1,
-//       state: 1,
-//       zone: 1,
-//       spaceType: 1,
-//       unit: 1,
-//       occupiedUnits: 1,
-//       availability: 1,
-//       footfall: 1,
-//       audience: 1,
-//       demographics: 1,
-//       dates: 1,
-//       tags: 1,
-//       mainPhoto: 1,
-//       overlappingBooking: 1,
-//       createdAt: 1,
-//     };
-
-//     const searchQuery = search
-//       ? {
-//           $or: [
-//             { spaceName: { $regex: search, $options: 'i' } },
-//             { address: { $regex: search, $options: 'i' } },
-//             { city: { $regex: search, $options: 'i' } },
-//             { state: { $regex: search, $options: 'i' } },
-//             { zone: { $regex: search, $options: 'i' } },
-//             { tags: { $regex: search, $options: 'i' } },
-//           ],
-//         }
-//       : {};
-
-//     const [spaces, totalCount] = await Promise.all([
-//       Space.find(searchQuery, projection).skip(skip).limit(limit).sort({ createdAt: -1 }),
-//       Space.countDocuments(searchQuery),
-//     ]);
-
-//     res.json({ spaces, totalCount });
-//   } catch (error) {
-//     res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
-//   }
-// });
 
 
 router.get('/listInventory', authenticate, async (req, res) => {
@@ -888,45 +775,7 @@ router.put('/:id/remove-tag', async (req, res) => {
 });
  
 
-  // PUT /api/spaces/:id
-// router.put('/:id', upload.fields([
-//   { name: 'mainPhoto', maxCount: 1 },
-//   { name: 'longShot', maxCount: 1 },
-//   { name: 'closeShot', maxCount: 1 },
-//   { name: 'otherPhotos', maxCount: 10 }
-// ]), async (req, res) => {
-//   try {
-//     const space = await Space.findById(req.params.id);
-//     if (!space) {
-//       return res.status(404).json({ error: 'Space not found' });
-//     }
 
-//     // Update normal text fields
-//     for (const key in req.body) {
-//       space[key] = req.body[key];
-//     }
-
-//     // Update photos if new ones are uploaded
-//     if (req.files['mainPhoto']) {
-//       space.mainPhoto = req.files['mainPhoto'][0].filename;
-//     }
-//     if (req.files['longShot']) {
-//       space.longShot = req.files['longShot'][0].filename;
-//     }
-//     if (req.files['closeShot']) {
-//       space.closeShot = req.files['closeShot'][0].filename;
-//     }
-//     if (req.files['otherPhotos']) {
-//       space.otherPhotos = req.files['otherPhotos'].map(file => file.filename);
-//     }
-
-//     await space.save();
-//     res.json(space);
-//   } catch (error) {
-//     console.error('Error updating space:', error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// });
 router.put('/:id', upload.fields([
   { name: 'mainPhoto', maxCount: 1 },
   { name: 'longShot', maxCount: 1 },
@@ -976,22 +825,6 @@ router.put('/:id', upload.fields([
   }
 });
 
-//   router.put('/:id/printingStatus', async (req, res) => {
-//   try {
-//     const space = await Space.findById(req.params.id);
-//     if (!space) {
-//       return res.status(404).json({ error: 'Space not found' });
-//     }
-
-//     space.printingStatus.confirmed = true;
-//     await space.save();
-
-//     res.json(space);
-//   } catch (error) {
-//     console.error('Error updating printing status:', error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// });
 router.put('/:id/printingStatus', async (req, res) => {
   try {
     const space = await Space.findById(req.params.id);
@@ -1027,23 +860,7 @@ router.put('/:id/printingStatus', async (req, res) => {
 
 
 
-// Confirm mounting status on space (Safe isolated route)
-// router.put('/:id/mountingStatus', async (req, res) => {
-//   try {
-//     const space = await Space.findById(req.params.id);
-//     if (!space) {
-//       return res.status(404).json({ error: 'Space not found' });
-//     }
 
-//     space.mountingStatus.confirmed = true;
-//     await space.save();
-
-//     res.json(space);
-//   } catch (error) {
-//     console.error('Error updating mounting status:', error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// });
 
 router.put('/:id/mountingStatus', async (req, res) => {
   try {
