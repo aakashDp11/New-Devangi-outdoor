@@ -37,6 +37,7 @@ import Report from './components/Report.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { SidebarProvider } from './context/SidebarContext';
+
 export default function App() {
   return (
     <AuthProvider>

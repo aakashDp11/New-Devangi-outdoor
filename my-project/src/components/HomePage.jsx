@@ -47,23 +47,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
 
   const navigate = useNavigate();
 
-  // Fetch campaigns (bookings) from the backend API
-  // useEffect(() => {
-   
-  //   const fetchCampaigns = async () => {
-  //     try {
-  //       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns`);  // Adjust URL if necessary
-  //       const data = await response.json(); // Parse the response body
-  //       console.log("Fetched campaigns data:", data);  // Log the response data to see structure
-  //       setCampaigns(data.campaigns);  // Access the 'campaigns' array from the response and set it in state
-  //     } catch (err) {
-  //       console.error('Error fetching campaigns:', err);
-  //     }
-  //   };
-  //   fetchCampaigns(); // Fetch the campaigns when the component mounts
-  // }, []);  // Empty dependency array means this runs once when the component mounts
-
-  // Handle campaign events (starting and ending)
+ 
   useEffect(() => {
     const eventMap = new Map();
   
@@ -102,43 +86,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
     setEvents(eventMap);  // Update the events map
   }, [campaigns]);  // This effect will run whenever 'campaigns' changes
 
-  
-    // useEffect(() => {
-    //   const eventMap = new Map();
-    
-    //   // Ensure that campaigns is an array before processing
-    //   if (Array.isArray(campaigns)) {
-    //     console.log("Campaigns data is", campaigns);
-    
-    //     campaigns.forEach(campaign => {
-    //       // Build the campaign info for each campaign
-    //       const campaignInfo = {
-    //         id: campaign._id,
-    //         campaignName: campaign.campaignName || 'Unnamed Campaign',
-    //       };
-    
-    //       // Process campaigns starting on a day
-    //       if (campaign.startDate) {
-    //         const startDateStr = dayjs(campaign.startDate).format('YYYY-MM-DD');
-    //         const dayEvents = eventMap.get(startDateStr) || { startingCampaigns: [], endingCampaigns: [] };
-    //         dayEvents.startingCampaigns.push(campaignInfo);
-    //         eventMap.set(startDateStr, dayEvents);
-    //       }
-    
-    //       // Process campaigns ending on a day
-    //       if (campaign.endDate) {
-    //         const endDateStr = dayjs(campaign.endDate).format('YYYY-MM-DD');
-    //         const dayEvents = eventMap.get(endDateStr) || { startingCampaigns: [], endingCampaigns: [] };
-    //         dayEvents.endingCampaigns.push(campaignInfo);
-    //         eventMap.set(endDateStr, dayEvents);
-    //       }
-    //     });
-    //   }
-    
-    //   setEvents(eventMap);  // Update the events map
-    // }, [campaigns]);  // This effect will run whenever 'campaigns' changes
-    
-  // Generate the days of the current month
+
   useEffect(() => {
     const start = currentDate.startOf('month'),
       end = currentDate.endOf('month'),
@@ -288,18 +236,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
           </div>
         </CardContent>
       </Card>
-  
-      {/* {tooltip.visible && (
-        <div
-          className="fixed z-50 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg pointer-events-none"
-          style={{
-            top: `${tooltip.y + 15}px`,
-            left: `${tooltip.x + 15}px`  // Adjust position of the tooltip
-          }}
-        >
-          {tooltip.content}
-        </div>
-      )} */}
+
       {tooltip.visible && (
   <div
     className="fixed z-50 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg"
@@ -370,10 +307,7 @@ const [revenueChartData, setRevenueChartData] = useState({ xLabels: [], yData: [
     const start = moment(startDate); // Parse startDate with moment
     const end = moment(endDate); // Parse endDate with moment
   
-    // Log dates for debugging
-    // console.log('Current Date:', currentDate.format());
-    // console.log('Start Date:', start.format());
-    // console.log('End Date:', end.format());
+
   
     // Check if the start and end dates are valid
     if (!start.isValid() || !end.isValid()) {
@@ -952,22 +886,7 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
                 </CardContent>
               </Card>
 
-{/* Ownership Distribution */}
-{/* <Card className="max-w-[320px] h-[30%] shadow-md mt-4">
-  <CardContent>
-    <h2 className="text-sm font-medium mb-2">Ownership Distribution</h2>
-    <div className="w-full">
-      <div className='flex mt-4'>
-        <div className="ml-auto text-[0.7rem]">
-          <p><strong>Traded:</strong> {ownershipDistribution.traded}</p>
-          <p><strong>Owned:</strong> {ownershipDistribution.owned}</p>
-          <p><strong>Leased:</strong> {ownershipDistribution.leased}</p>
-        </div>
-      </div>
-      <PieChart series={[{ data: ownershipDistributionPieData, innerRadius: 40 }]} height={190} width={150} />
-    </div>
-  </CardContent>
-</Card> */}
+
 
         </div>
 
@@ -1096,3 +1015,5 @@ setOwnershipDistribution(statsData.ownershipDistribution || {});
 };
 
 export default BookingGraphDashboard;
+
+
