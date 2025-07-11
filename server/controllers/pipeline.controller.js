@@ -653,14 +653,16 @@ export const deletePipelineAndCleanup = async (req, res) => {
       return res.status(404).json({ error: 'Pipeline not found' });
     }
 
-    // Optional cleanup: reset statuses in each space
+    // Reset statuses in each space including DOOH nodes
     if (Array.isArray(pipeline.spaces)) {
       await Promise.all(
         pipeline.spaces.map(async (spaceId) => {
           await Space.findByIdAndUpdate(spaceId, {
             $set: {
               'printingStatus.confirmed': false,
-              'mountingStatus.confirmed': false
+              'mountingStatus.confirmed': false,
+              'digitalStatus.confirmed': false,
+              'digitalStatus.isLive': false
             }
           });
         })
@@ -676,3 +678,38 @@ export const deletePipelineAndCleanup = async (req, res) => {
     return res.status(500).json({ error: 'Server error during pipeline deletion' });
   }
 };
+
+
+// export const deletePipelineAndCleanup = async (req, res) => {
+//   const { campaignId } = req.params;
+
+//   try {
+//     const pipeline = await Pipeline.findOne({ campaign: campaignId });
+
+//     if (!pipeline) {
+//       return res.status(404).json({ error: 'Pipeline not found' });
+//     }
+
+//     // Optional cleanup: reset statuses in each space
+//     if (Array.isArray(pipeline.spaces)) {
+//       await Promise.all(
+//         pipeline.spaces.map(async (spaceId) => {
+//           await Space.findByIdAndUpdate(spaceId, {
+//             $set: {
+//               'printingStatus.confirmed': false,
+//               'mountingStatus.confirmed': false
+//             }
+//           });
+//         })
+//       );
+//     }
+
+//     // Delete pipeline
+//     await Pipeline.deleteOne({ _id: pipeline._id });
+
+//     return res.status(200).json({ message: 'Pipeline and associated space statuses deleted successfully' });
+//   } catch (err) {
+//     console.error('Error deleting pipeline:', err);
+//     return res.status(500).json({ error: 'Server error during pipeline deletion' });
+//   }
+// };

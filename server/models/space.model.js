@@ -65,6 +65,14 @@ const spaceSchema = new Schema({
   },
 
   otherPhotos: [String],
+  digitalStatus: {
+    confirmed: { type: Boolean, default: false },
+    assignedAgency: { type: String, default: '' },
+    isLive: { type: Boolean, default: false },
+    goLiveDate: { type: String, default: '' },
+    note: { type: String }
+  }
+,  
 
   availability: {
     type: String,

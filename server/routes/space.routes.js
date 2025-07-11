@@ -858,6 +858,43 @@ router.put('/:id/printingStatus', async (req, res) => {
   }
 });
 
+router.put('/:id/digitalStatus', async (req, res) => {
+  try {
+    const space = await Space.findById(req.params.id);
+    if (!space) {
+      return res.status(404).json({ error: 'Space not found' });
+    }
+
+    const {
+      confirmed,
+      isLive,
+      goLiveDate,
+      assignedPerson,
+      assignedAgency,
+      note
+    } = req.body;
+
+    // Initialize nested object if not present
+    if (!space.digitalStatus) {
+      space.digitalStatus = {};
+    }
+
+    // Update only provided fields
+    if (confirmed !== undefined) space.digitalStatus.confirmed = confirmed;
+    if (isLive !== undefined) space.digitalStatus.isLive = isLive;
+    if (goLiveDate !== undefined) space.digitalStatus.goLiveDate = goLiveDate;
+    if (assignedPerson !== undefined) space.digitalStatus.assignedPerson = assignedPerson;
+    if (assignedAgency !== undefined) space.digitalStatus.assignedAgency = assignedAgency;
+    if (note !== undefined) space.digitalStatus.note = note;
+
+    await space.save();
+
+    res.json(space);
+  } catch (error) {
+    console.error('Error updating digital status:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 
 
