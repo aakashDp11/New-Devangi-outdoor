@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useSidebar } from "../context/SidebarContext";
 import { FaArrowLeft } from "react-icons/fa";
 import EditCampaignModal from "./modals/EditCampaignModel";
+
 const KeyValueItem = ({
   label,
   value,
@@ -172,7 +173,8 @@ export default function CampaignDetails() {
         updated.push({
           id: spaceId,
           displayCost: field === "displayCost" ? value : 0,
-          tradeMargin: field === "tradeMargin" ? value : 0,
+          buyingPrice: field === "buyingPrice" ? value : 0,
+          sellingPrice: field === "sellingPrice" ? value : 0,
           printingcostpersquareFeet:
             field === "printingcostpersquareFeet" ? value : 0,
           mountingcostpersquareFeet:
@@ -268,8 +270,6 @@ export default function CampaignDetails() {
     // },
   ];
 
-  console.log("PipelineData: ", pipelineData);
-
   return (
     <div className="text-xs min-h-screen w-screen text-black flex flex-col lg:flex-row ">
       <Navbar />
@@ -313,12 +313,11 @@ export default function CampaignDetails() {
               Back
             </button>
             <button
-  onClick={() => setShowEditModal(true)}
-  className="ml-2 inline-flex gap-2 items-center px-4 py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
->
-   Edit Campaign
-</button>
-
+              onClick={() => setShowEditModal(true)}
+              className="ml-2 inline-flex gap-2 items-center px-4 py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+            >
+              Edit Campaign
+            </button>
           </div>
         </div>
 
@@ -493,15 +492,18 @@ export default function CampaignDetails() {
               const cost = getCostItem(space._id);
               const computedArea = space.width * space.height;
               const displayCost = cost?.displayCost || 0;
+              const sellingPrice = cost?.sellingPrice || 0;
               const printingCost = cost?.printingcostpersquareFeet || 0;
               const mountingCost = cost?.mountingcostpersquareFeet || 0;
               const area = cost?.area || computedArea || 0;
-
-              // --- THIS IS THE CORRECTED CALCULATION ---
-              const totalCost =
-                displayCost + printingCost * area + mountingCost * area;
-
               const isEditable = editableSpaces.has(space._id);
+
+              // --- UPDATED TOTAL COST CALCULATION ---
+             let totalCost = displayCost; // Always starts with displayCost
+
+              if (space.spaceType !== "DOOH") {
+                totalCost += (printingCost * area) + (mountingCost * area);
+              }
 
               return (
                 <div
@@ -540,11 +542,10 @@ export default function CampaignDetails() {
                     <p>
                       <strong>Availability:</strong> {space.availability}
                     </p>
-                    {space.ownershipType === "Traded" && (
-                      <p>
-                        <strong>Ownership Type: </strong> {space.ownershipType}
-                      </p>
-                    )}
+                    {/* --- CHANGE 1: Always show Ownership Type --- */}
+                    <p>
+                      <strong>Ownership Type: </strong> {space.ownershipType}
+                    </p>
                     <hr className="my-2" />
 
                     <div className="grid grid-cols-1 gap-2">
@@ -564,64 +565,56 @@ export default function CampaignDetails() {
                           readOnly={!isEditable}
                         />
                       </label>
+                      
+                      {/* --- CHANGE 2: Conditionally render Buying/Selling Price --- */}
+                      {space.ownershipType === "Traded" && (
+                        <>
+                          <div className="mb-2">
+                            <label>
+                              Buying Price:
+                              <input
+                                type="number"
+                                className="border rounded ml-2 px-2 py-1 w-[20%]"
+                                value={cost?.buyingPrice || 0}
+                                onChange={(e) =>
+                                  updateCostField(
+                                    space._id,
+                                    "buyingPrice",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                readOnly={!isEditable}
+                              />
+                            </label>
+                          </div>
+                          <div>
+                            <label>
+                              Selling Price:
+                              <input
+                                type="number"
+                                className="border rounded ml-2 px-2 py-1 w-[20%]"
+                                value={cost?.sellingPrice || 0}
+                                onChange={(e) =>
+                                  updateCostField(
+                                    space._id,
+                                    "sellingPrice",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                readOnly={!isEditable}
+                              />
+                            </label>
+                          </div>
+                        </>
+                      )}
 
-                   <div> {/* The main container now stacks children vertically by default */}
-
-    {/* --- Input for Buying Rate --- */}
-    <div className="mb-2"> {/* `mb-2` adds margin-bottom for spacing */}
-      <label>
-  Buying Price:
-  <input
-    type="number"
-    className="border rounded ml-2 px-2 py-1 w-[20%]"
-    value={cost?.buyingPrice || 0} // <--- CHANGE HERE
-    onChange={(e) =>
-      updateCostField(
-        space._id,
-        "buyingPrice", // <--- CHANGE HERE
-        Number(e.target.value)
-      )
-    }
-    readOnly={!isEditable}
-  />
-</label>
-    </div>
-
-    {/* --- Input for Selling Rate --- */}
-    <div>
-      <label>
-  Selling Price:
-  <input
-    type="number"
-    className="border rounded ml-2 px-2 py-1 w-[20%]"
-    value={cost?.sellingPrice || 0} // <--- CHANGE HERE
-    onChange={(e) =>
-      updateCostField(
-        space._id,
-        "sellingPrice", // <--- CHANGE HERE
-        Number(e.target.value)
-      )
-    }
-    readOnly={!isEditable}
-  />
-</label>
-    </div>
-
-  </div>
-
+                      {/* --- CHANGE 3 & 4: Logic to handle DOOH vs. other types --- */}
                       {[
                         "printingcostpersquareFeet",
                         "mountingcostpersquareFeet",
                         "area",
                       ].map((field) => {
-                        if (
-                          space.spaceType === "DOOH" &&
-                          [
-                            "printingcostpersquareFeet",
-                            "mountingcostpersquareFeet",
-                            "area",
-                          ].includes(field)
-                        ) {
+                        if (space.spaceType === "DOOH") {
                           return null;
                         }
                         return (
@@ -653,6 +646,7 @@ export default function CampaignDetails() {
                         );
                       })}
 
+                      {/* --- CHANGE 5: Display the correctly calculated total cost --- */}
                       <p>
                         <strong>Total Cost:</strong> ₹{totalCost.toFixed(2)}
                       </p>
@@ -686,15 +680,13 @@ export default function CampaignDetails() {
           </div>
         )}
         {showEditModal && (
- <EditCampaignModal
- campaignData={campaignData}
- pipelineSpaces={pipelineData?.spaces || []}
- onClose={() => setShowEditModal(false)}
- onUpdate={(updated) => setCampaignData(updated)}
-/>
-
-)}
-
+          <EditCampaignModal
+            campaignData={campaignData}
+            pipelineSpaces={pipelineData?.spaces || []}
+            onClose={() => setShowEditModal(false)}
+            onUpdate={(updated) => setCampaignData(updated)}
+          />
+        )}
       </main>
     </div>
   );
