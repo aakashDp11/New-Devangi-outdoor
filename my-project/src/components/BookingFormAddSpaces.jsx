@@ -110,7 +110,7 @@ export default function InventorySelector({
               <th className="px-3 py-2">City</th>
               <th className="px-3 py-2">Width (in ft)</th>
               <th className="px-3 py-2">Height (in ft)</th>
-              <th className="px-3 py-2">Size (in ft)</th>
+              <th className="px-3 py-2">Size (in sq ft)</th>
               <th className="px-3 py-2">Specification</th>
               <th className="px-3 py-2">Ownership</th>
               <th className="px-3 py-2">Occupied</th>
