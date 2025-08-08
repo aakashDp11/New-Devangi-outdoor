@@ -86,6 +86,7 @@ export default function BookingFormOrderInfo() {
         traded: space.traded,
         mainPhoto:space.mainPhoto,
         overlappingBooking: space.overlappingBooking,
+        
         availableFrom: space.dates?.[0],
         availableTo: space.dates?.[space.dates.length - 1],
         status: space.occupiedUnits === 0

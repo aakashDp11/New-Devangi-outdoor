@@ -42,7 +42,7 @@ export default function InventorySelector({
       const selectedEnd = new Date(endDate);
 
       return selectedStart >= spaceStart && selectedEnd <= spaceEnd;
-    } catch (err) {
+    } catch (err) { // <<< FIX IS HERE
       console.error("Error checking availability range:", err);
       return false;
     }
@@ -108,6 +108,9 @@ export default function InventorySelector({
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">TFT</th>
               <th className="px-3 py-2">City</th>
+              <th className="px-3 py-2">Width (in ft)</th>
+              <th className="px-3 py-2">Height (in ft)</th>
+              <th className="px-3 py-2">Size (in ft)</th>
               <th className="px-3 py-2">Specification</th>
               <th className="px-3 py-2">Ownership</th>
               <th className="px-3 py-2">Occupied</th>
@@ -160,6 +163,9 @@ export default function InventorySelector({
                   </td>
                   <td className="px-3 py-2">{space.facia}</td>
                   <td className="px-3 py-2">{space.city}</td>
+                  <td className="px-3 py-2">{space.width}</td>
+                  <td className="px-3 py-2">{space.height}</td>
+                  <td className="px-3 py-2">{space.width * space.height}</td>
                   <td className="px-3 py-2">{space.specification}</td>
                   <td className="px-3 py-2">
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">

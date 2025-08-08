@@ -57,6 +57,9 @@ export default function BookingDetails() {
         traded: space.traded,
         mainPhoto: space.mainPhoto,
         overlappingBooking: space.overlappingBooking,
+        specification: space.specification, // Also adding specification, as it's used
+        width: space.width,                 // <-- THE FIX
+        height: space.height,               // <-- THE FIX
         availableFrom: space.dates?.[0],
         availableTo: space.dates?.[space.dates.length - 1],
         status:
