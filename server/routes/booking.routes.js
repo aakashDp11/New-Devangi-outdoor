@@ -9,6 +9,7 @@ import Campaign from '../models/campaign.model.js';
 import { uploadToS3 } from '../utils/s3uploader.js';
 import { authenticate } from '../middleware/authenticate.middleware.js';
 const router = express.Router();
+
 export const updateCampaign = async (req, res) => {
   const { id } = req.params;
   const { campaignName, description, startDate, endDate, industry } = req.body;
@@ -36,6 +37,7 @@ export const updateCampaign = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 export const getPaymentReport = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -151,7 +153,6 @@ export const getPaymentReport = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch payment report' });
   }
 };
-
 
 // EndPoint for Booking Dashboard Page.
 export const getFilteredBookings = async (req, res) => {
@@ -271,7 +272,8 @@ export const getFilteredBookings = async (req, res) => {
   }
 };
 
-// Booking Report Endpoint New One.
+// --- START: CORRECTED FUNCTION ---
+// Booking Report Endpoint (FIXED and more robust)
 export const getAllBookings = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -310,35 +312,59 @@ export const getAllBookings = async (req, res) => {
       }
     });
 
-    // Convert campaign dates to Date objects
+    // Safely convert campaign dates to Date objects
     pipeline.push({
-      $addFields: {
-        campaigns: {
-          $map: {
-            input: '$campaigns',
-            as: 'camp',
-            in: {
-              $mergeObjects: [
-                '$$camp',
-                {
-                  startDateObj: {
-                    $dateFromString: {
-                      dateString: '$$camp.startDate',
-                      format: '%Y-%m-%d'
+        $addFields: {
+            campaigns: {
+                $map: {
+                    input: '$campaigns',
+                    as: 'camp',
+                    in: {
+                        $mergeObjects: [
+                            '$$camp',
+                            {
+                                // Only convert if startDate is a non-empty string
+                                startDateObj: {
+                                    $cond: {
+                                        if: { $and: [
+                                            { $ne: [{ $type: '$$camp.startDate' }, 'missing'] },
+                                            { $ne: ['$$camp.startDate', null] },
+                                            { $ne: ['$$camp.startDate', ""] }
+                                        ]},
+                                        then: {
+                                            $dateFromString: {
+                                                dateString: '$$camp.startDate',
+                                                format: '%Y-%m-%d',
+                                                onError: null // Return null on error
+                                            }
+                                        },
+                                        else: null // Return null if field is missing or empty
+                                    }
+                                },
+                                // Only convert if endDate is a non-empty string
+                                endDateObj: {
+                                    $cond: {
+                                        if: { $and: [
+                                            { $ne: [{ $type: '$$camp.endDate' }, 'missing'] },
+                                            { $ne: ['$$camp.endDate', null] },
+                                            { $ne: ['$$camp.endDate', ""] }
+                                        ]},
+                                        then: {
+                                            $dateFromString: {
+                                                dateString: '$$camp.endDate',
+                                                format: '%Y-%m-%d',
+                                                onError: null // Return null on error
+                                            }
+                                        },
+                                        else: null // Return null if field is missing or empty
+                                    }
+                                }
+                            }
+                        ]
                     }
-                  },
-                  endDateObj: {
-                    $dateFromString: {
-                      dateString: '$$camp.endDate',
-                      format: '%Y-%m-%d'
-                    }
-                  }
                 }
-              ]
             }
-          }
         }
-      }
     });
 
     // Lookup pipelines
@@ -509,26 +535,16 @@ export const getAllBookings = async (req, res) => {
 
     return res.json({
       bookings,
-      totalCount,
+      totalPages: Math.ceil(totalCount / limit), // Corrected to match frontend
       currentPage: page,
-      totalPages: Math.ceil(totalCount / limit)
+      totalCount: totalCount,
     });
   } catch (err) {
     console.error('Error in getAllBookings:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
+// --- END: CORRECTED FUNCTION ---
 
 export const getCampaignById = async (req, res) => {
   try {
@@ -557,11 +573,6 @@ export const getCampaignById = async (req, res) => {
     return res.status(500).json({ error: 'Server error' });
   }
 };
-
-
-
-
-
 
 export const createBooking = async (req, res) => {
   console.log("Create booking data is", req.body);
@@ -838,6 +849,7 @@ export const updateBooking = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Failed to update booking' });
   }
 };
+
 export const deleteBooking = async (req, res) => {
   const { id: bookingId } = req.params;
 
@@ -1046,34 +1058,9 @@ export const getBookingDashboardStats = async (req, res) => {
   }
 };
 
-
-
-
 router.get('/dashboard-stats', authenticate, getBookingDashboardStats);
-
 router.get('/campaign/:id', getCampaignById);
 router.patch('/campaign/:id', updateCampaign);
-
-
-// router.post('/:bookingId/campaigns', async (req, res) => {
-//   try {
-//     const { bookingId } = req.params;
-//     const campaignData = req.body;
-
-//     // 1. Create the campaign
-//     const newCampaign = await Campaign.create({ ...campaignData });
-
-//     // 2. Attach to the booking
-//     await Booking.findByIdAndUpdate(bookingId, {
-//       $push: { campaigns: newCampaign._id }
-//     });
-
-//     res.status(201).json(newCampaign);
-//   } catch (err) {
-//     console.error('Error creating campaign:', err);
-//     res.status(500).json({ message: 'Failed to create and link campaign' });
-//   }
-// });
 
 router.post('/:bookingId/campaigns', async (req, res) => {
   const session = await mongoose.startSession();
@@ -1155,8 +1142,6 @@ router.post('/:bookingId/campaigns', async (req, res) => {
     res.status(500).json({ message: err.message || 'Failed to create and link campaign' });
   }
 });
-
-
 
 router.get('/', authenticate, getAllBookings);
 router.get('/optimized', authenticate, getAllBookings1);

@@ -18,7 +18,7 @@ const cpUpload = upload.fields([
 ]);
 
 
-router.post('/create', cpUpload, createSpace);
+router.post('/create', cpUpload, createSpace)
 
 function parseDate(dateString) {
   const [day, month, year] = dateString.split('-').map(Number);
@@ -94,22 +94,26 @@ const ENUMS = {
   spaceType: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk'],
   category: ['Retail', 'Transit'],
   mediaType: ['Static', 'Digital'],
-  audience: ['Youth', 'Working Professionals'],
+  audience: ['Youth', 'Working Professionals'], // Add specific audience enums if applicable
   demographics: ['Urban', 'Rural'],
-  illuminations: ['Front lit', 'Back lit'],
+  // FIX: Renamed from 'illuminations' to 'illumination'
+  illumination: ['Front Lit', 'Back Lit', 'Non Lit', 'Frontlit', 'Backlit', 'Nonlit'], 
   availability: ['Completely available', 'Partially available', 'Completely booked'],
   zone: ['East', 'West', 'North', 'South'],
-  ownership: ['Owned', 'Leased', 'Traded'],
+  ownershipType: ['Owned', 'Leased', 'Traded'], // Renamed from 'ownership' to 'ownershipType'
   tier: ['Tier 1', 'Tier 2'],
+  // FIX: Added 'facing' if it's an enum, otherwise it's just a string
+  // If facing has specific allowed values like 'North', 'South' etc., add them here.
+  // For now, assuming it's a general string based on model.
 };
 
-// Normalize Excel header names to camelCase schema keys
+// FIX: Updated MODEL_KEYS to match the schema (organization, illumination, facing)
 const MODEL_KEYS = [
-  'spaceName', 'landlord', 'peerMediaOwner', 'spaceType', 'traded', 'category',
+  'spaceName', 'landlord', 'organization', 'peerMediaOwner', 'spaceType', 'traded', 'category',
   'mediaType', 'price', 'footfall', 'audience', 'demographics', 'description',
-  'illuminations', 'unit', 'occupiedUnits', 'width', 'height', 'additionalTags',
+  'illumination', 'unit', 'occupiedUnits', 'width', 'height', 'additionalTags',
   'previousBrands', 'tags', 'address', 'city', 'state', 'latitude', 'longitude',
-  'landmark', 'zone', 'ownership', 'tier', 'faciaTowards', 'overlappingBooking',
+  'landmark', 'zone', 'ownershipType', 'tier', 'facing', 'faciaTowards', 'overlappingBooking',
   'availability', 'dates'
 ];
 
@@ -119,7 +123,6 @@ MODEL_KEYS.forEach(key => {
   normalizedMap[normalized] = key;
 });
 
-// Helper functions
 const parseNumber = (val) => {
   const n = Number(val);
   return isNaN(n) ? undefined : n;
@@ -128,8 +131,9 @@ const parseNumber = (val) => {
 const enumFix = (val, validValues) => {
   if (!val) return undefined;
   const normalized = val.toString().toLowerCase().trim();
-  return validValues.find(v => v.toLowerCase() === normalized);
+  return validValues.find(v => v.toLowerCase().replace(/[^a-z0-9]/g, '') === normalized.replace(/[^a-z0-9]/g, ''));
 };
+
 
 router.post('/upload-excel', excelUpload.single('file'), async (req, res) => {
   if (!req.file) {
@@ -161,14 +165,13 @@ router.post('/upload-excel', excelUpload.single('file'), async (req, res) => {
             : [];
         } else if (modelKey === 'traded' || modelKey === 'overlappingBooking') {
           formattedRow[modelKey] = value?.toString().toLowerCase() === 'true';
-        } else if (ENUMS[modelKey]) {
+        } else if (ENUMS[modelKey]) { // This will now correctly check for 'illumination'
           formattedRow[modelKey] = enumFix(value, ENUMS[modelKey]);
         } else {
           formattedRow[modelKey] = value?.toString().trim();
         }
       }
 
-      // Add fallback for spaceName
       if (!formattedRow.spaceName) {
         formattedRow.spaceName = `Unnamed Space ${i + 1}`;
       }
@@ -226,20 +229,19 @@ router.get('/selectcampaignSpaces', async (req, res) => {
 });
 
 router.patch('/:id/toggle-inventory', async (req, res) => {
-  try {
-    const space = await Space.findById(req.params.id);
-    if (!space) return res.status(404).json({ message: 'Space not found' });
+try {
+const space = await Space.findById(req.params.id);
+if (!space) return res.status(404).json({ message: 'Space not found' });
 
-    space.isInventoryEnabled = !space.isInventoryEnabled;
-    await space.save();
+space.isInventoryEnabled = !space.isInventoryEnabled;
+await space.save();
 
-    res.json({ isInventoryEnabled: space.isInventoryEnabled });
-  } catch (err) {
-    console.error('Error toggling inventory:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
+res.json({ isInventoryEnabled: space.isInventoryEnabled });
+} catch (err) {
+console.error('Error toggling inventory:', err);
+res.status(500).json({ message: 'Server error' });
+}
 });
-
 
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -249,9 +251,6 @@ router.get('/', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
   }
 });
-
-
-
 
 router.get('/listInventory', authenticate, async (req, res) => {
   try {
@@ -263,36 +262,19 @@ router.get('/listInventory', authenticate, async (req, res) => {
     const region = req.query.region || '';
     const availability = req.query.availability || '';
     const spaceType = req.query.spaceType || '';
-    const ownershipType = req.query.ownershipType || '';  // Added ownershipType
+    const ownershipType = req.query.ownershipType || '';
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
 
     const projection = {
-      spaceName: 1,
-      address: 1,
-      city: 1,
-      state: 1,
-      zone: 1,
-      spaceType: 1,
-      unit: 1,
-      occupiedUnits: 1,
-      availability: 1,
-      footfall: 1,
-      audience: 1,
-      demographics: 1,
-      dates: 1,
-      tags: 1,
-      mainPhoto: 1,
-      overlappingBooking: 1,
-      ownershipType: 1,  // Ensure ownershipType is projected
-      createdAt: 1,
-      campaignDates: 1,
-      specification: 1
+      spaceName: 1, address: 1, city: 1, state: 1, zone: 1, spaceType: 1, unit: 1,
+      occupiedUnits: 1, availability: 1, footfall: 1, audience: 1, demographics: 1,
+      dates: 1, tags: 1, mainPhoto: 1, overlappingBooking: 1, ownershipType: 1,
+      createdAt: 1, campaignDates: 1, specification: 1
     };
 
     const filters = {};
 
-    // Search text
     if (search) {
       filters.$or = [
         { spaceName: { $regex: search, $options: 'i' } },
@@ -304,7 +286,6 @@ router.get('/listInventory', authenticate, async (req, res) => {
       ];
     }
 
-    // Region filter (match in city, state, or zone)
     if (region) {
       filters.$and = filters.$and || [];
       filters.$and.push({
@@ -316,23 +297,13 @@ router.get('/listInventory', authenticate, async (req, res) => {
       });
     }
 
-    // Space Type
-    if (spaceType) {
-      filters.spaceType = spaceType;
-    }
+    if (spaceType) filters.spaceType = spaceType;
+    if (ownershipType) filters.ownershipType = ownershipType;
 
-    // Ownership Type filter
-    if (ownershipType) {
-      filters.ownershipType = ownershipType;  // Added ownershipType filter
-    }
-
-    // Availability (we compute after fetching below)
     const rawData = await Space.find(filters, projection).sort({ createdAt: -1 });
     const totalFiltered = rawData.length;
 
-    // Date Filter + Availability Logic
     const filtered = rawData.filter((item) => {
-      // Computed availability
       const totalUnits = item.unit || 0;
       const occupied = item.occupiedUnits || 0;
       let computedAvailability = 'Completely available';
@@ -342,7 +313,6 @@ router.get('/listInventory', authenticate, async (req, res) => {
 
       if (availability && computedAvailability !== availability) return false;
 
-      // Date filtering
       if (startDate && endDate && item.dates?.length >= 2) {
         const [d1, m1, y1] = item.dates[0].split('-');
         const [d2, m2, y2] = item.dates[1].split('-');
@@ -372,377 +342,54 @@ router.get('/listInventory', authenticate, async (req, res) => {
   }
 });
 
-
-
-//   try {
-//     const page = parseInt(req.query.page) || 1;
-//     const limit = parseInt(req.query.limit) || 10;
-//     const skip = (page - 1) * limit;
-
-//     const search = req.query.search || '';
-//     const region = req.query.region || '';
-//     const availability = req.query.availability || '';
-//     const spaceType = req.query.spaceType || '';
-//     const startDate = req.query.startDate;
-//     const endDate = req.query.endDate;
-
-//     const projection = {
-//       spaceName: 1,
-//       address: 1,
-//       city: 1,
-//       state: 1,
-//       zone: 1,
-//       spaceType: 1,
-//       unit: 1,
-//       occupiedUnits: 1,
-//       availability: 1,
-//       footfall: 1,
-//       audience: 1,
-//       demographics: 1,
-//       dates: 1,
-//       tags: 1,
-//       mainPhoto: 1,
-//       overlappingBooking: 1,
-//       ownershipType:1,
-//       createdAt: 1,
-//       campaignDates: 1,
-//       specification:1
-//     };
-
-//     const filters = {};
-
-//     // Search text
-//     if (search) {
-//       filters.$or = [
-//         { spaceName: { $regex: search, $options: 'i' } },
-//         { address: { $regex: search, $options: 'i' } },
-//         { city: { $regex: search, $options: 'i' } },
-//         { state: { $regex: search, $options: 'i' } },
-//         { zone: { $regex: search, $options: 'i' } },
-//         { tags: { $regex: search, $options: 'i' } },
-//       ];
-//     }
-
-//     // Region filter (match in city, state, or zone)
-//     if (region) {
-//       filters.$and = filters.$and || [];
-//       filters.$and.push({
-//         $or: [
-//           { city: { $regex: region, $options: 'i' } },
-//           { state: { $regex: region, $options: 'i' } },
-//           { zone: { $regex: region, $options: 'i' } },
-//         ],
-//       });
-//     }
-
-//     // Space Type
-//     if (spaceType) {
-//       filters.spaceType = spaceType;
-//     }
-
-//     // Availability (we compute after fetching below)
-//     const rawData = await Space.find(filters, projection).sort({ createdAt: -1 });
-//     const totalFiltered = rawData.length;
-
-//     // Date Filter + Availability Logic
-//     const filtered = rawData.filter((item) => {
-//       // Computed availability
-//       const totalUnits = item.unit || 0;
-//       const occupied = item.occupiedUnits || 0;
-//       let computedAvailability = 'Completely available';
-//       if (item.overlappingBooking) computedAvailability = 'Overlapping booking';
-//       else if (totalUnits === occupied && occupied !== 0) computedAvailability = 'Completely booked';
-//       else if (occupied > 0 && occupied < totalUnits) computedAvailability = 'Partially available';
-
-//       if (availability && computedAvailability !== availability) return false;
-
-//       // Date filtering
-//       if (startDate && endDate && item.dates?.length >= 2) {
-//         const [d1, m1, y1] = item.dates[0].split('-');
-//         const [d2, m2, y2] = item.dates[1].split('-');
-//         const invStart = new Date(`${y1}-${m1}-${d1}`);
-//         const invEnd = new Date(`${y2}-${m2}-${d2}`);
-//         const selectedStart = new Date(startDate);
-//         const selectedEnd = new Date(endDate);
-
-//         const inRange = selectedStart >= invStart && selectedEnd <= invEnd;
-
-//         const overlapWithCampaign = (item.campaignDates || []).some(c => {
-//           const campStart = new Date(c.startDate);
-//           const campEnd = new Date(c.endDate);
-//           return selectedStart <= campEnd && selectedEnd >= campStart;
-//         });
-
-//         if (!inRange || overlapWithCampaign) return false;
-//       }
-
-//       return true;
-//     });
-
-//     const paginated = filtered.slice(skip, skip + limit);
-//     res.json({ spaces: paginated, totalCount: filtered.length });
-//   } catch (error) {
-//     res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
-//   }
-// });
-
-
-// router.get('/', authenticate, async (req, res) => {
-//   try {
-//     const page = parseInt(req.query.page) || 1;
-//     const limit = parseInt(req.query.limit) || 10;
-//     const skip = (page - 1) * limit;
-
-//     const search = req.query.search || '';
-//     const region = req.query.region || '';
-//     const availability = req.query.availability || '';
-//     const spaceType = req.query.spaceType || '';
-//     const startDate = req.query.startDate;
-//     const endDate = req.query.endDate;
-
-//     const projection = {
-//       spaceName: 1,
-//       address: 1,
-//       city: 1,
-//       state: 1,
-//       zone: 1,
-//       spaceType: 1,
-//       unit: 1,
-//       occupiedUnits: 1,
-//       availability: 1,
-//       footfall: 1,
-//       audience: 1,
-//       demographics: 1,
-//       dates: 1,
-//       tags: 1,
-//       mainPhoto: 1,
-//       overlappingBooking: 1,
-//       createdAt: 1,
-//       campaignDates: 1,
-//     };
-
-//     const filters = {};
-
-//     // Search text
-//     if (search) {
-//       filters.$or = [
-//         { spaceName: { $regex: search, $options: 'i' } },
-//         { address: { $regex: search, $options: 'i' } },
-//         { city: { $regex: search, $options: 'i' } },
-//         { state: { $regex: search, $options: 'i' } },
-//         { zone: { $regex: search, $options: 'i' } },
-//         { tags: { $regex: search, $options: 'i' } },
-//       ];
-//     }
-
-//     // Region filter (match in city, state, or zone)
-//     if (region) {
-//       filters.$and = filters.$and || [];
-//       filters.$and.push({
-//         $or: [
-//           { city: { $regex: region, $options: 'i' } },
-//           { state: { $regex: region, $options: 'i' } },
-//           { zone: { $regex: region, $options: 'i' } },
-//         ],
-//       });
-//     }
-
-//     // Space Type
-//     if (spaceType) {
-//       filters.spaceType = spaceType;
-//     }
-
-//     // Availability (we compute after fetching below)
-//     const rawData = await Space.find(filters, projection).sort({ createdAt: -1 });
-//     const totalFiltered = rawData.length;
-
-//     // Date Filter + Availability Logic
-//     const filtered = rawData.filter((item) => {
-//       // Computed availability
-//       const totalUnits = item.unit || 0;
-//       const occupied = item.occupiedUnits || 0;
-//       let computedAvailability = 'Completely available';
-//       if (item.overlappingBooking) computedAvailability = 'Overlapping booking';
-//       else if (totalUnits === occupied && occupied !== 0) computedAvailability = 'Completely booked';
-//       else if (occupied > 0 && occupied < totalUnits) computedAvailability = 'Partially available';
-
-//       if (availability && computedAvailability !== availability) return false;
-
-//       // Date filtering
-//       if (startDate && endDate && item.dates?.length >= 2) {
-//         const [d1, m1, y1] = item.dates[0].split('-');
-//         const [d2, m2, y2] = item.dates[1].split('-');
-//         const invStart = new Date(`${y1}-${m1}-${d1}`);
-//         const invEnd = new Date(`${y2}-${m2}-${d2}`);
-//         const selectedStart = new Date(startDate);
-//         const selectedEnd = new Date(endDate);
-
-//         const inRange = selectedStart >= invStart && selectedEnd <= invEnd;
-
-//         const overlapWithCampaign = (item.campaignDates || []).some(c => {
-//           const campStart = new Date(c.startDate);
-//           const campEnd = new Date(c.endDate);
-//           return selectedStart <= campEnd && selectedEnd >= campStart;
-//         });
-
-//         if (!inRange || overlapWithCampaign) return false;
-//       }
-
-//       return true;
-//     });
-
-//     const paginated = filtered.slice(skip, skip + limit);
-//     res.json({ spaces: paginated, totalCount: filtered.length });
-//   } catch (error) {
-//     res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
-//   }
-// });
-
-
-//   router.get('/dashboard-stats', async (req, res) => {
-//   try {
-//     const spaces = await Space.find({}, {
-//       spaceType: 1,
-//       unit: 1,
-//       occupiedUnits: 1,
-//       overlappingBooking: 1
-//     });
-
-//     // DOOH Utilization
-//     let totalUnits = 0;
-//     let bookedUnits = 0;
-
-//     // Static Site Availability
-//     let available = 0;
-//     let booked = 0;
-//     let overlapping = 0;
-
-//     spaces.forEach(space => {
-//       const units = space.unit || 0;
-//       const occupied = space.occupiedUnits || 0;
-
-//       if (space.spaceType === 'DOOH') {
-//         totalUnits += units;
-//         bookedUnits += occupied;
-//       } else {
-//         if (occupied === 0) {
-//           available++;
-//         } else if (space.overlappingBooking) {
-//           overlapping++;
-//         } else {
-//           booked++;
-//         }
-//       }
-//     });
-
-//     const dashboardStats = {
-//       doohUtilization: {
-//         totalUnits,
-//         bookedUnits,
-//         freeUnits: totalUnits - bookedUnits
-//       },
-//       staticAvailability: {
-//         available,
-//         booked,
-//         overlapping
-//       }
-//     };
-
-//     res.json(dashboardStats);
-//   } catch (error) {
-//     res.status(500).json({ error: 'Failed to compute dashboard stats', details: error.message });
-//   }
-// });
 router.get('/dashboard-stats', async (req, res) => {
   try {
     const spaces = await Space.find({}, {
-      spaceType: 1,
-      unit: 1,
-      occupiedUnits: 1,
-      overlappingBooking: 1,
-      ownershipType: 1,
-      traded: 1
+      spaceType: 1, unit: 1, occupiedUnits: 1, overlappingBooking: 1,
+      ownershipType: 1, traded: 1
     });
 
-    let totalUnits = 0;
-    let bookedUnits = 0;
-    let available = 0;
-    let booked = 0;
-    let overlapping = 0;
-
-    // New: DOOH availability status counts
-    let doohCompletelyAvailable = 0;
-    let doohPartiallyAvailable = 0;
-    let doohCompletelyBooked = 0;
-
-    // New: Ownership/trade status counts (all inventories)
-    let tradedCount = 0;
-    let ownedCount = 0;
-    let leasedCount = 0;
+    let totalUnits = 0, bookedUnits = 0, available = 0, booked = 0, overlapping = 0;
+    let doohCompletelyAvailable = 0, doohPartiallyAvailable = 0, doohCompletelyBooked = 0;
+    let tradedCount = 0, ownedCount = 0, leasedCount = 0;
 
     spaces.forEach(space => {
       const units = space.unit || 0;
       const occupied = space.occupiedUnits || 0;
 
-      // For DOOH
       if (space.spaceType === 'DOOH') {
         totalUnits += units;
         bookedUnits += occupied;
-
         if (occupied === 0) doohCompletelyAvailable++;
         else if (occupied < units) doohPartiallyAvailable++;
         else if (occupied === units) doohCompletelyBooked++;
       } else {
-        // For Static
-        if (occupied === 0) {
-          available++;
-        } else if (space.overlappingBooking) {
-          overlapping++;
-        } else {
-          booked++;
-        }
+        if (occupied === 0) available++;
+        else if (space.overlappingBooking) overlapping++;
+        else booked++;
       }
 
-      // Ownership/trade status
-      if (space.ownershipType === 'Traded') {
-        tradedCount++;
-      } else if (space.ownershipType === 'Owned') {
-        ownedCount++;
-      } else if (space.ownershipType === 'Leased') {
-        leasedCount++;
-      }
+      if (space.ownershipType === 'Traded') tradedCount++;
+      else if (space.ownershipType === 'Owned') ownedCount++;
+      else if (space.ownershipType === 'Leased') leasedCount++;
     });
 
     const dashboardStats = {
-      doohUtilization: {
-        totalUnits,
-        bookedUnits,
-        freeUnits: totalUnits - bookedUnits
-      },
-      staticAvailability: {
-        available,
-        booked,
-        overlapping
-      },
+      doohUtilization: { totalUnits, bookedUnits, freeUnits: totalUnits - bookedUnits },
+      staticAvailability: { available, booked, overlapping },
       doohAvailabilityStatus: {
         completelyAvailable: doohCompletelyAvailable,
         partiallyAvailable: doohPartiallyAvailable,
         completelyBooked: doohCompletelyBooked
       },
-      ownershipDistribution: {
-        traded: tradedCount,
-        owned: ownedCount,
-        leased: leasedCount
-      }
+      ownershipDistribution: { traded: tradedCount, owned: ownedCount, leased: leasedCount }
     };
-
     res.json(dashboardStats);
   } catch (error) {
     res.status(500).json({ error: 'Failed to compute dashboard stats', details: error.message });
   }
 });
 
-// READ ONE - GET /api/space/:id
 router.get('/:id', async (req, res) => {
   try {
     const space = await Space.findById(req.params.id);
@@ -753,6 +400,7 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch space', details: error.message });
   }
 });
+
 router.put('/:id/add-tag', async (req, res) => {
   const { tag } = req.body;
   try {
@@ -767,18 +415,13 @@ router.put('/:id/add-tag', async (req, res) => {
   }
 });
 
-// PUT /api/spaces/:id/remove-tag
 router.put('/:id/remove-tag', async (req, res) => {
   const { tag } = req.body;
   try {
     const space = await Space.findById(req.params.id);
     if (!space) return res.status(404).json({ message: 'Not found' });
 
-    const tagList = (space.tags || '')
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t && t !== tag);
-
+    const tagList = (space.tags || '').split(',').map(t => t.trim()).filter(t => t && t !== tag);
     space.tags = tagList.join(', ');
     await space.save();
     res.status(200).json(space);
@@ -788,73 +431,95 @@ router.put('/:id/remove-tag', async (req, res) => {
 });
 
 
-
+// --- FIX: This is the complete, corrected PUT route handler ---
 router.put('/:id', upload.fields([
-  { name: 'mainPhoto', maxCount: 1 },
-  { name: 'longShot', maxCount: 1 },
-  { name: 'closeShot', maxCount: 1 },
-  { name: 'otherPhotos', maxCount: 10 }
+    { name: 'mainPhoto', maxCount: 1 },
+    { name: 'longShot', maxCount: 1 },
+    { name: 'closeShot', maxCount: 1 },
+    { name: 'otherPhotos', maxCount: 10 }
 ]), async (req, res) => {
-  try {
-    const space = await Space.findById(req.params.id);
-    if (!space) {
-      return res.status(404).json({ error: 'Space not found' });
-    }
+    try {
+        const { id } = req.params;
+        const updateData = {};
 
-    // Update normal text fields
-    for (const key in req.body) {
-      space[key] = req.body[key];
-    }
+        const allowedFields = [
+            'spaceName', 'landlord', 'organization', 'peerMediaOwner', 
+            'ownershipType', 'spaceType', 'category', 'specification', 
+            'mediaType', 'illumination', 'price', 'footfall', 'audience', 
+            'demographics', 'width', 'height', 'address', 'city', 'state', 
+            'latitude', 'longitude', 'zone', 'tier', 'facing', 'faciaTowards',
+            'tags', 'previousBrands', 'additionalTags', 'description', 
+            'unit', 'dates', 'occupiedUnits'
+        ];
 
-    // Helper to upload a file and return S3 URL
-    const uploadAndReturnUrl = async (file) => {
-      const localPath = file.path;
-      const s3Key = `spaces/${req.params.id}/${file.filename}`;
-      const url = await uploadToS3(localPath, s3Key);
-      // fs.unlinkSync(localPath); // delete local file after upload
-      return url;
-    };
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                // Special handling for dates if they come as a comma-separated string
+                if (field === 'dates' && typeof req.body[field] === 'string') {
+                    updateData[field] = req.body[field].split(',').map(d => d.trim());
+                } else if (field === 'unit' || field === 'occupiedUnits' || field === 'price' || field === 'footfall' || field === 'width' || field === 'height') {
+                    // Convert numbers
+                    updateData[field] = parseFloat(req.body[field]);
+                    if (isNaN(updateData[field])) {
+                        delete updateData[field]; // Remove if not a valid number
+                    }
+                } else {
+                    updateData[field] = req.body[field];
+                }
+            }
+        }
+        
+        const uploadAndReturnUrl = async (file) => {
+            if (!file) return null;
+            const localPath = file.path;
+            const s3Key = `spaces/${id}/${file.filename}`; // Or a more structured path if needed
+            return await uploadToS3(localPath, s3Key);
+        };
 
-    // Update photos if new ones are uploaded
-    if (req.files['mainPhoto']) {
-      space.mainPhoto = await uploadAndReturnUrl(req.files['mainPhoto'][0]);
-    }
-    if (req.files['longShot']) {
-      space.longShot = await uploadAndReturnUrl(req.files['longShot'][0]);
-    }
-    if (req.files['closeShot']) {
-      space.closeShot = await uploadAndReturnUrl(req.files['closeShot'][0]);
-    }
-    if (req.files['otherPhotos']) {
-      const uploads = req.files['otherPhotos'].map(file => uploadAndReturnUrl(file));
-      space.otherPhotos = await Promise.all(uploads);
-    }
+        if (req.files['mainPhoto']) {
+            updateData.mainPhoto = await uploadAndReturnUrl(req.files['mainPhoto'][0]);
+        }
+        if (req.files['longShot']) {
+            updateData.longShot = await uploadAndReturnUrl(req.files['longShot'][0]);
+        }
+        if (req.files['closeShot']) {
+            updateData.closeShot = await uploadAndReturnUrl(req.files['closeShot'][0]);
+        }
+        if (req.files['otherPhotos']?.length > 0) {
+            const uploads = req.files['otherPhotos'].map(file => uploadAndReturnUrl(file));
+            const newPhotoUrls = await Promise.all(uploads);
+            const existingSpace = await Space.findById(id).select('otherPhotos');
+            // Append new photos to existing ones
+            updateData.otherPhotos = [...(existingSpace.otherPhotos || []), ...newPhotoUrls];
+        }
 
-    await space.save();
-    res.json(space);
-  } catch (error) {
-    console.error('Error updating space:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
+        const updatedSpace = await Space.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedSpace) {
+            return res.status(404).json({ error: 'Space not found' });
+        }
+
+        res.json(updatedSpace);
+
+    } catch (error) {
+        console.error('Error updating space:', error);
+        res.status(500).json({ error: 'Server error', details: error.message });
+    }
 });
+// --- End of corrected PUT route handler ---
+
 
 router.put('/:id/printingStatus', async (req, res) => {
   try {
     const space = await Space.findById(req.params.id);
-    if (!space) {
-      return res.status(404).json({ error: 'Space not found' });
-    }
+    if (!space) return res.status(404).json({ error: 'Space not found' });
 
-    const {
-      confirmed,
-      printingDate,
-      assignedPerson,
-      assignedAgency,
-      printingMaterial,
-      note
-    } = req.body;
+    const { confirmed, printingDate, assignedPerson, assignedAgency, printingMaterial, note } = req.body;
 
-    // Update fields only if they are provided
     if (confirmed !== undefined) space.printingStatus.confirmed = confirmed;
     if (printingDate !== undefined) space.printingStatus.printingDate = printingDate;
     if (assignedPerson !== undefined) space.printingStatus.assignedPerson = assignedPerson;
@@ -863,7 +528,6 @@ router.put('/:id/printingStatus', async (req, res) => {
     if (note !== undefined) space.printingStatus.note = note;
 
     await space.save();
-
     res.json(space);
   } catch (error) {
     console.error('Error updating printing status:', error);
@@ -874,25 +538,12 @@ router.put('/:id/printingStatus', async (req, res) => {
 router.put('/:id/digitalStatus', async (req, res) => {
   try {
     const space = await Space.findById(req.params.id);
-    if (!space) {
-      return res.status(404).json({ error: 'Space not found' });
-    }
+    if (!space) return res.status(404).json({ error: 'Space not found' });
 
-    const {
-      confirmed,
-      isLive,
-      goLiveDate,
-      assignedPerson,
-      assignedAgency,
-      note
-    } = req.body;
+    const { confirmed, isLive, goLiveDate, assignedPerson, assignedAgency, note } = req.body;
 
-    // Initialize nested object if not present
-    if (!space.digitalStatus) {
-      space.digitalStatus = {};
-    }
+    if (!space.digitalStatus) space.digitalStatus = {};
 
-    // Update only provided fields
     if (confirmed !== undefined) space.digitalStatus.confirmed = confirmed;
     if (isLive !== undefined) space.digitalStatus.isLive = isLive;
     if (goLiveDate !== undefined) space.digitalStatus.goLiveDate = goLiveDate;
@@ -901,7 +552,6 @@ router.put('/:id/digitalStatus', async (req, res) => {
     if (note !== undefined) space.digitalStatus.note = note;
 
     await space.save();
-
     res.json(space);
   } catch (error) {
     console.error('Error updating digital status:', error);
@@ -909,23 +559,12 @@ router.put('/:id/digitalStatus', async (req, res) => {
   }
 });
 
-
-
-
 router.put('/:id/mountingStatus', async (req, res) => {
   try {
     const space = await Space.findById(req.params.id);
-    if (!space) {
-      return res.status(404).json({ error: 'Space not found' });
-    }
+    if (!space) return res.status(404).json({ error: 'Space not found' });
 
-    const {
-      confirmed,
-      receivedDate,
-      assignedPerson,
-      assignedAgency,
-      note
-    } = req.body;
+    const { confirmed, receivedDate, assignedPerson, assignedAgency, note } = req.body;
 
     if (confirmed !== undefined) space.mountingStatus.confirmed = confirmed;
     if (receivedDate !== undefined) space.mountingStatus.mountingDate = receivedDate;
@@ -934,7 +573,6 @@ router.put('/:id/mountingStatus', async (req, res) => {
     if (note !== undefined) space.mountingStatus.note = note;
 
     await space.save();
-
     res.json(space);
   } catch (error) {
     console.error('Error updating mounting status:', error);
@@ -942,20 +580,15 @@ router.put('/:id/mountingStatus', async (req, res) => {
   }
 });
 
-
-// DELETE /api/spaces/:id
 router.delete('/:id', async (req, res) => {
   try {
     const space = await Space.findByIdAndDelete(req.params.id);
-    if (!space) {
-      return res.status(404).json({ error: 'Space not found' });
-    }
+    if (!space) return res.status(404).json({ error: 'Space not found' });
     res.json({ message: 'Space deleted successfully' });
   } catch (error) {
     console.error('Error deleting space:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 
 export default router;

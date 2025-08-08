@@ -3,32 +3,36 @@ import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 
 const spaceSchema = new Schema({
-  spaceName: { type: String }, // removed `required`
+  spaceName: { type: String },
   landlord: { type: String },
-  peerMediaOwner: { type: String },
-  spaceType: { type: String, enum: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk'] }, // removed `required`
-  spaceType: { type: String, enum: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk'] }, // removed `required`
-  traded: { type: Boolean, default: false },
-  category: { type: String, enum: ['Retail', 'Transit'] }, // removed `required`
+  
+  // FIX: Added the missing 'organization' field to match the form
+  organization: { type: String },
 
+  peerMediaOwner: { type: String },
+  spaceType: { type: String, enum: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk'] },
+  traded: { type: Boolean, default: false },
+  category: { type: String, enum: ['Retail', 'Transit'] },
 
   industry: {
     type: Schema.Types.ObjectId,
     ref: 'Industry'
   },
 
-
-  mediaType: { type: String, enum: ['Static', 'Digital', ""], default: "" }, // removed `required`
+  mediaType: { type: String, enum: ['Static', 'Digital', ""], default: "" },
   price: { type: Number },
   footfall: { type: Number },
   audience: { type: String },
   demographics: { type: String, enum: ['Urban', 'Rural'] },
   description: { type: String },
-  illuminations: { type: String, enum: ['Front lit', 'Back lit', 'Non lit'] },
 
-  unit: { type: Number, default: 1 }, // removed custom validator
+  // FIX: Renamed from 'illuminations' to 'illumination' to match the form
+  // Also ensured enum values match the frontend's expectation, including variations
+  illumination: { type: String, enum: ['Front Lit', 'Back Lit', 'Non Lit', 'Frontlit', 'Backlit', 'Nonlit'] },
+
+  unit: { type: Number, default: 1 },
   specification: { type: String, enum: ['LHS', 'RHS'], required: true },
-  occupiedUnits: { type: Number, default: 0 }, // removed validator
+  occupiedUnits: { type: Number, default: 0 },
 
   width: { type: Number },
   height: { type: Number },
@@ -37,13 +41,17 @@ const spaceSchema = new Schema({
   tags: { type: String },
   address: { type: String },
   city: { type: String },
-  state: { type: String }, // removed enum
+  state: { type: String },
   latitude: { type: String },
   longitude: { type: String },
   landmark: { type: String },
-  zone: { type: String }, // removed enum
-  ownershipType: { type: String }, // removed enum
-  tier: { type: String }, // removed enum
+  zone: { type: String },
+  ownershipType: { type: String },
+  tier: { type: String },
+  
+  // FIX: Added the missing 'facing' field to match the form
+  facing: { type: String },
+
   faciaTowards: { type: String },
   overlappingBooking: { type: Boolean, default: false },
 
@@ -72,25 +80,22 @@ const spaceSchema = new Schema({
 
   otherPhotos: [String],
   isInventoryEnabled: { type: Boolean, default: true },
-
-
   digitalStatus: {
     confirmed: { type: Boolean, default: false },
     assignedAgency: { type: String, default: '' },
     isLive: { type: Boolean, default: false },
     goLiveDate: { type: String, default: '' },
     note: { type: String }
-  }
-  ,
+  },
 
   availability: {
     type: String,
     default: 'Completely available',
   },
 
+  // This correctly stores the dates from your controller
   dates: [{ type: String }],
   campaignDates: [{
-    campaignId: { type: Schema.Types.ObjectId, ref: "Campaign" },
     startDate: { type: String, },
     endDate: { type: String, }
   }],

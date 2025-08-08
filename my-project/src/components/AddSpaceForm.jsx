@@ -7,6 +7,62 @@ import MapPreview from "./MapPreview";
 import Select from "react-select";
 import { useSidebar } from "../context/SidebarContext";
 
+// New component specifically for multi-select audience field with custom UI
+function MultiAudienceSelect({ label, name, value, onChange, options, mandatory }) {
+  // Ensure the form's value is treated as an array, defaulting to empty if it's not.
+  const valueAsArray = Array.isArray(value) ? value : [];
+  
+  // Map the array of string values back to react-select's { value, label } object format.
+  const selectedValueObjects = options.filter(option => valueAsArray.includes(option.value));
+
+  // Custom styles to highlight selected options green and hide the tags in the control.
+  const customStyles = {
+    option: (provided, state) => ({
+      ...provided,
+      // When an option is selected, make its background green.
+      backgroundColor: state.isSelected ? '#dcfce7' : state.isFocused ? '#f1f5f9' : null,
+      color: state.isSelected ? '#166534' : 'inherit',
+      // Keep a visible hover effect that doesn't override the green selection color.
+      '&:active': {
+        backgroundColor: state.isSelected ? '#bbf7d0' : '#e5e7eb',
+      },
+    }),
+    // Hide the individual tag containers for a cleaner look.
+    multiValue: () => ({ display: 'none' }),
+  };
+
+  const handleChange = (selectedOptions) => {
+    // Extract just the `value` from each selected option object.
+    const newValues = selectedOptions ? selectedOptions.map(opt => opt.value) : [];
+    // Call the form's change handler with the name and the new array of values.
+    onChange({ target: { name, value: newValues } });
+  };
+
+  return (
+    <div>
+      <label className="text-sm block mb-1">
+        {label}
+        {mandatory === "true" && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      <Select
+        isMulti
+        name={name}
+        // Filter out the initial "Select..." placeholder from the options list.
+        options={options.filter(o => o.value !== "")} 
+        className="w-3/4"
+        styles={customStyles}
+        value={selectedValueObjects}
+        onChange={handleChange}
+        // These two props are crucial for a good multi-select experience.
+        hideSelectedOptions={false}
+        closeMenuOnSelect={false}
+        placeholder="Select one or more audience types..."
+      />
+    </div>
+  );
+}
+
+
 export default function AddSpaceForm() {
   const navigate = useNavigate();
   const { isCollapsed } = useSidebar();
@@ -283,7 +339,7 @@ export default function AddSpaceForm() {
                     label="Inventory Owner (Organization)"
                     name="organization"
                     value={form.organization}
-                    disabled
+                    onChange={handleInputChange}
                   />
                   <Input
                     label="Peer Media Owner"
@@ -354,7 +410,8 @@ export default function AddSpaceForm() {
                     value={form.footfall}
                     onChange={handleInputChange}
                   />
-                  <CustomSelect
+                  {/* --- START: MODIFIED AUDIENCE FIELD --- */}
+                  <MultiAudienceSelect
                     label="Audience"
                     name="audience"
                     value={form.audience}
@@ -362,6 +419,7 @@ export default function AddSpaceForm() {
                     options={audienceOptions}
                     mandatory="true"
                   />
+                  {/* --- END: MODIFIED AUDIENCE FIELD --- */}
                   <Select1
                     label="Demographics"
                     name="demographics"

@@ -194,7 +194,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
 
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Upload Estimate Document
+                Upload Confirmation Document
               </label>
               <input
                 type="file"

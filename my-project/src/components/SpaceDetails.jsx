@@ -1,21 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import {toast} from 'sonner';
-import { useSidebar } from '../context/SidebarContext'; // 1. ADDED: Import the hook
+import { toast } from 'sonner';
+import { useSidebar } from '../context/SidebarContext';
 
-// Reusable component for Key-Value display
+// Reusable component for Key-Value display.
 const DetailItem = ({ label, value, className = '' }) => (
   <div className={`mb-3 ${className}`}>
     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
-    <p className="text-sm text-gray-800 break-words">{value || 'N/A'}</p>
+    <p className="text-sm text-gray-800 break-words">{value ?? 'N/A'}</p>
   </div>
 );
+
 
 export default function SpaceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isCollapsed } = useSidebar(); // 2. ADDED: Get the sidebar state
+  const { isCollapsed } = useSidebar();
   const [space, setSpace] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -55,25 +56,10 @@ export default function SpaceDetails() {
     fetchSpace();
   }, [id]);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    try {
-      const parts = dateString.split('-');
-      if (parts.length === 3) {
-        const day = parts[0]; const month = parts[1]; let year = parts[2];
-        if (year.length === 2) year = `20${year}`;
-        const date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-        return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'});
-      }
-      return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'});
-    } catch (e) { return dateString; }
-  };
-
   if (!space) {
     return (
       <div className="min-h-screen h-full w-full  text-black flex flex-col lg:flex-row overflow-x-hidden">
         <Navbar />
-        {/* 3a. ADDED: Dynamic class for main content area (loading state) */}
         <main className={`flex-1 flex items-center justify-center p-6 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
             <div className="text-xl text-gray-600">Loading space details...</div>
         </main>
@@ -84,7 +70,6 @@ export default function SpaceDetails() {
   return (
     <div className="min-h-screen h-screen w-screen text-black flex flex-col ">
       <Navbar />
-      {/* 3b. ADDED: Dynamic class for main content area */}
       <main className={`flex-1 overflow-y-auto px-4 md:px-10 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="flex justify-between items-center mb-6">
             <button
@@ -96,68 +81,92 @@ export default function SpaceDetails() {
             </svg>
             Back
             </button>
+            {/* --- START: Integrated Feature --- */}
             <div className='flex gap-4'>
-            <button
-                onClick={() => navigate(`/space/${id}/edit`)}
-                className="text-xs text-white bg-black px-4 py-2 rounded-md hover:bg-gray-800"
-            >
-            Edit Space
-            </button>
-            <button
-  onClick={async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${id}/toggle-inventory`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      });
+                <button
+                    onClick={() => navigate(`/space/${id}/edit`)}
+                    className="text-xs text-white bg-black px-4 py-2 rounded-md hover:bg-gray-800"
+                >
+                Edit Space
+                </button>
+                <button
+                    onClick={async () => {
+                        try {
+                        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${id}/toggle-inventory`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                        });
 
-      if (!response.ok) {
-        throw new Error('Failed to toggle inventory status.');
-      }
+                        if (!response.ok) {
+                            throw new Error('Failed to toggle inventory status.');
+                        }
 
-      const updated = await response.json();
-      setSpace(prev => ({ ...prev, isInventoryEnabled: updated.isInventoryEnabled }));
+                        const updated = await response.json();
+                        setSpace(prev => ({ ...prev, isInventoryEnabled: updated.isInventoryEnabled }));
 
-      toast.success(
-        updated.isInventoryEnabled ? 'Inventory enabled successfully.' : 'Inventory disabled successfully.'
-      );
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || 'Failed to toggle inventory status.');
-    }
-  }}
-  className="text-xs text-white bg-gray-600 px-4 py-2 rounded-md hover:bg-gray-700"
->
-  {space.isInventoryEnabled ? 'Disable Inventory' : 'Enable Inventory'}
-</button>
-</div>
+                        toast.success(
+                            updated.isInventoryEnabled ? 'Inventory enabled successfully.' : 'Inventory disabled successfully.'
+                        );
+                        } catch (err) {
+                        console.error(err);
+                        toast.error(err.message || 'Failed to toggle inventory status.');
+                        }
+                    }}
+                    className="text-xs text-white bg-gray-600 px-4 py-2 rounded-md hover:bg-gray-700"
+                    >
+                    {space.isInventoryEnabled ? 'Disable Inventory' : 'Enable Inventory'}
+                </button>
+            </div>
+            {/* --- END: Integrated Feature --- */}
         </div>
 
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg">
             <div className="mb-6 pb-4 border-b border-gray-200">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{space.spaceName || 'Unnamed Space'}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{space.spaceName ?? 'Unnamed Space'}</h1>
                 <p className="text-sm text-gray-500 mt-1">
-                    {space.address || 'N/A Address'}, {space.city || 'N/A City'}, {space.state || 'N/A State'}
+                    {space.address ?? 'N/A Address'}, {space.city ?? 'N/A City'}, {space.state ?? 'N/A State'}, {space.zip ?? ''}
                 </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2 mb-6">
+              {/* --- All Fields Corrected --- */}
+              <DetailItem label="Landlord" value={space.landlord} />
+              <DetailItem label="Inventory Owner (Organization)" value={space.organization} />
+              <DetailItem label="Peer Media Owner" value={space.peerMediaOwner} />
+              <DetailItem label="Ownership Type" value={space.ownershipType} />
+
+              {/* FIX: Reading from the `dates` array at index 0 and 1 */}
+              <DetailItem label="Start Date" value={space.dates?.[0]} />
+              <DetailItem label="End Date" value={space.dates?.[1]} />
+
               <DetailItem label="Category" value={space.category} />
-              <DetailItem label="Space Type" value={space.spaceType} />
-              <DetailItem label="Price" value={`₹${space.price?.toLocaleString() || 'N/A'}`} />
-              <DetailItem label="Footfall" value={space.footfall?.toLocaleString() || 'N/A'} />
+              <DetailItem label="Specification" value={space.specification} />
+              <DetailItem label="Price" value={space.price ? `₹${space.price.toLocaleString()}`: null} />
+              <DetailItem label="Footfall" value={space.footfall ? space.footfall.toLocaleString() : null} />
               <DetailItem label="Audience" value={space.audience} />
               <DetailItem label="Demographics" value={space.demographics} />
+              <DetailItem label="Illumination" value={space.illumination} />
+              <DetailItem label="Space Type" value={space.spaceType} />
+              {space.spaceType === 'DOOH' && (
+                <>
+                  <DetailItem label="Unit" value={space.unit} />
+                  <DetailItem label="Resolution" value={space.resolution} />
+                </>
+              )}
+              <DetailItem label="Width (ft)" value={space.width} />
+              <DetailItem label="Height (ft)" value={space.height} />
+              <DetailItem label="Additional Tags" value={space.additionalTags} />
+              <DetailItem label="Previous Brands" value={space.previousBrands} />
+              <DetailItem label="Tags" value={space.tags} />
+              <DetailItem label="Landmark" value={space.landmark} />
               <DetailItem label="Zone" value={space.zone} />
+              <DetailItem label="Tier" value={space.tier} />
               <DetailItem label="Facing" value={space.facing} />
               <DetailItem label="Facia Towards" value={space.faciaTowards} />
-              <DetailItem label="Tier" value={space.tier} />
               <DetailItem label="Latitude" value={space.latitude} />
               <DetailItem label="Longitude" value={space.longitude} />
-              <DetailItem label="Available From" value={formatDate(space.dates?.[0])} />
-              <DetailItem label="Available To" value={formatDate(space.dates?.[1])} />
               <DetailItem label="Total Units" value={space.unit} />
-              <DetailItem label="Occupied Units" value={space.occupiedUnits || 0} />
+              <DetailItem label="Occupied Units" value={space.occupiedUnits} />
             </div>
 
             {space.description && (
@@ -203,7 +212,6 @@ export default function SpaceDetails() {
             </div>
         </div>
 
-
         <div className="flex text-xs gap-4 mt-8 pt-6 border-t border-gray-300">
           <button
             onClick={() => setShowModal(true)}
@@ -212,8 +220,8 @@ export default function SpaceDetails() {
             Delete Space
           </button>
         </div>
-
       </main>
+
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-50 rounded-lg shadow-xl p-6 w-full max-w-md flex flex-col gap-4">
