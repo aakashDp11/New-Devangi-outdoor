@@ -1503,6 +1503,8 @@ export default function InventoryDashboard() {
               <option value="DOOH">DOOH</option>
               <option value="Pole Kiosk">Pole Kiosk</option>
               <option value="Gantry">Gantry</option>
+              <option value="BQS">BQS</option>
+              <option value="Miscellaneous">Miscellaneous</option>
             </select>
 
             <select className="px-3 py-2 border rounded-md w-full md:w-auto bg-white" value={ownershipType} onChange={(e) => setOwnershipType(e.target.value)}>

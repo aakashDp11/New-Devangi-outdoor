@@ -10,7 +10,7 @@ const spaceSchema = new Schema({
   organization: { type: String },
 
   peerMediaOwner: { type: String },
-  spaceType: { type: String, enum: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk'] },
+  spaceType: { type: String, enum: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk', 'BQS', 'Miscellaneous'] },
   traded: { type: Boolean, default: false },
   category: { type: String, enum: ['Retail', 'Transit'] },
 

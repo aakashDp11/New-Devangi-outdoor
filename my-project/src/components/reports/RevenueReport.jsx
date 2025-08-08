@@ -717,6 +717,8 @@ export default function RevenueReport({
                 <option value="DOOh">DOOh</option>
                 <option value="Gantry">Gantry</option>
                 <option value="Pole kiosk">Pole kiosk</option>
+                <option value="BQS">BQS</option>
+                <option value="Miscellaneous">Miscellaneous</option>
             </Select>
             <button
               onClick={() => {
@@ -786,6 +788,8 @@ export default function RevenueReport({
                 <option value="DOOh">DOOh</option>
                 <option value="Gantry">Gantry</option>
                 <option value="Pole kiosk">Pole kiosk</option>
+                <option value="BQS">BQS</option>
+                <option value="Miscellaneous">Miscellaneous</option>
             </Select>
             <button
               onClick={() => {

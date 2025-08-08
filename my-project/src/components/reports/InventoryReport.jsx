@@ -249,6 +249,8 @@ export default function InventoryReport({ handleShowDateModal = () => { } }) {
                             <option value="Billboard">Billboard</option>
                             <option value="Gantry">Gantry</option>
                             <option value="Pole Kiosk">Pole Kiosk</option>
+                            <option value="BQS">BQS</option>
+                            <option value="Miscellaneous">Miscellaneous</option>
                         </Select>
                         <Input
                             label="Filter by Agency"

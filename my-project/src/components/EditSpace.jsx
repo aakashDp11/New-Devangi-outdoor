@@ -51,7 +51,7 @@ export default function EditSpace() {
   const ownershipOptions = ["Owned", "Leased", "Traded"];
   const illuminationOptions = ["Front Lit", "Back Lit", "Non Lit"];
   const specificationOptions = ["LHS", "RHS"];
-  const spaceTypeOptions = ["Billboard", "DOOH", "Pole Kiosk", "Gantry"];
+  const spaceTypeOptions = ["Billboard", "DOOH", "Pole Kiosk", "Gantry", "BQS", "Miscellaneous"];
   const categoryOptions = ["Retail", "Transit"];
   const mediaTypeOptions = ["Static", "Digital"];
   const audienceOptions = [

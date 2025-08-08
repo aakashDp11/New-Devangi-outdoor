@@ -23,6 +23,8 @@ export const createSpace = async (req, res) => {
       DOOH: 10,
       'Pole kiosk': 10,
       Gantry: 1,
+      BQS: 1,
+      Miscellaneous: 1,
     };
 
     const allowedUnit = maxUnitMap[body.spaceType];

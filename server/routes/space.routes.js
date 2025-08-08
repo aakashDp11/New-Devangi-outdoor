@@ -91,7 +91,7 @@ router.get('/available', async (req, res) => {
 });
 
 const ENUMS = {
-  spaceType: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk'],
+  spaceType: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk' , 'BQS', 'Miscellaneous'],
   category: ['Retail', 'Transit'],
   mediaType: ['Static', 'Digital'],
   audience: ['Youth', 'Working Professionals'], // Add specific audience enums if applicable

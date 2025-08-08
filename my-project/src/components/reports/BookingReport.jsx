@@ -68,7 +68,7 @@ const industryOptions = [
   "FMCG", "Finance", "Financial Services", "Healthcare", "Hospitality", "IT Industry",
   "Automobile", "Clothing & Apparel", "Ecommerce", "Edtech", "Entertainment",
 ];
-const inventoryTypeOptions = ["Billboard", "DOOH", "Gantry", "Pole Kiosk"];
+const inventoryTypeOptions = ["Billboard", "DOOH", "Gantry", "Pole Kiosk", "BQS", "Miscellaneous"];
 
 export default function BookingReport({ handleShowDateModal = () => {} }) {
   const navigate = useNavigate();
