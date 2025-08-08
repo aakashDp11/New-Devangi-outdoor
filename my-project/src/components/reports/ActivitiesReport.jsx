@@ -2,19 +2,63 @@ import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import dayjs from "dayjs";
-import {
-  Card,
-  CardContent,
-  Input,
-  Button,
-  PaginationControls,
-} from "./UIComponents";
+
+// --- UI Components (Defined locally for consistent styling) ---
+const Card = ({ children, className }) => (
+  <div className={`bg-white shadow-md rounded-lg overflow-hidden ${className}`}>
+    {children}
+  </div>
+);
+
+const CardContent = ({ children }) => <div className="p-6">{children}</div>;
+
+const Input = ({ ...props }) => (
+  <input
+    className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+    {...props}
+  />
+);
+
+const Button = ({ children, ...props }) => (
+  <button
+    className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+    {...props}
+  >
+    {children}
+  </button>
+);
+
+const PaginationControls = ({ currentPage, totalPages, onPageChange }) => (
+  <div className="flex justify-end items-center mt-4 text-xs">
+    <span className="mr-4 text-gray-600">
+      Page {currentPage} of {totalPages}
+    </span>
+    <div className="flex">
+      <button
+        onClick={() => onPageChange((p) => Math.max(1, p - 1))}
+        disabled={currentPage === 1}
+        className="px-3 py-1 border rounded-l-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Previous
+      </button>
+      <button
+        onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1 border-t border-b border-r rounded-r-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+);
+// --- End of UI Components ---
+
 
 const ITEMS_PER_PAGE = 10;
+const API_MAX_LIMIT = 50; // Use a larger limit for download fetches
 
 // Helper to render object values safely
 const renderObjectDetails = (value) => {
-  // Check if the value is a non-null object
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return Object.entries(value).map(([key, val]) => (
       <div key={key}>
@@ -22,7 +66,6 @@ const renderObjectDetails = (value) => {
       </div>
     ));
   }
-  // Handle other types if necessary, or return null/empty
   return null;
 };
 
@@ -36,17 +79,23 @@ export default function ActivitiesReport({ handleShowDateModal }) {
   const [changelogCurrentPage, setChangelogCurrentPage] = useState(1);
   const [changelogTotalPages, setChangelogTotalPages] = useState(1);
 
-  // Combined useEffect to handle fetching data
   useEffect(() => {
     fetchChangelogs();
   }, [changelogCurrentPage, changelogFilters]);
 
-  const fetchChangelogs = async (pageOverride = null) => {
-    try {
-      const pageToFetch = pageOverride || changelogCurrentPage;
+  const resetChangelogFilters = () => {
+    setChangelogFilters({
+      searchText: "",
+      startDate: "",
+      endDate: "",
+    });
+    setChangelogCurrentPage(1);
+  };
 
+  const fetchChangelogs = async () => {
+    try {
       const params = new URLSearchParams({
-        page: pageToFetch,
+        page: changelogCurrentPage,
         limit: ITEMS_PER_PAGE,
       });
       if (changelogFilters.searchText)
@@ -64,33 +113,70 @@ export default function ActivitiesReport({ handleShowDateModal }) {
       const data = await res.json();
       setChangelogs(data.changelogs || []);
       setChangelogTotalPages(data.totalPages || 1);
-      setChangelogCurrentPage(data.currentPage || 1); // update in case backend overrides
     } catch (err) {
       console.error("Failed to fetch changelogs:", err);
     }
   };
 
-  const getChangelogRowsForExcel = () =>
-    changelogs.map((log) => ({
-      Campaign: log.campaignId?.campaignName || "",
-      User: log.userName || log.userId?.name || "",
-      Email: log.userEmail,
-      ChangeType: log.changeType,
-      Previous: JSON.stringify(log.previousValue),
-      New: JSON.stringify(log.newValue),
-      Date: dayjs(log.createdAt).format("DD MMM YYYY HH:mm"),
-    }));
+  // MODIFICATION: This function now fetches the complete report for download
+  const downloadChangelogExcel = async () => {
+    try {
+        const fetchAllChangelogs = async () => {
+            let allLogs = [];
+            let currentPage = 1;
+            let totalPages = 1;
 
-  const downloadChangelogExcel = () => {
-    const rows = getChangelogRowsForExcel();
-    const sheet = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, sheet, "Changelogs");
-    const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    saveAs(
-      new Blob([buf], { type: "application/octet-stream" }),
-      `changelogs_page_${changelogCurrentPage}.xlsx`
-    );
+            do {
+                const params = new URLSearchParams({
+                    page: currentPage,
+                    limit: API_MAX_LIMIT, // Fetch more items per page for download
+                });
+                if (changelogFilters.searchText) params.append("search", changelogFilters.searchText);
+                if (changelogFilters.startDate) params.append("startDate", changelogFilters.startDate);
+                if (changelogFilters.endDate) params.append("endDate", changelogFilters.endDate);
+
+                const res = await fetch(
+                    `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log?${params.toString()}`
+                );
+
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                const data = await res.json();
+                allLogs = allLogs.concat(data.changelogs || []);
+                totalPages = data.totalPages || 1;
+                currentPage++;
+            } while (currentPage <= totalPages);
+            return allLogs;
+        };
+
+        const allData = await fetchAllChangelogs();
+
+        if (allData.length === 0) {
+            alert("No changelog data to download for the selected filters.");
+            return;
+        }
+
+        const rows = allData.map((log) => ({
+            Campaign: log.campaignId?.campaignName || "N/A",
+            User: log.userName || log.userId?.name || "N/A",
+            Email: log.userEmail || "N/A",
+            ChangeType: log.changeType,
+            Previous: JSON.stringify(log.previousValue),
+            New: JSON.stringify(log.newValue),
+            Date: dayjs(log.createdAt).format("DD MMM YYYY HH:mm"),
+        }));
+
+        const sheet = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, "Changelogs");
+        const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        saveAs(
+            new Blob([buf], { type: "application/octet-stream" }),
+            `changelogs_report_${dayjs().format("YYYYMMDD")}.xlsx`
+        );
+    } catch (error) {
+        console.error("Error downloading changelog report:", error);
+        alert("Failed to download full changelog report. Please try again.");
+    }
   };
 
   return (
@@ -99,7 +185,7 @@ export default function ActivitiesReport({ handleShowDateModal }) {
         <h3 className="text-lg font-semibold mb-4 text-gray-800">
           Change Logs
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-center">
           <Input
             placeholder="Search..."
             value={changelogFilters.searchText}
@@ -108,7 +194,7 @@ export default function ActivitiesReport({ handleShowDateModal }) {
                 ...changelogFilters,
                 searchText: e.target.value,
               });
-              fetchChangelogs(1); // force page 1 when filters are applied
+              setChangelogCurrentPage(1);
             }}
           />
           <button
@@ -118,7 +204,7 @@ export default function ActivitiesReport({ handleShowDateModal }) {
                 changelogFilters,
                 (newFilters) => {
                   setChangelogFilters(newFilters);
-                  fetchChangelogs(1);
+                  setChangelogCurrentPage(1);
                 }
               );
             }}
@@ -128,8 +214,12 @@ export default function ActivitiesReport({ handleShowDateModal }) {
               ? `${changelogFilters.startDate} to ${changelogFilters.endDate}`
               : "Filter by Log Date"}
           </button>
-          <Button onClick={downloadChangelogExcel} className="h-full">
-            Download Excel (Current Page)
+          {/* MODIFICATION: Updated button text to 'Download Full Report' */}
+          <Button onClick={downloadChangelogExcel} disabled={changelogs.length === 0}>
+            Download Full Report
+          </Button>
+          <Button onClick={resetChangelogFilters}>
+            Reset Filters
           </Button>
         </div>
 
