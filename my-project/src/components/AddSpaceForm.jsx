@@ -11,20 +11,38 @@ import { useSidebar } from "../context/SidebarContext";
 function MultiAudienceSelect({ label, name, value, onChange, options, mandatory }) {
   // Ensure the form's value is treated as an array, defaulting to empty if it's not.
   const valueAsArray = Array.isArray(value) ? value : [];
-  
-  // Map the array of string values back to react-select's { value, label } object format.
+
+  // Map the array of string values back to react-select's { value, label } object format for the control's value.
   const selectedValueObjects = options.filter(option => valueAsArray.includes(option.value));
 
-  // Custom styles to highlight selected options green and hide the tags in the control.
+  // Separate options into selected and not selected groups
+  const selectedOptions = options.filter(option => valueAsArray.includes(option.value) && option.value !== "");
+  const unselectedOptions = options.filter(option => !valueAsArray.includes(option.value) && option.value !== "");
+
+  // Create the grouped options structure for the dropdown
+  const groupedOptions = [];
+  if (selectedOptions.length > 0) {
+    groupedOptions.push({
+      label: 'Selected',
+      options: selectedOptions
+    });
+  }
+  if (unselectedOptions.length > 0) {
+    groupedOptions.push({
+      label: 'Not Selected',
+      options: unselectedOptions
+    });
+  }
+
+  // Custom styles to hide the tags in the control and apply a hover effect.
   const customStyles = {
     option: (provided, state) => ({
       ...provided,
-      // When an option is selected, make its background green.
-      backgroundColor: state.isSelected ? '#dcfce7' : state.isFocused ? '#f1f5f9' : null,
-      color: state.isSelected ? '#166534' : 'inherit',
-      // Keep a visible hover effect that doesn't override the green selection color.
+      // Retain a hover effect for better UX.
+      backgroundColor: state.isFocused ? '#f1f5f9' : null,
+      color: 'inherit',
       '&:active': {
-        backgroundColor: state.isSelected ? '#bbf7d0' : '#e5e7eb',
+        backgroundColor: '#e5e7eb',
       },
     }),
     // Hide the individual tag containers for a cleaner look.
@@ -37,6 +55,15 @@ function MultiAudienceSelect({ label, name, value, onChange, options, mandatory 
     // Call the form's change handler with the name and the new array of values.
     onChange({ target: { name, value: newValues } });
   };
+  
+  // Custom function to render options with a tick mark if selected
+  const formatOptionLabel = ({ label, value }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {label}
+      {valueAsArray.includes(value) && <span>✓</span>}
+    </div>
+  );
+
 
   return (
     <div>
@@ -47,13 +74,14 @@ function MultiAudienceSelect({ label, name, value, onChange, options, mandatory 
       <Select
         isMulti
         name={name}
-        // Filter out the initial "Select..." placeholder from the options list.
-        options={options.filter(o => o.value !== "")} 
+        // Use the new grouped options
+        options={groupedOptions}
         className="w-3/4"
         styles={customStyles}
         value={selectedValueObjects}
         onChange={handleChange}
-        // These two props are crucial for a good multi-select experience.
+        // Custom renderer for options in the menu
+        formatOptionLabel={formatOptionLabel}
         hideSelectedOptions={false}
         closeMenuOnSelect={false}
         placeholder="Select one or more audience types..."

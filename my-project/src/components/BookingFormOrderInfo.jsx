@@ -66,11 +66,10 @@ export default function BookingFormOrderInfo() {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/selectcampaignSpaces`);
       const data = await res.json();
       const transformed = data.filter(space => {
-        // ✅ If the field is undefined, skip filtering — include the space
         if (typeof space.isInventoryEnabled === 'undefined') return true;
         return space.isInventoryEnabled === true;
       })
-.map(space => ({
+      .map(space => ({
         id: space._id,
         name: space.spaceName,
         facia: space.faciaTowards,
@@ -86,7 +85,10 @@ export default function BookingFormOrderInfo() {
         traded: space.traded,
         mainPhoto:space.mainPhoto,
         overlappingBooking: space.overlappingBooking,
-        
+        // --- START: THE FINAL FIX ---
+        width: space.width,
+        height: space.height,
+        // --- END: THE FINAL FIX ---
         availableFrom: space.dates?.[0],
         availableTo: space.dates?.[space.dates.length - 1],
         status: space.occupiedUnits === 0
@@ -361,7 +363,6 @@ function Input({ label, ...props }) {
 export function CustomSelect({ label, value, onChange, name, options, mandatory }) {
   const selected = options.find((o) => o.value === value) || null;
 
-  // Custom styles to enforce exact height and consistent styling
   const customStyles = {
     control: (provided) => ({
       ...provided,

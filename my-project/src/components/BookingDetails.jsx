@@ -4,11 +4,10 @@ import { toast } from "sonner";
 import Navbar from "./Navbar";
 import { PieChart } from "@mui/x-charts/PieChart";
 import InventorySelector from "./BookingFormAddSpaces";
-import { useSidebar } from "../context/SidebarContext"; // 1. IMPORT THE CENTRALIZED HOOK
+import { useSidebar } from "../context/SidebarContext";
 import { FaArrowLeft } from "react-icons/fa";
 import axios from "axios";
 
-// MODIFIED InfoDetail component for Key-Above-Value display
 const InfoDetail = ({ label, value }) => (
   <div className="mb-3">
     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -25,17 +24,17 @@ export default function BookingDetails() {
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [campaignDrafts, setCampaignDrafts] = useState([]);
   const [spaces, setSpaces] = useState([]);
-
-  // 2. USE THE SIDEBAR CONTEXT - This is the correct way
   const { isCollapsed } = useSidebar();
-  // REMOVED: const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const fetchSpaces = async () => {
       const token = localStorage.getItem("accessToken");
+      
+      // --- START: THIS IS THE CORRECTED CODE ---
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/spaces`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/spaces/selectcampaignSpaces`, // Use the corrected, specific API route
         {
+      // --- END: THIS IS THE CORRECTED CODE ---
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -43,6 +42,8 @@ export default function BookingDetails() {
         }
       );
       const data = await res.json();
+      console.log("Data fetched from /selectcampaignSpaces:", data); // Confirming the correct endpoint was called
+
       const transformed = data.map((space) => ({
         id: space._id,
         name: space.spaceName,
@@ -57,9 +58,9 @@ export default function BookingDetails() {
         traded: space.traded,
         mainPhoto: space.mainPhoto,
         overlappingBooking: space.overlappingBooking,
-        specification: space.specification, // Also adding specification, as it's used
-        width: space.width,                 // <-- THE FIX
-        height: space.height,               // <-- THE FIX
+        specification: space.specification,
+        width: space.width,
+        height: space.height,
         availableFrom: space.dates?.[0],
         availableTo: space.dates?.[space.dates.length - 1],
         status:
@@ -73,8 +74,6 @@ export default function BookingDetails() {
     };
     fetchSpaces();
   }, []);
-
-  console.log("This is Spaces Fetch from the Backend: ", spaces);
 
   useEffect(() => {
     const fetchBooking = async () => {
@@ -100,7 +99,6 @@ export default function BookingDetails() {
     };
     fetchBooking();
   }, [id]);
-  console.log("Booking details:", booking);
 
   const industryOptions = [
     { value: "Tourism", label: "Tourism" },
@@ -149,8 +147,6 @@ export default function BookingDetails() {
 
   const saveDraftCampaign = async (index) => {
     const campaign = campaignDrafts[index];
-    console.log("Saving campaign draft:", campaign);
-
     const payload = {
       ...campaign,
       spaces: campaign.selectedSpaces.map((space) => ({
@@ -159,14 +155,6 @@ export default function BookingDetails() {
       })),
     };
 
-    console.log("Payload to save:", payload);
-
-    // const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings/${booking._id}/campaigns`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(campaign),
-    // });
-    //
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/bookings/${
@@ -286,12 +274,8 @@ export default function BookingDetails() {
   ];
 
   return (
-    // 3. THE FIX: Use `w-screen` to force the container to take the full viewport width
     <div className="min-h-screen bg-white w-screen text-base-content">
-      {/* Navbar no longer needs props */}
       <Navbar />
-
-      {/* Main content uses the global isCollapsed state for its margin */}
       <main
         className={`h-full overflow-y-auto px-4 sm:px-6 py-6 transition-all duration-300 ${
           isCollapsed ? "lg:ml-24" : "lg:ml-64"
@@ -327,8 +311,8 @@ export default function BookingDetails() {
               {clientInfoData.map(({ key, label, value }) => {
                 if (key === "bookingSource" && value === "Agency") {
                   return (
-                    <>
-                      <InfoDetail key={key} label={label} value={value} />
+                    <React.Fragment key={key}>
+                      <InfoDetail label={label} value={value} />
                       <div className="mb-3">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Agency Name
@@ -337,10 +321,9 @@ export default function BookingDetails() {
                           {booking.agencyName ?? "NA"}
                         </p>
                       </div>
-                    </>
+                    </React.Fragment>
                   );
                 }
-
                 return <InfoDetail key={key} label={label} value={value} />;
               })}
             </div>
@@ -353,8 +336,7 @@ export default function BookingDetails() {
             {booking.isFOCBooking ? (
               <div className="flex items-center justify-center h-48">
                 <p className="text-gray-500 text-md text-center">
-                  {" "}
-                  This is a FOC booking{" "}
+                  This is a FOC booking
                 </p>
               </div>
             ) : (
@@ -362,8 +344,7 @@ export default function BookingDetails() {
                 {totalPaid === 0 && totalDue === 0 && grandTotal === 0 ? (
                   <div className="flex items-center justify-center h-48">
                     <p className="text-gray-500 text-md text-center">
-                      {" "}
-                      Please enter the payment details{" "}
+                      Please enter the payment details
                     </p>
                   </div>
                 ) : (
@@ -522,10 +503,6 @@ export default function BookingDetails() {
                   updateDraftCampaign(index, updated);
                 }}
               />
-              {/* <Input label="Industry" value={campaign.industry} onChange={e => {
-        const updated = { ...campaign, industry: e.target.value };
-        updateDraftCampaign(index, updated);
-      }} /> */}
               <CustomSelect
                 label="Industry"
                 name="industry"
@@ -656,7 +633,6 @@ export default function BookingDetails() {
   );
 }
 
-// MODIFICATION: Added 'text-xs' class to the input element for consistent font size
 function Input({ label, ...props }) {
   return (
     <div>

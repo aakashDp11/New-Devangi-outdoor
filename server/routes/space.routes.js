@@ -218,7 +218,9 @@ router.get('/selectcampaignSpaces', async (req, res) => {
       traded: 1,
       overlappingBooking: 1,
       dates: 1,
-      mainPhoto: 1
+      mainPhoto: 1,
+      width: 1,
+      height: 1,
     });
 
     res.json(spaces);

@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
 import { DateRange } from 'react-date-range';
+import dayjs from 'dayjs'; // <-- STEP 1: IMPORT DAYJS
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 
 import Navbar from './Navbar';
-// Import the updated set of components
 import RevenueReport from './reports/RevenueReport';
 import BookingReport from './reports/BookingReport';
 import InventoryReport from './reports/InventoryReport';
@@ -17,15 +17,12 @@ export default function Report() {
     const { isCollapsed } = useSidebar();
     const navigate = useNavigate();
     
-    // Updated tab state, starting with 'revenue'
     const [activeTab, setActiveTab] = useState('revenue');
     
-    // State for shared data
     const [allBookingsForPayments, setAllBookingsForPayments] = useState([]);
     const [bookingStats, setBookingStats] = useState([]);
     const [loadingCharts, setLoadingCharts] = useState(true);
 
-    // State for the shared Date Picker Modal
     const [activeDateModal, setActiveDateModal] = useState(null);
     const [tempDateRange, setTempDateRange] = useState([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
     const [currentFilterUpdater, setCurrentFilterUpdater] = useState(null);
@@ -38,7 +35,6 @@ export default function Report() {
     const fetchAllBookingsForPaymentReport = async () => {
         try {
             const token = localStorage.getItem('accessToken');
-            // Removed the `limit` param to fetch all records as the endpoint likely intends
             const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`, {
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             });
@@ -73,11 +69,13 @@ export default function Report() {
         }
     };
 
+    // --- STEP 2: REPLACE THIS FUNCTION ---
     const formatDateForPicker = (date) => {
         if (!date) return '';
-        const adjustedDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
-        return adjustedDate.toISOString().split('T')[0];
+        // This is now simpler and more reliable.
+        return dayjs(date).format('YYYY-MM-DD');
     };
+    // ------------------------------------
 
     const handleShowDateModal = (filterType, currentFilters, setFilterFunc) => {
         const startDate = currentFilters.startDate ? new Date(currentFilters.startDate) : new Date();
@@ -111,6 +109,7 @@ export default function Report() {
                             loadingCharts={loadingCharts} 
                             allBookingsForPayments={allBookingsForPayments} 
                             handleShowDateModal={handleShowDateModal} 
+                            navigate={navigate} // Pass navigate prop
                         />;
             case 'bookings':
                 return <BookingReport handleShowDateModal={handleShowDateModal} />;

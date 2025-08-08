@@ -11,53 +11,48 @@ export default function InventorySelector({
   onUpdateSelectedUnits,
   onSearchChange
 }) {
-  const [selectedSpace, setSelectedSpace] = useState(null); // State to manage selected space for the modal
+  const [selectedSpace, setSelectedSpace] = useState(null);
 
   const parseDDMMYY = (str) => {
-    // Return early if the string is invalid to prevent errors
     if (!str || typeof str !== 'string') return null;
     const parts = str.split("-");
     if (parts.length !== 3) return null;
 
     const [dd, mm, yy] = parts;
     const fullYear = yy.length === 2 ? `20${yy}` : yy;
-    // Create a new date object. Note: Month is 0-indexed in JavaScript's Date object.
     const date = new Date(fullYear, mm - 1, dd);
-    // Basic validation to check if the constructed date is valid
     if (isNaN(date.getTime())) return null;
     return date;
   };
 
-
   const isSpaceAvailableInRange = (space) => {
     try {
       if (!startDate || !endDate) return false;
+
       const spaceStart = parseDDMMYY(space.availableFrom);
       const spaceEnd = parseDDMMYY(space.availableTo);
 
-      // If date parsing fails, treat as unavailable
       if (!spaceStart || !spaceEnd) return false;
 
       const selectedStart = new Date(startDate);
+      // --- FIX IS HERE ---
       const selectedEnd = new Date(endDate);
+      // --- END OF FIX ---
 
       return selectedStart >= spaceStart && selectedEnd <= spaceEnd;
-    } catch (err) { // <<< FIX IS HERE
+    } catch (err) {
       console.error("Error checking availability range:", err);
       return false;
     }
   };
 
   const filteredSpaces = (spaces || []).filter(space => {
-    // Initial basic filtering
     if (!isSpaceAvailableInRange(space)) return false;
     if (space.overlappingBooking && space.status === 'Completely booked') return false;
     if ((space.status === 'Completely available' || space.status === 'Partialy available') && space.traded) return false;
 
-    // Search query filtering
     if (campaign.searchQuery?.trim()) {
       const query = campaign.searchQuery.toLowerCase();
-      // Check against multiple fields, ensuring they exist before calling toLowerCase
       return (
         (space.name || '').toLowerCase().includes(query) ||
         (space.city || '').toLowerCase().includes(query) ||
@@ -69,14 +64,103 @@ export default function InventorySelector({
     return true;
   });
 
-  // Function to handle space click for modal
+  const selectedSpaceIds = campaign.selectedSpaces?.map(s => s.id) || [];
+  const selectedTableSpaces = filteredSpaces.filter(space => selectedSpaceIds.includes(space.id));
+  const unselectedTableSpaces = filteredSpaces.filter(space => !selectedSpaceIds.includes(space.id));
+
   const handleSpaceClick = (space) => {
     setSelectedSpace(space);
   };
 
-  // Close the modal
   const closeModal = () => {
     setSelectedSpace(null);
+  };
+
+  const renderTableRow = (space, isSelectedRow) => {
+    const globallySelectedUnits = globalAvailability[space.id] || 0;
+    const currentCampaignUnits = campaign.selectedSpaces?.find(s => s.id === space.id)?.selectedUnits || 0;
+    const remainingUnits = space.unit - (space.occupiedUnits || 0) - globallySelectedUnits + currentCampaignUnits;
+    const updatedOccupiedUnits = (space.occupiedUnits || 0) + globallySelectedUnits - currentCampaignUnits;
+
+    const isActuallyBooked = updatedOccupiedUnits >= space.unit;
+    const canSelectUnits = remainingUnits > 0;
+    const isDOOH = space.spaceType === 'DOOH';
+
+    const rowClass = isSelectedRow
+      ? "text-center hover:bg-gray-50 bg-blue-50"
+      : "text-center hover:bg-gray-50";
+
+    return (
+      <tr key={space.id} className={rowClass}>
+        <td className="px-3 py-2">
+          <input
+            type="checkbox"
+            className="cursor-pointer"
+            checked={campaign.selectedSpaces?.some(s => s.id === space.id)}
+            onChange={() => onToggleSpaceSelection(campaignIndex, space.id)}
+          />
+        </td>
+        <td
+          className="px-3 py-2 font-medium text-blue-600 hover:underline cursor-pointer"
+          onClick={() => handleSpaceClick(space)}
+        >
+          {space.name}
+        </td>
+        <td className="px-3 py-2">{space.spaceType}</td>
+        <td className="px-3 py-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            space.status === "Completely available" ? "bg-green-100 text-green-700" :
+            space.status === "Partialy available" ? "bg-yellow-100 text-yellow-700" :
+            "bg-red-100 text-red-700"
+          }`}>
+            {space.status}
+          </span>
+        </td>
+        <td className="px-3 py-2">{space.facia}</td>
+        <td className="px-3 py-2">{space.city}</td>
+        <td className="px-3 py-2">{space.width || 'N/A'}</td>
+        <td className="px-3 py-2">{space.height || 'N/A'}</td>
+        <td className="px-3 py-2">
+          {(space.width && space.height) ? (space.width * space.height) : 'N/A'}
+        </td>
+        <td className="px-3 py-2">{space.specification}</td>
+        <td className="px-3 py-2">
+          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+            {space.ownershipType}
+          </span>
+        </td>
+        <td className="px-3 py-2">
+          {!isDOOH ? (
+            <span className="text-gray-400 italic">N/A</span>
+          ) : (
+            updatedOccupiedUnits
+          )}
+        </td>
+        <td className="px-3 py-2">
+          {!isDOOH ? (
+            <span className="text-gray-400 italic">N/A</span>
+          ) : (
+            space.unit
+          )}
+        </td>
+        <td className="px-3 py-2">
+          {!isDOOH || isActuallyBooked || !canSelectUnits ? (
+            <span className="text-gray-400 italic">N/A</span>
+          ) : (
+            <input
+              type="number"
+              min={1}
+              max={remainingUnits}
+              value={currentCampaignUnits || 1}
+              onChange={(e) => onUpdateSelectedUnits(campaignIndex, space.id, parseInt(e.target.value))}
+              className="w-16 border rounded px-1 text-center"
+              disabled={!campaign.selectedSpaces?.some(s => s.id === space.id)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+        </td>
+      </tr>
+    );
   };
 
   return (
@@ -96,9 +180,7 @@ export default function InventorySelector({
         </div>
       </div>
 
-      {/* This div enables horizontal scrolling on smaller screens */}
       <div className="overflow-x-auto border rounded">
-        {/* The whitespace-nowrap class is the key change to prevent columns from collapsing */}
         <table className="min-w-full text-xs whitespace-nowrap">
           <thead className="bg-gray-100">
             <tr className="text-center">
@@ -119,97 +201,21 @@ export default function InventorySelector({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filteredSpaces.map(space => {
-              const globallySelectedUnits = globalAvailability[space.id] || 0;
-              const currentCampaignUnits = campaign.selectedSpaces?.find(s => s.id === space.id)?.selectedUnits || 0;
-              const remainingUnits = space.unit - (space.occupiedUnits || 0) - globallySelectedUnits + currentCampaignUnits;
-              const updatedOccupiedUnits = (space.occupiedUnits || 0) + globallySelectedUnits - currentCampaignUnits;
+            {selectedTableSpaces.map(space => renderTableRow(space, true))}
 
-              const updatedStatus =
-                updatedOccupiedUnits >= space.unit
-                  ? 'Completely booked'
-                  : updatedOccupiedUnits === 0
-                  ? 'Completely available'
-                  : 'Partialy available';
-
-              const canSelectUnits = remainingUnits > 0;
-              const isDOOH = space.spaceType === 'DOOH';
-
-              return (
-                <tr key={space.id} className="text-center hover:bg-gray-50">
-                  <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      className="cursor-pointer"
-                      checked={campaign.selectedSpaces?.some(s => s.id === space.id)}
-                      onChange={() => onToggleSpaceSelection(campaignIndex, space.id)}
-                    />
-                  </td>
-                  <td
-                    className="px-3 py-2 font-medium text-blue-600 hover:underline cursor-pointer"
-                    onClick={() => handleSpaceClick(space)}
-                  >
-                    {space.name}
-                  </td>
-                  <td className="px-3 py-2">{space.spaceType}</td>
-                  <td className="px-3 py-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      updatedStatus === "Completely available" ? "bg-green-100 text-green-700" :
-                      updatedStatus === "Partialy available" ? "bg-yellow-100 text-yellow-700" :
-                      "bg-red-100 text-red-700"
-                    }`}>
-                      {updatedStatus}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">{space.facia}</td>
-                  <td className="px-3 py-2">{space.city}</td>
-                  <td className="px-3 py-2">{space.width}</td>
-                  <td className="px-3 py-2">{space.height}</td>
-                  <td className="px-3 py-2">{space.width * space.height}</td>
-                  <td className="px-3 py-2">{space.specification}</td>
-                  <td className="px-3 py-2">
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                      {space.ownershipType}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">
-                    {!isDOOH ? (
-                      <span className="text-gray-400 italic">N/A</span>
-                    ) : (
-                      updatedOccupiedUnits
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {!isDOOH ? (
-                      <span className="text-gray-400 italic">N/A</span>
-                    ) : (
-                      space.unit
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {!isDOOH || updatedStatus === "Completely booked" || !canSelectUnits ? (
-                      <span className="text-gray-400 italic">N/A</span>
-                    ) : (
-                      <input
-                        type="number"
-                        min={1}
-                        max={remainingUnits}
-                        value={currentCampaignUnits || 1}
-                        onChange={(e) => onUpdateSelectedUnits(campaignIndex, space.id, parseInt(e.target.value))}
-                        className="w-16 border rounded px-1 text-center"
-                        disabled={!campaign.selectedSpaces?.some(s => s.id === space.id)}
-                        onClick={(e) => e.stopPropagation()} // Prevent row click event when interacting with input
-                      />
-                    )}
-                  </td>
+            {selectedTableSpaces.length > 0 && unselectedTableSpaces.length > 0 && (
+                <tr className="bg-gray-200 font-semibold">
+                    <td colSpan="14" className="py-2 text-center text-gray-600">
+                        Not Selected
+                    </td>
                 </tr>
-              );
-            })}
+            )}
+
+            {unselectedTableSpaces.map(space => renderTableRow(space, false))}
           </tbody>
         </table>
       </div>
 
-      {/* Custom Modal to show the main photo */}
       {selectedSpace && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -226,7 +232,6 @@ export default function InventorySelector({
         </div>
       )}
 
-      {/* Modal Styling */}
       <style jsx>{`
         .modal-overlay {
           position: fixed;
@@ -267,7 +272,7 @@ export default function InventorySelector({
           height: auto;
           max-width: 80vw;
           max-height: 70vh;
-          object-fit: contain; /* Ensures image aspect ratio is maintained */
+          object-fit: contain;
           margin-top: 10px;
         }
 

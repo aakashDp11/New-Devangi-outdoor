@@ -193,7 +193,6 @@ export default function RevenueReport({
     }
   };
 
-  // --- MODIFICATION START: Download all payments ---
   const downloadPaymentsExcel = async () => {
     try {
       const fetchAllPayments = async () => {
@@ -204,7 +203,7 @@ export default function RevenueReport({
         do {
           const params = new URLSearchParams({
             page: currentPage,
-            limit: 50, // Fetch more items per page
+            limit: 50,
           });
           if (paymentFilters.clientName) params.append("clientName", paymentFilters.clientName);
           if (paymentFilters.bookingName) params.append("bookingName", paymentFilters.bookingName);
@@ -256,7 +255,6 @@ export default function RevenueReport({
       alert("Failed to download payments report. Please try again.");
     }
   };
-  // --- MODIFICATION END ---
   
   useEffect(() => {
     fetchRevenueByAgency();
@@ -372,8 +370,21 @@ export default function RevenueReport({
   });
   const [tradeMarginCurrentPage, setTradeMarginCurrentPage] = useState(1);
   const [tradeMarginTotalPages, setTradeMarginTotalPages] = useState(1);
-  const [tradeMarginLoading, setTradeMarginLoading] = useState(true);
-  const [tradeMarginError, setTradeMarginError] = useState(null);
+  const [tradeMarginTableLoading, setTradeMarginTableLoading] = useState(true);
+  const [tradeMarginTableError, setTradeMarginTableError] = useState(null);
+
+  // --- STATE & LOGIC FOR TRADE MARGIN GRAPH ---
+  const [tradeMarginGraphFilters, setTradeMarginGraphFilters] = useState({
+    bookingSearch: "",
+    inventorySearch: "",
+    inventoryType: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [tradeMarginChartView, setTradeMarginChartView] = useState("monthly");
+  const [tradeMarginChartData, setTradeMarginChartData] = useState({ xLabels: [], yData: [] });
+  const [tradeMarginGraphLoading, setTradeMarginGraphLoading] = useState(true);
+  const [tradeMarginGraphError, setTradeMarginGraphError] = useState(null);
 
   const resetTradeMarginFilters = () => {
     setTradeMarginFilters({
@@ -388,22 +399,32 @@ export default function RevenueReport({
 
   const handleTradeMarginFilterChange = (e) => {
     const { name, value } = e.target;
-    setTradeMarginFilters((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setTradeMarginFilters((prev) => ({ ...prev, [name]: value }));
     setTradeMarginCurrentPage(1);
   };
-  
-  const fetchTradeMarginReport = async () => {
-    setTradeMarginLoading(true);
-    setTradeMarginError(null);
 
+  const resetTradeMarginGraphFilters = () => {
+    setTradeMarginGraphFilters({
+        bookingSearch: "",
+        inventorySearch: "",
+        inventoryType: "",
+        startDate: "",
+        endDate: "",
+    });
+  };
+
+  const handleTradeMarginGraphFilterChange = (e) => {
+    const { name, value } = e.target;
+    setTradeMarginGraphFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const fetchTradeMarginTable = async () => {
+    setTradeMarginTableLoading(true);
+    setTradeMarginTableError(null);
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      setTradeMarginError("Authentication failed. Please log in again.");
-      setTradeMarginLoading(false);
-      if (navigate) navigate("/login");
+      setTradeMarginTableError("Authentication failed. Please log in again.");
+      setTradeMarginTableLoading(false);
       return;
     }
 
@@ -412,136 +433,136 @@ export default function RevenueReport({
         page: tradeMarginCurrentPage,
         limit: ITEMS_PER_PAGE,
       });
+      if (tradeMarginFilters.bookingSearch) params.append('booking', tradeMarginFilters.bookingSearch);
+      if (tradeMarginFilters.inventorySearch) params.append('inventory', tradeMarginFilters.inventorySearch);
+      if (tradeMarginFilters.inventoryType) params.append('inventoryType', tradeMarginFilters.inventoryType);
+      if (tradeMarginFilters.startDate) params.append('startDate', tradeMarginFilters.startDate);
+      if (tradeMarginFilters.endDate) params.append('endDate', tradeMarginFilters.endDate);
+
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/trade-margin?${params.toString()}`, { headers: { "Authorization": `Bearer ${token}` } });
+      if (!res.ok) throw new Error(`Failed to fetch report: ${res.statusText}`);
       
-      if (tradeMarginFilters.bookingSearch) {
-        params.append('bookingSearch', tradeMarginFilters.bookingSearch);
-      }
-      if (tradeMarginFilters.inventorySearch) {
-        params.append('inventorySearch', tradeMarginFilters.inventorySearch);
-      }
-      if (tradeMarginFilters.inventoryType) {
-        params.append('inventoryType', tradeMarginFilters.inventoryType);
-      }
-      if (tradeMarginFilters.startDate) {
-        params.append('startDate', tradeMarginFilters.startDate);
-      }
-      if (tradeMarginFilters.endDate) {
-        params.append('endDate', tradeMarginFilters.endDate);
-      }
-
-      const res = await fetch(
-        `${
-          import.meta.env.VITE_API_BASE_URL
-        }/api/reports/trade-margin?${params.toString()}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-            localStorage.clear();
-            if (navigate) navigate("/login");
-            throw new Error("Session expired. Please log in again.");
-        }
-        throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);
-      }
-
       const data = await res.json();
-
-      if (data && data.tradeMargins) {
-        setTradeMarginData(data.tradeMargins);
-        setTradeMarginTotalPages(data.pagination?.totalPages || 1);
-      } else {
-        setTradeMarginData(Array.isArray(data) ? data : []);
-        setTradeMarginTotalPages(1);
-      }
+      setTradeMarginData(data.tradeMargins || []);
+      setTradeMarginTotalPages(data.pagination?.totalPages || 1);
     } catch (error) {
-      console.error("Error fetching trade margin report:", error);
-      setTradeMarginError(error.message || "Failed to load report data.");
-      setTradeMarginData([]);
-      setTradeMarginTotalPages(1);
+      setTradeMarginTableError(error.message);
     } finally {
-      setTradeMarginLoading(false);
+      setTradeMarginTableLoading(false);
     }
   };
   
-  useEffect(() => {
-    fetchTradeMarginReport();
-  }, [tradeMarginFilters, tradeMarginCurrentPage]);
-
-  // --- MODIFICATION START: Download all trade margins ---
-  const downloadTradeMarginExcel = async () => {
+  const fetchTradeMarginGraph = async () => {
+    setTradeMarginGraphLoading(true);
+    setTradeMarginGraphError(null);
     const token = localStorage.getItem("accessToken");
     if (!token) {
-        alert("Authentication failed. Please log in again.");
-        if (navigate) navigate("/login");
-        return;
+      setTradeMarginGraphError("Authentication failed. Please log in again.");
+      setTradeMarginGraphLoading(false);
+      return;
     }
 
     try {
-        const fetchAllTradeMargins = async () => {
-            let allMargins = [];
-            let currentPage = 1;
-            let totalPages = 1;
-
-            do {
-                const params = new URLSearchParams({ page: currentPage, limit: 50 });
-                if (tradeMarginFilters.bookingSearch) params.append('bookingSearch', tradeMarginFilters.bookingSearch);
-                if (tradeMarginFilters.inventorySearch) params.append('inventorySearch', tradeMarginFilters.inventorySearch);
-                if (tradeMarginFilters.inventoryType) params.append('inventoryType', tradeMarginFilters.inventoryType);
-                if (tradeMarginFilters.startDate) params.append('startDate', tradeMarginFilters.startDate);
-                if (tradeMarginFilters.endDate) params.append('endDate', tradeMarginFilters.endDate);
-
-                const res = await fetch(
-                    `${import.meta.env.VITE_API_BASE_URL}/api/reports/trade-margin?${params.toString()}`,
-                    { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
-                );
-
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-                const data = await res.json();
-                allMargins = allMargins.concat(data.tradeMargins || []);
-                totalPages = data.pagination?.totalPages || 1;
-                currentPage++;
-            } while (currentPage <= totalPages);
-            return allMargins;
-        };
-        
-        const allTradeMarginData = await fetchAllTradeMargins();
-
-        if (allTradeMarginData.length === 0) {
-            alert("No trade margin data to download.");
-            return;
-        }
-
-        const rows = allTradeMarginData.map(item => ({
-            'Inventory': item.inventory || "N/A",
-            'Inventory Type': item.inventoryType || "N/A",
-            'Booking': item.booking || "N/A",
-            'Trade Margin': item.tradeMargin || 0,
-            'Date': dayjs(item.date).format("DD MMM YYYY")
-        }));
-        
-        const sheet = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, sheet, "TradeMargins");
-        const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-        saveAs(
-            new Blob([buf], { type: "application/octet-stream" }),
-            `trade_margin_report_${dayjs().format("YYYYMMDD")}.xlsx`
-        );
+      const params = new URLSearchParams({ all: 'true' });
+      if (tradeMarginGraphFilters.bookingSearch) params.append('booking', tradeMarginGraphFilters.bookingSearch);
+      if (tradeMarginGraphFilters.inventorySearch) params.append('inventory', tradeMarginGraphFilters.inventorySearch);
+      if (tradeMarginGraphFilters.inventoryType) params.append('inventoryType', tradeMarginGraphFilters.inventoryType);
+      if (tradeMarginGraphFilters.startDate) params.append('startDate', tradeMarginGraphFilters.startDate);
+      if (tradeMarginGraphFilters.endDate) params.append('endDate', tradeMarginGraphFilters.endDate);
+      
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/trade-margin?${params.toString()}`, { headers: { "Authorization": `Bearer ${token}` } });
+      if (!res.ok) throw new Error(`Failed to fetch graph data: ${res.statusText}`);
+      
+      const data = await res.json();
+      processTradeMarginData(data.tradeMargins || []);
     } catch (error) {
-        console.error("Error downloading trade margin report:", error);
-        alert("Failed to download trade margin report. Please try again.");
+      setTradeMarginGraphError(error.message);
+    } finally {
+      setTradeMarginGraphLoading(false);
     }
   };
-  // --- MODIFICATION END ---
+
+  useEffect(() => {
+    fetchTradeMarginTable();
+  }, [tradeMarginFilters, tradeMarginCurrentPage]);
   
-  const yMax =
-    revenueChartData.yData.length > 0 ? Math.max(...revenueChartData.yData) : 0;
+  useEffect(() => {
+    fetchTradeMarginGraph();
+  }, [tradeMarginGraphFilters, tradeMarginChartView]);
+
+  const processTradeMarginData = (data) => {
+    const marginMap = new Map();
+    data.forEach(({ date, tradeMargin }) => {
+      if (!date || typeof tradeMargin !== 'number') return;
+      const d = dayjs(date);
+      const key = tradeMarginChartView === "monthly" ? d.format("MMM YYYY") : d.format("YYYY");
+      marginMap.set(key, (marginMap.get(key) || 0) + tradeMargin);
+    });
+
+    const sortedKeys = Array.from(marginMap.keys()).sort((a, b) => {
+      const format = tradeMarginChartView === "monthly" ? "MMM YYYY" : "YYYY";
+      return dayjs(a, format).unix() - dayjs(b, format).unix();
+    });
+
+    setTradeMarginChartData({
+      xLabels: sortedKeys,
+      yData: sortedKeys.map((k) => marginMap.get(k))
+    });
+  };
+
+  const downloadTradeMarginExcel = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      alert("Authentication failed. Please log in again.");
+      return;
+    }
+
+    try {
+      let allMargins = [];
+      let currentPage = 1;
+      let totalPages = 1;
+
+      do {
+        const params = new URLSearchParams({ page: currentPage, limit: 50 });
+        if (tradeMarginFilters.bookingSearch) params.append('booking', tradeMarginFilters.bookingSearch);
+        if (tradeMarginFilters.inventorySearch) params.append('inventory', tradeMarginFilters.inventorySearch);
+        if (tradeMarginFilters.inventoryType) params.append('inventoryType', tradeMarginFilters.inventoryType);
+        if (tradeMarginFilters.startDate) params.append('startDate', tradeMarginFilters.startDate);
+        if (tradeMarginFilters.endDate) params.append('endDate', tradeMarginFilters.endDate);
+
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/trade-margin?${params.toString()}`, { headers: { "Authorization": `Bearer ${token}` } });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        allMargins = allMargins.concat(data.tradeMargins || []);
+        totalPages = data.pagination?.totalPages || 1;
+        currentPage++;
+      } while (currentPage <= totalPages);
+      
+      if (allMargins.length === 0) {
+        alert("No trade margin data to download for the selected filters.");
+        return;
+      }
+
+      const rows = allMargins.map(item => ({
+        'Inventory': item.inventory || "N/A",
+        'Inventory Type': item.inventoryType || "N/A",
+        'Booking': item.booking || "N/A",
+        'Trade Margin': item.tradeMargin || 0,
+        'Date': dayjs(item.date).format("DD MMM YYYY")
+      }));
+      
+      const sheet = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, sheet, "TradeMargins");
+      const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(new Blob([buf]), `trade_margin_report_${dayjs().format("YYYYMMDD")}.xlsx`);
+    } catch (error) {
+      console.error("Error downloading trade margin report:", error);
+      alert("Failed to download trade margin report. Please try again.");
+    }
+  };
+  
+  const yMax = revenueChartData.yData.length > 0 ? Math.max(...revenueChartData.yData) : 0;
   const yAxisFormatter = (value) => `${(value / 100000).toFixed(1)} L`;
   const tooltipFormatter = (value) => `₹${(value / 100000).toFixed(2)} L`;
 
@@ -559,48 +580,25 @@ export default function RevenueReport({
       <Card>
         <CardContent>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">
-              Payments Report
-            </h3>
-            {/* MODIFICATION: Added download button */}
-            <Button onClick={downloadPaymentsExcel} disabled={paymentData.length === 0}>
-                Download Full Report
-            </Button>
+            <h3 className="text-lg font-semibold text-gray-800">Payments Report</h3>
+            <Button onClick={downloadPaymentsExcel} disabled={paymentData.length === 0}>Download Full Report</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-center">
             <Input
               placeholder="Client Name"
               value={paymentFilters.clientName}
-              onChange={(e) =>
-                setPaymentFilters({
-                  ...paymentFilters,
-                  clientName: e.target.value,
-                })
-              }
+              onChange={(e) => setPaymentFilters({ ...paymentFilters, clientName: e.target.value })}
             />
             <Input
               placeholder="Booking Name"
               value={paymentFilters.bookingName}
-              onChange={(e) =>
-                setPaymentFilters({
-                  ...paymentFilters,
-                  bookingName: e.target.value,
-                })
-              }
+              onChange={(e) => setPaymentFilters({ ...paymentFilters, bookingName: e.target.value })}
             />
             <button
-              onClick={() =>
-                handleShowDateModal(
-                  "payments",
-                  paymentFilters,
-                  setPaymentFilters
-                )
-              }
+              onClick={() => handleShowDateModal("payments", paymentFilters, setPaymentFilters)}
               className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
             >
-              {paymentFilters.startDate && paymentFilters.endDate
-                ? `${paymentFilters.startDate} to ${paymentFilters.endDate}`
-                : "Filter by Payment Date"}
+              {paymentFilters.startDate && paymentFilters.endDate ? `${paymentFilters.startDate} to ${paymentFilters.endDate}` : "Filter by Payment Date"}
             </button>
             <Button onClick={resetPaymentFilters}>Reset Filters</Button>
           </div>
@@ -620,11 +618,7 @@ export default function RevenueReport({
               <tbody>
                 {paymentData.length > 0 ? (
                   paymentData.map((p) => (
-                    <tr 
-                      key={p._id || p.bookingId} 
-                      className="bg-white border-b hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleRowClick(p)}
-                    >
+                    <tr key={p._id || p.bookingId} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => handleRowClick(p)}>
                       <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.bookingName}</td>
                       <td className="px-6 py-4">{p.clientName}</td>
                       <td className="px-6 py-4">₹{p.amount?.toLocaleString()}</td>
@@ -632,17 +626,7 @@ export default function RevenueReport({
                       <td className="px-6 py-4 capitalize">{p.mode}</td>
                       <td className="px-6 py-4">{p.referenceNumber || "N/A"}</td>
                       <td className="px-6 py-4">
-                        {p.documentUrl ? (
-                          <a 
-                            href={p.documentUrl} 
-                            target="_blank" 
-                            className="text-blue-500 underline" 
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            View
-                          </a>
-                        ) : "N/A"}
+                        {p.documentUrl ? (<a href={p.documentUrl} target="_blank" className="text-blue-500 underline" rel="noreferrer" onClick={(e) => e.stopPropagation()}>View</a>) : "N/A"}
                       </td>
                     </tr>
                   ))
@@ -652,11 +636,7 @@ export default function RevenueReport({
               </tbody>
             </table>
           </div>
-          <PaginationControls
-            currentPage={paymentCurrentPage}
-            totalPages={paymentTotalPages}
-            onPageChange={setPaymentCurrentPage}
-          />
+          <PaginationControls currentPage={paymentCurrentPage} totalPages={paymentTotalPages} onPageChange={setPaymentCurrentPage}/>
         </CardContent>
       </Card>
 
@@ -667,36 +647,19 @@ export default function RevenueReport({
             <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
               <h3 className="text-lg font-semibold text-gray-800 border-l-4 border-indigo-500 pl-3">Agency vs Direct Revenue</h3>
               <div className="flex items-center gap-2">
-                <button
-                    onClick={() => handleShowDateModal("agency", agencyFilters, setagencyFilters)}
-                    className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
-                >
+                <button onClick={() => handleShowDateModal("agency", agencyFilters, setagencyFilters)} className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50">
                     {agencyFilters.startDate && agencyFilters.endDate ? `${agencyFilters.startDate} to ${agencyFilters.endDate}` : "Filter by Date"}
                 </button>
                 <Button onClick={resetAgencyFilters}>Reset</Button>
               </div>
               <p className="font-semibold text-sm w-full sm:w-auto text-right">Total Revenue: ₹{totalRevenue.toLocaleString()}</p>
             </div>
-            <div className="flex justify-center">
-              <PieChart
-                series={[{
-                  data: agencyVsDirect.map((item, i) => ({ id: i, value: item.totalRevenue, label: item._id })),
-                  innerRadius: 40,
-                  outerRadius: 80,
-                }]}
-                width={200}
-                height={200}
-              />
-            </div>
+            <div className="flex justify-center"><PieChart series={[{ data: agencyVsDirect.map((item, i) => ({ id: i, value: item.totalRevenue, label: item._id })), innerRadius: 40, outerRadius: 80 }]} width={200} height={200}/></div>
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4 border-l-4 border-green-500 pl-3">Revenue by Agency Name</h3>
             <div className="rounded-lg border border-gray-100 shadow-sm p-4 bg-gray-50">
-              <BarChart
-                xAxis={[{ scaleType: "band", data: revenueByAgency.map((d) => d._id) }]}
-                series={[{ data: revenueByAgency.map((d) => d.totalRevenue), label: "Total Revenue", color: "#10B981" }]}
-                height={200}
-              />
+              <BarChart xAxis={[{ scaleType: "band", data: revenueByAgency.map((d) => d._id) }]} series={[{ data: revenueByAgency.map((d) => d.totalRevenue), label: "Total Revenue", color: "#10B981" }]} height={200}/>
             </div>
           </div>
         </CardContent>
@@ -709,21 +672,14 @@ export default function RevenueReport({
             <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
               <h3 className="text-lg font-semibold text-gray-800 border-l-4 border-yellow-500 pl-3">Revenue by Industry</h3>
               <div className="flex items-center gap-2">
-                <button
-                    onClick={() => handleShowDateModal("industry", industryFilters, setIndustryFilters)}
-                    className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
-                >
+                <button onClick={() => handleShowDateModal("industry", industryFilters, setIndustryFilters)} className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50">
                     {industryFilters.startDate && industryFilters.endDate ? `${industryFilters.startDate} to ${industryFilters.endDate}` : "Filter by Date"}
                 </button>
                 <Button onClick={resetIndustryFilters}>Reset</Button>
               </div>
             </div>
             <div className="rounded-md border border-gray-100 shadow-sm p-3 bg-gray-50">
-              <BarChart
-                xAxis={[{ scaleType: "band", data: industryRevenue.map((item) => item._id || "Others") }]}
-                series={[{ data: industryRevenue.map((item) => item.totalRevenue), label: "Total Revenue", color: "#F59E0B" }]}
-                height={250}
-              />
+              <BarChart xAxis={[{ scaleType: "band", data: industryRevenue.map((item) => item._id || "Others") }]} series={[{ data: industryRevenue.map((item) => item.totalRevenue), label: "Total Revenue", color: "#F59E0B" }]} height={250}/>
             </div>
             <p className="text-sm text-gray-600 mt-2 text-right">Total Revenue: ₹{industryTotal.toLocaleString()}</p>
           </div>
@@ -736,22 +692,10 @@ export default function RevenueReport({
           <CardContent>
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-base font-semibold text-gray-800">Revenue Graph</h3>
-              <button
-                onClick={() => setRevenueView((prev) => (prev === "yearly" ? "monthly" : "yearly"))}
-                className="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-md"
-              >
-                View By: {revenueView === "yearly" ? "Yearly" : "Monthly"}
-              </button>
+              <button onClick={() => setRevenueView((prev) => (prev === "yearly" ? "monthly" : "yearly"))} className="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-md">View By: {revenueView === "yearly" ? "Yearly" : "Monthly"}</button>
             </div>
             <div className="flex flex-grow h-80 -ml-4 -mr-2">
-              <LineChart
-                xAxis={[{ data: revenueChartData.xLabels, scaleType: "point" }]}
-                yAxis={[{ label: "Amount in Lakhs", min: 0, max: yMax > 0 ? yMax * 1.2 : 100000, valueFormatter: yAxisFormatter }]}
-                series={[{ data: revenueChartData.yData, label: "Revenue", color: "#8b5cf6", showMark: true, valueFormatter: tooltipFormatter, area: true }]}
-                grid={{ vertical: true, horizontal: true }}
-                margin={{ top: 40, right: 20, bottom: 50, left: 60 }}
-                legend={{ direction: "row", position: { vertical: "top", horizontal: "middle" }, padding: 0 }}
-              />
+              <LineChart xAxis={[{ data: revenueChartData.xLabels, scaleType: "point" }]} yAxis={[{ label: "Amount in Lakhs", min: 0, max: yMax > 0 ? yMax * 1.2 : 100000, valueFormatter: yAxisFormatter }]} series={[{ data: revenueChartData.yData, label: "Revenue", color: "#8b5cf6", showMark: true, valueFormatter: tooltipFormatter, area: true }]} grid={{ vertical: true, horizontal: true }} margin={{ top: 40, right: 20, bottom: 50, left: 60 }} legend={{ direction: "row", position: { vertical: "top", horizontal: "middle" }, padding: 0 }}/>
             </div>
           </CardContent>
         </Card>
@@ -762,24 +706,11 @@ export default function RevenueReport({
         <CardContent>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-800">Trade Margin Report</h3>
-              {/* MODIFICATION: Added download button */}
-              <Button onClick={downloadTradeMarginExcel} disabled={tradeMarginData.length === 0}>
-                  Download Full Report
-              </Button>
+              <Button onClick={downloadTradeMarginExcel} disabled={tradeMarginData.length === 0}>Download Full Report</Button>
             </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 items-center">
-            <Input 
-              name="bookingSearch" 
-              placeholder="Filter by Booking" 
-              value={tradeMarginFilters.bookingSearch} 
-              onChange={handleTradeMarginFilterChange} 
-            />
-            <Input 
-              name="inventorySearch" 
-              placeholder="Filter by Inventory" 
-              value={tradeMarginFilters.inventorySearch} 
-              onChange={handleTradeMarginFilterChange} 
-            />
+            <Input name="bookingSearch" placeholder="Filter by Booking" value={tradeMarginFilters.bookingSearch} onChange={handleTradeMarginFilterChange} />
+            <Input name="inventorySearch" placeholder="Filter by Inventory" value={tradeMarginFilters.inventorySearch} onChange={handleTradeMarginFilterChange} />
             <Select name="inventoryType" value={tradeMarginFilters.inventoryType} onChange={handleTradeMarginFilterChange}>
                 <option value="">Filter by Inventory Type</option>
                 <option value="Billboard">Billboard</option>
@@ -788,7 +719,12 @@ export default function RevenueReport({
                 <option value="Pole kiosk">Pole kiosk</option>
             </Select>
             <button
-              onClick={() => handleShowDateModal("tradeMargin", tradeMarginFilters, setTradeMarginFilters)}
+              onClick={() => {
+                console.log("--- TABLE DATE FILTER CLICKED ---");
+                console.log("Function received:", handleShowDateModal);
+                console.log("Arguments:", "tradeMarginTable", tradeMarginFilters, setTradeMarginFilters);
+                handleShowDateModal("tradeMarginTable", tradeMarginFilters, setTradeMarginFilters);
+              }}
               className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
             >
               {tradeMarginFilters.startDate && tradeMarginFilters.endDate ? `${dayjs(tradeMarginFilters.startDate).format("DD MMM YYYY")} to ${dayjs(tradeMarginFilters.endDate).format("DD MMM YYYY")}` : "Filter by Date Range"}
@@ -807,10 +743,10 @@ export default function RevenueReport({
                 </tr>
               </thead>
               <tbody>
-                {tradeMarginLoading ? (
+                {tradeMarginTableLoading ? (
                   <tr><td colSpan="5" className="text-center py-10 text-gray-500"><CircularProgress size={24} /></td></tr>
-                ) : tradeMarginError ? (
-                  <tr><td colSpan="5" className="text-center py-10 text-red-500">{tradeMarginError}</td></tr>
+                ) : tradeMarginTableError ? (
+                  <tr><td colSpan="5" className="text-center py-10 text-red-500">{tradeMarginTableError}</td></tr>
                 ) : tradeMarginData.length > 0 ? (
                   tradeMarginData.map((item, index) => (
                     <tr key={item.id || index} className="bg-white border-b hover:bg-gray-50">
@@ -827,11 +763,55 @@ export default function RevenueReport({
               </tbody>
             </table>
           </div>
-          <PaginationControls
-            currentPage={tradeMarginCurrentPage}
-            totalPages={tradeMarginTotalPages}
-            onPageChange={setTradeMarginCurrentPage}
-          />
+          <PaginationControls currentPage={tradeMarginCurrentPage} totalPages={tradeMarginTotalPages} onPageChange={setTradeMarginCurrentPage} />
+        </CardContent>
+      </Card>
+
+      {/* Trade Margin Graph */}
+      <Card>
+        <CardContent>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-base font-semibold text-gray-800">Trade Margin Graph</h3>
+            <button onClick={() => setTradeMarginChartView(prev => prev === "yearly" ? "monthly" : "yearly")} className="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-md">
+              View By: {tradeMarginChartView === "yearly" ? "Yearly" : "Monthly"}
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 items-center">
+            <Input name="bookingSearch" placeholder="Filter by Booking" value={tradeMarginGraphFilters.bookingSearch} onChange={handleTradeMarginGraphFilterChange} />
+            <Input name="inventorySearch" placeholder="Filter by Inventory" value={tradeMarginGraphFilters.inventorySearch} onChange={handleTradeMarginGraphFilterChange} />
+            <Select name="inventoryType" value={tradeMarginGraphFilters.inventoryType} onChange={handleTradeMarginGraphFilterChange}>
+                <option value="">Filter by Inventory Type</option>
+                <option value="Billboard">Billboard</option>
+                <option value="DOOh">DOOh</option>
+                <option value="Gantry">Gantry</option>
+                <option value="Pole kiosk">Pole kiosk</option>
+            </Select>
+            <button
+              onClick={() => {
+                console.log("--- GRAPH DATE FILTER CLICKED ---");
+                console.log("Function received:", handleShowDateModal);
+                console.log("Arguments:", "tradeMarginGraph", tradeMarginGraphFilters, setTradeMarginGraphFilters);
+                handleShowDateModal("tradeMarginGraph", tradeMarginGraphFilters, setTradeMarginGraphFilters);
+              }}
+              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
+            >
+              {tradeMarginGraphFilters.startDate && tradeMarginGraphFilters.endDate ? `${dayjs(tradeMarginGraphFilters.startDate).format("DD MMM YYYY")} to ${dayjs(tradeMarginGraphFilters.endDate).format("DD MMM YYYY")}` : "Filter by Date Range"}
+            </button>
+            <Button onClick={resetTradeMarginGraphFilters}>Reset Filters</Button>
+          </div>
+          
+          {tradeMarginGraphLoading ? <ShimmerCard /> : tradeMarginGraphError ? (
+             <div className="h-80 flex items-center justify-center text-red-500">{tradeMarginGraphError}</div>
+          ) : (
+            <div className="flex flex-grow h-80">
+              <BarChart
+                xAxis={[{ scaleType: 'band', data: tradeMarginChartData.xLabels }]}
+                yAxis={[{ label: "Amount in Lakhs", valueFormatter: yAxisFormatter }]}
+                series={[{ data: tradeMarginChartData.yData, label: "Trade Margin", color: "#10B981", valueFormatter: tooltipFormatter }]}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

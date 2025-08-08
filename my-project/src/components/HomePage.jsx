@@ -18,14 +18,14 @@ dayjs.extend(isBetween);
 
 // Card is designed to be a flex container that fills its parent's height
 const Card = ({ children, className = '', ...props }) => (
-  <div className={`bg-white text-xs border shadow-sm rounded-xl w-full h-full flex flex-col ${className}`} {...props}>
+  <div className={`bg-white border shadow-sm rounded-xl w-full h-full flex flex-col ${className}`} {...props}>
     {children}
   </div>
 );
 
 // CardContent will grow to fill the available space within the card
 const CardContent = ({ children, className = '' }) => (
-  <div className={`p-4 md:p-5 flex-grow flex flex-col ${className} text-xs`}>{children}</div>
+  <div className={`p-4 md:p-5 flex-grow flex flex-col ${className}`}>{children}</div>
 );
 
 const ShimmerCard = ({ className = '' }) => (
@@ -47,21 +47,21 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
 
   useEffect(() => {
     const eventMap = new Map();
-  
+
     if (Array.isArray(campaigns)) {
       campaigns.forEach(campaign => {
         const campaignInfo = {
           id: campaign._id,
           campaignName: campaign.campaignName || 'Unnamed Campaign',
         };
-  
+
         if (campaign.startDate) {
           const startDateStr = dayjs(campaign.startDate).format('YYYY-MM-DD');
           const dayEvents = eventMap.get(startDateStr) || { startingCampaigns: [], endingCampaigns: [] };
           dayEvents.startingCampaigns.push(campaignInfo);
           eventMap.set(startDateStr, dayEvents);
         }
-  
+
         if (campaign.endDate) {
           const endDateStr = dayjs(campaign.endDate).format('YYYY-MM-DD');
           const dayEvents = eventMap.get(endDateStr) || { startingCampaigns: [], endingCampaigns: [] };
@@ -70,7 +70,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
         }
       });
     }
-  
+
     setEvents(eventMap);
   }, [campaigns]);
 
@@ -100,9 +100,9 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
 
   const handleMouseOver = (e, campaigns, type) => {
     if (!campaigns || campaigns.length === 0) return;
-  
+
     clearTimeout(tooltipTimeoutRef.current);
-  
+
     const isStarting = type === 'starting';
     const title = isStarting ? 'Campaigns Starting Today:' : 'Campaigns Ending Today:';
     const dotColorClass = isStarting ? 'bg-green-500' : 'bg-red-500';
@@ -129,7 +129,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
         </div>
       </div>
     );
-  
+
     setTooltip({
       visible: true,
       content: tooltipContent,
@@ -137,7 +137,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
       y: e.clientY,
     });
   };
-  
+
   const handleMouseOut = () => {
     tooltipTimeoutRef.current = setTimeout(() => {
       setTooltip(prev => ({ ...prev, visible: false }));
@@ -150,7 +150,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
 
   return (
     <>
-      <Card className="h-full w-full text-xs">
+      <Card className="h-full w-full">
         <CardContent>
           <div className="flex items-center w-full justify-between mb-4">
             <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 gap-x-4 gap-y-1">
@@ -185,7 +185,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
               const cm = day.month() === currentDate.month();
               // Highlight the actual current day
               const t = day.isSame(dayjs(), 'day'); 
-  
+
               return (
                 <div
                   key={i}
@@ -198,7 +198,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
                   >
                     {day.format('D')}
                   </span>
-  
+
                   <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1">
                     {e?.startingCampaigns?.length > 0 && (
                       <div
@@ -207,7 +207,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
                         onMouseLeave={handleMouseOut}
                       ></div>
                     )}
-  
+
                     {e?.endingCampaigns?.length > 0 && (
                       <div
                         className="w-2 h-2 rounded-full bg-red-500"
@@ -292,12 +292,11 @@ const BookingGraphDashboard = () => {
   const [tableBookings, setTableBookings] = useState([]);
 
   // =================================================================
-  // START: CORRECTED getCampaignStatus FUNCTION
+  // START: getCampaignStatus FUNCTION
   // =================================================================
   const getCampaignStatus = (startDate, endDate) => {
     const today = moment();
     const start = moment(startDate).startOf('day');
-    // FIX: Ensure the end date includes the entire day for accurate comparison.
     const end = moment(endDate).endOf('day');
   
     if (!start.isValid() || !end.isValid()) {
@@ -307,14 +306,13 @@ const BookingGraphDashboard = () => {
     if (today.isBefore(start)) {
       return 'upcoming';
     }
-    // This check is now robust and will work correctly.
     if (today.isBetween(start, end)) {
       return 'ongoing';
     }
     return 'completed';
   };
   // =================================================================
-  // END: CORRECTED getCampaignStatus FUNCTION
+  // END: getCampaignStatus FUNCTION
   // =================================================================
 
   
@@ -348,21 +346,25 @@ const BookingGraphDashboard = () => {
     fetchCampaigns();
   }, []); 
 
+  // =================================================================
+  // START: CORRECTED useEffect for Payment and Revenue Data
+  // =================================================================
   useEffect(() => {
     if (bookingStats.length > 0) {
       const now = dayjs();
       const rangeStart = getRangeStart(now);
-      const rangeEnd = (range === 'threeMonths') ? now.endOf('month') : now.endOf(range);
-
+      
+      // FIX: Filter bookings based on their creation date to match other charts
       const filteredBookings = bookingStats.filter(b => {
-        const campaignStart = dayjs(b.startDate);
-        const campaignEnd = dayjs(b.endDate);
-        if (!campaignStart.isValid() || !campaignEnd.isValid()) {
-          return false;
-        }
-        return campaignStart.isBefore(rangeEnd) && campaignEnd.isAfter(rangeStart);
+        // Ensure createdAt exists and is a valid date
+        if (!b.createdAt) return false;
+        const createdDate = dayjs(b.createdAt);
+        if (!createdDate.isValid()) return false;
+        
+        // Check if the booking's creation date is within the selected range
+        return createdDate.isAfter(rangeStart);
       });
-
+  
       let totalReceived = 0;
       let totalDue = 0;
       filteredBookings.forEach((b) => {
@@ -370,10 +372,13 @@ const BookingGraphDashboard = () => {
         totalDue += b.paymentDue || 0;
       });
       setPaymentData({ received: totalReceived, due: totalDue });
-
+  
       processRevenueData(filteredBookings);
     }
   }, [range, bookingStats, revenueView]);
+  // =================================================================
+  // END: CORRECTED useEffect
+  // =================================================================
   
   useEffect(() => {
     if (tableBookings.length > 0 || proposals.length > 0) {
@@ -439,6 +444,7 @@ const BookingGraphDashboard = () => {
       const statsData = await spaceRes.json();
       const proposalData = await proposalRes.json();
       
+      // IMPORTANT: Ensure `bookingStats` from the API includes `createdAt`
       setBookingStats(bookingData.bookingStats || []);
       setProposals(proposalData || []);
       setUnitUtilizationStats(statsData.doohUtilization || {});
@@ -497,15 +503,16 @@ const BookingGraphDashboard = () => {
   const processRevenueData = (filteredBookings) => {
     const revenueMap = new Map();
   
-    filteredBookings.forEach(({ startDate, totalPaid }) => {
+    // The logic here remains the same, but it now operates on correctly filtered data
+    filteredBookings.forEach(({ createdAt, totalPaid }) => {
       if (totalPaid === null || totalPaid === undefined) return;
       
-      const campaignDate = dayjs(startDate);
-      if (!campaignDate.isValid()) return;
+      const createdDate = dayjs(createdAt);
+      if (!createdDate.isValid()) return;
   
       const key = revenueView === 'monthly'
-        ? campaignDate.format('MMM YYYY')
-        : campaignDate.format('YYYY');
+        ? createdDate.format('MMM YYYY')
+        : createdDate.format('YYYY');
   
       revenueMap.set(key, (revenueMap.get(key) || 0) + totalPaid);
     });
@@ -604,10 +611,10 @@ const BookingGraphDashboard = () => {
   };
   
   return (
-    <div className="min-h-screen text-xs h-screen w-screen bg-gray-50 text-black flex flex-col">
+    <div className="min-h-screen h-screen w-screen bg-gray-50 text-black flex flex-col">
       <Navbar />
-      <main className={`flex-1 h-full text-xs overflow-y-auto px-4 md:px-6 py-6 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
-        <div className="flex text-xs flex-col md:flex-row mb-6 gap-4 items-center">
+      <main className={`flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+        <div className="flex flex-col md:flex-row mb-6 gap-4 items-center">
          <h2 className="text-2xl font-sans font-normal">Dashboard</h2>
 
           <p className="text-lg font-medium text-gray-700 ml-auto">
@@ -628,8 +635,9 @@ const BookingGraphDashboard = () => {
             {/* ====== TOP SECTION ====== */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="flex flex-col gap-6">
-                <Card><CardContent><div className="flex justify-between items-start mb-2" ><h2 className="text-base font-medium">Ownership Distribution</h2><div className="text-xs text-right text-gray-600"><p><strong>Traded:</strong> {ownershipDistribution.traded}</p><p><strong>Owned:</strong> {ownershipDistribution.owned}</p><p><strong>Leased:</strong> {ownershipDistribution.leased}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: ownershipDistributionPieData, innerRadius: 40 }]} legend={{ hidden: true }} /></div></CardContent></Card>
                 <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium">Campaign Status</h2><div className="text-xs text-right text-gray-600"><p><strong>Completed:</strong> {statusData.completed}</p><p><strong>Ongoing:</strong> {statusData.ongoing}</p><p><strong>Upcoming:</strong> {statusData.upcoming}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: campaignStatusPieData, innerRadius: 40 }]} legend={{ hidden: true }} /></div></CardContent></Card>
+                <Card><CardContent><div className="flex justify-between items-start mb-2" ><h2 className="text-base font-medium">Ownership Distribution</h2><div className="text-xs text-right text-gray-600"><p><strong>Traded:</strong> {ownershipDistribution.traded}</p><p><strong>Owned:</strong> {ownershipDistribution.owned}</p><p><strong>Leased:</strong> {ownershipDistribution.leased}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: ownershipDistributionPieData, innerRadius: 40 }]} legend={{ hidden: true }} /></div></CardContent></Card>
+
               </div>
               <div className="lg:col-span-2"><DashboardCalendar campaigns={campaigns} currentDate={currentDate} setCurrentDate={setCurrentDate} /></div>
               <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium">DOOH Availability</h2><div className="text-xs text-right text-gray-600"><p><strong>Available:</strong> {doohAvailabilityStatus.completelyAvailable}</p><p><strong>Partially:</strong> {doohAvailabilityStatus.partiallyAvailable}</p><p><strong>Booked:</strong> {doohAvailabilityStatus.completelyBooked}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: doohAvailabilityPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
