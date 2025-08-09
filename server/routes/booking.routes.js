@@ -646,6 +646,7 @@ export const createBooking = async (req, res) => {
     const createdCampaigns = [];
 
     for (const campaignData of parsedCampaigns) {
+      console.log("Received Campaign Data:", JSON.stringify(campaignData, null, 2));
       const {
         campaignName,
         industry,
@@ -955,6 +956,7 @@ export const getAllBookings1 = async (req, res) => {
       companyName: 1,
       clientName: 1,
       brandDisplayName: 1,
+      clientType: 1,
       createdAt: 1,
       // companyLogo: 1,
       campaigns: 1
@@ -967,7 +969,7 @@ export const getAllBookings1 = async (req, res) => {
       .limit(limit)
       .sort({ createdAt: -1 }).populate({
         path: 'campaigns',
-        select: 'campaignName startDate endDate', // Include startDate and endDate
+        select: 'campaignName startDate endDate industry', // Include startDate and endDate
         populate: [
           {
             path: 'spaces.id',

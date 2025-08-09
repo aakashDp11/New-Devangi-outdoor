@@ -714,7 +714,7 @@ export default function RevenueReport({
             <Select name="inventoryType" value={tradeMarginFilters.inventoryType} onChange={handleTradeMarginFilterChange}>
                 <option value="">Filter by Inventory Type</option>
                 <option value="Billboard">Billboard</option>
-                <option value="DOOh">DOOh</option>
+                <option value="DOOh">DOOH</option>
                 <option value="Gantry">Gantry</option>
                 <option value="Pole kiosk">Pole kiosk</option>
                 <option value="BQS">BQS</option>
