@@ -144,6 +144,3 @@ async function connectAndStart() {
 }
 
 connectAndStart();
-
-
-

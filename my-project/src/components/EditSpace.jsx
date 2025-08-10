@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useSidebar } from "../context/SidebarContext";
 import Select from "react-select";
 
-// ... (Helper functions and MultiSelectField component remain the same)
+// Helper functions for date formatting
 const toInputDate = (dateStr) => {
   if (!dateStr || dateStr.split('-').length !== 3) return "";
   const [day, month, year] = dateStr.split('-');
@@ -18,25 +18,62 @@ const toDisplayDate = (dateStr) => {
   return `${day}-${month}-${year}`;
 };
 
-const MultiSelectField = ({ label, name, value, onChange, options }) => {
+// COPIED FROM AddSpaceForm.jsx and integrated here
+function MultiAudienceSelect({ label, name, value, onChange, options, mandatory }) {
   const valueAsArray = Array.isArray(value) ? value : [];
-  const optionObjects = options.map(opt => ({ value: opt, label: opt }));
-  const selectedValueObjects = optionObjects.filter(opt => valueAsArray.includes(opt.value));
+  const selectedValueObjects = options.filter(option => valueAsArray.includes(option.value));
+  const selectedOptions = options.filter(option => valueAsArray.includes(option.value) && option.value !== "");
+  const unselectedOptions = options.filter(option => !valueAsArray.includes(option.value) && option.value !== "");
+
+  const groupedOptions = [];
+  if (selectedOptions.length > 0) {
+    groupedOptions.push({ label: 'Selected', options: selectedOptions });
+  }
+  if (unselectedOptions.length > 0) {
+    groupedOptions.push({ label: 'Not Selected', options: unselectedOptions });
+  }
+
   const customStyles = {
-    option: (provided, state) => ({ ...provided, backgroundColor: state.isSelected ? '#dcfce7' : state.isFocused ? '#f1f5f9' : null, color: state.isSelected ? '#166534' : 'inherit', '&:active': { backgroundColor: state.isSelected ? '#bbf7d0' : '#e5e7eb' } }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? '#f1f5f9' : null,
+      color: 'inherit',
+      '&:active': { backgroundColor: '#e5e7eb' },
+    }),
     multiValue: () => ({ display: 'none' }),
   };
+
   const handleChange = (selectedOptions) => {
     const newValues = selectedOptions ? selectedOptions.map(opt => opt.value) : [];
     onChange({ target: { name, value: newValues } });
   };
+
+  const formatOptionLabel = ({ label, value }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {label}
+      {valueAsArray.includes(value) && <span>✓</span>}
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={name} className="font-medium text-sm text-gray-700">{label}</label>
-      <Select isMulti name={name} options={optionObjects} value={selectedValueObjects} onChange={handleChange} styles={customStyles} hideSelectedOptions={false} closeMenuOnSelect={false} placeholder="Select one or more..." className="border-gray-300 rounded w-full" theme={(theme) => ({ ...theme, colors: { ...theme.colors, primary: '#3b82f6', primary25: '#eff6ff' } })} />
+      <Select
+        isMulti
+        name={name}
+        options={groupedOptions}
+        styles={customStyles}
+        value={selectedValueObjects}
+        onChange={handleChange}
+        formatOptionLabel={formatOptionLabel}
+        hideSelectedOptions={false}
+        closeMenuOnSelect={false}
+        placeholder="Select one or more audience types..."
+        className="border-gray-300 rounded w-full"
+      />
     </div>
   );
-};
+}
 
 
 export default function EditSpace() {
@@ -54,10 +91,9 @@ export default function EditSpace() {
   const spaceTypeOptions = ["Billboard", "DOOH", "Pole Kiosk", "Gantry", "BQS", "Miscellaneous"];
   const categoryOptions = ["Retail", "Transit"];
   const mediaTypeOptions = ["Static", "Digital"];
+  // MODIFIED: Changed to object array for MultiAudienceSelect
   const audienceOptions = [
-    "Youth", "Working Professionals", "Business Professional", "College Students", "Elite", "Families",
-    "Fashion Enthusiast", "Female focused", "Government official", "Male focused", "Middle class",
-    "Rural", "Students", "Tourists", "Working",
+    { value: "Youth", label: "Youth" }, { value: "Working Professionals", label: "Working Professionals" }, { value: "Business Professional", label: "Business Professional" }, { value: "College Students", label: "College Students" }, { value: "Elite", label: "Elite" }, { value: "Families", label: "Families" }, { value: "Fashion Enthusiast", label: "Fashion Enthusiast" }, { value: "Female focused", label: "Female focused" }, { value: "Government official", label: "Government official" }, { value: "Male focused", label: "Male focused" }, { value: "Middle class", label: "Middle class" }, { value: "Rural", label: "Rural" }, { value: "Students", label: "Students" }, { value: "Tourists", label: "Tourists" }, { value: "Working", label: "Working" },
   ];
   const demographicsOptions = ["Urban", "Rural"];
   const tierOptions = ["Tier 1", "Tier 2"];
@@ -133,19 +169,15 @@ export default function EditSpace() {
           const value = payload[key];
           
           if (Array.isArray(value)) {
-            // --- FIX START: Handle 'audience' array specifically ---
             if (key === 'audience') {
-              // The backend expects 'audience' as a single comma-separated string.
               formData.append(key, value.join(','));
             } else {
-              // Other arrays (like 'dates') should be appended individually.
               value.forEach(item => {
                 if (item !== null && item !== undefined) {
                   formData.append(key, item);
                 }
               });
             }
-            // --- FIX END ---
           } else {
             formData.append(key, value);
           }
@@ -201,7 +233,16 @@ export default function EditSpace() {
             <SelectField label="Illumination" name="illumination" value={space.illumination || ""} onChange={handleChange} options={illuminationOptions} />
             <InputField label="Price" name="price" type="number" value={space.price || ""} onChange={handleChange} />
             <InputField label="Footfall" name="footfall" type="number" value={space.footfall || ""} onChange={handleChange} />
-            <MultiSelectField label="Audience" name="audience" value={space.audience || []} onChange={handleChange} options={audienceOptions} />
+            
+            {/* --- REPLACED MultiSelectField with MultiAudienceSelect --- */}
+            <MultiAudienceSelect
+              label="Audience"
+              name="audience"
+              value={space.audience || []}
+              onChange={handleChange}
+              options={audienceOptions}
+            />
+
             <SelectField label="Demographics" name="demographics" value={space.demographics || ""} onChange={handleChange} options={demographicsOptions} />
             <InputField label="Width (ft)" name="width" type="number" value={space.width || ""} onChange={handleChange} />
             <InputField label="Height (ft)" name="height" type="number" value={space.height || ""} onChange={handleChange} />
