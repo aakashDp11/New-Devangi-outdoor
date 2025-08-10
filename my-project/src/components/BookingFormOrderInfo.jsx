@@ -5,6 +5,7 @@ import { useBookingForm } from '../context/BookingFormContext';
 import InventorySelector from './BookingFormAddSpaces';
 import Select from 'react-select';
 import { toast } from 'sonner';
+import { useSidebar } from '../context/SidebarContext'; // 1. Import the useSidebar hook
 
 function Stepper({ currentStep }) {
   const stepOrder = ['Basic', 'Order'];
@@ -58,6 +59,7 @@ const industryOptions = [
 export default function BookingFormOrderInfo() {
   const navigate = useNavigate();
   const { orderInfo, setOrderInfo } = useBookingForm();
+  const { isCollapsed } = useSidebar(); // 2. Get the sidebar's collapsed state
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -85,10 +87,8 @@ export default function BookingFormOrderInfo() {
         traded: space.traded,
         mainPhoto:space.mainPhoto,
         overlappingBooking: space.overlappingBooking,
-        // --- START: THE FINAL FIX ---
         width: space.width,
         height: space.height,
-        // --- END: THE FINAL FIX ---
         availableFrom: space.dates?.[0],
         availableTo: space.dates?.[space.dates.length - 1],
         status: space.occupiedUnits === 0
@@ -216,9 +216,10 @@ export default function BookingFormOrderInfo() {
   const handleBack = () => navigate('/create-booking');
 
   return (
-    <div className="bg-white">
+    <div className="bg-white flex">
       <Navbar />
-      <main className="p-6 md:ml-64 min-h-screen pb-24">
+      {/* 3. Apply dynamic margin and flex properties to the main content area */}
+      <main className={`flex-1 p-6 min-h-screen pb-24 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <Stepper currentStep="Order" />
         <h2 className="text-2xl font-semibold mb-6">Create Order</h2>
 
@@ -319,7 +320,8 @@ export default function BookingFormOrderInfo() {
         )}
       </main>
 
-      <div className="fixed bottom-0 right-0 bg-white z-10 left-0 md:left-64">
+      {/* 4. Adjust the left margin of the footer based on sidebar state */}
+      <div className={`fixed bottom-0 right-0 bg-white z-10 left-0 transition-all duration-300 ${isCollapsed ? 'lg:left-24' : 'lg:left-64'}`}>
         <div className="flex justify-between items-center w-full px-6 py-3 max-w-screen-xl mx-auto">
           <button
             type="button"

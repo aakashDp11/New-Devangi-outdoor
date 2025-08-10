@@ -3,10 +3,12 @@ import Navbar from "./Navbar";
 import { useNavigate } from "react-router-dom";
 import { useBookingForm } from "../context/BookingFormContext";
 import { toast } from "sonner";
+import { useSidebar } from "../context/SidebarContext"; // 1. Import the useSidebar hook
 
 export default function CreateOrderBasicInfo() {
   const navigate = useNavigate();
   const { basicInfo, setBasicInfo, proposalId } = useBookingForm();
+  const { isCollapsed } = useSidebar(); // 2. Get the sidebar's collapsed state
 
   // State for the stepper UI
   const [step, setStep] = useState("Basic");
@@ -105,11 +107,11 @@ export default function CreateOrderBasicInfo() {
   };
 
   return (
-    <div className="bg-white text-xs">
+    <div className="bg-white text-xs flex">
       <Navbar />
-      {/* Add pb-24 to create space for the fixed footer */}
-      <main className="ml-64 w-full flex-1 px-8 pb-24">
-        <div className="flex justify-between items-center mb-8">
+      {/* 3. Apply dynamic margin to the main content area */}
+      <main className={`flex-1 px-8 pb-24 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+        <div className="flex justify-between items-center mb-8 pt-6">
           <h1 className="text-2xl font-semibold">
             {proposalId ? "Edit Proposal" : "Create Order"}
           </h1>
@@ -379,7 +381,8 @@ export default function CreateOrderBasicInfo() {
       </main>
 
       {/* --- STANDARDIZED FIXED FOOTER --- */}
-      <div className="fixed bottom-0 right-0 bg-white z-10 left-0 md:left-64">
+      {/* 4. Adjust the left margin of the footer based on sidebar state */}
+      <div className={`fixed bottom-0 right-0 bg-white z-10 left-0 transition-all duration-300 ${isCollapsed ? 'lg:left-24' : 'lg:left-64'}`}>
         <div className="flex justify-between items-center w-full px-6 py-3 max-w-screen-xl mx-auto">
           {/* *** THIS IS THE FIX *** */}
           {/* Changed the path to match the route for the dashboard defined in App.jsx */}
