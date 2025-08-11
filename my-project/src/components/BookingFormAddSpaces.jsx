@@ -25,44 +25,119 @@ export default function InventorySelector({
     return date;
   };
 
-  const isSpaceAvailableInRange = (space) => {
-    try {
-      if (!startDate || !endDate) return false;
+  const doesDateRangeIntersect = (rangeStart, rangeEnd, targetStart, targetEnd) => {
+  return rangeStart <= targetEnd && rangeEnd >= targetStart;
+};
 
-      const spaceStart = parseDDMMYY(space.availableFrom);
-      const spaceEnd = parseDDMMYY(space.availableTo);
+const isSpaceAvailableInRange = (space) => {
+  try {
+    if (!startDate || !endDate) return false;
 
-      if (!spaceStart || !spaceEnd) return false;
+    const spaceStart = parseDDMMYY(space.availableFrom);
+    const spaceEnd = parseDDMMYY(space.availableTo);
+    if (!spaceStart || !spaceEnd) return false;
 
-      const selectedStart = new Date(startDate);
-      // --- FIX IS HERE ---
-      const selectedEnd = new Date(endDate);
-      // --- END OF FIX ---
+    const selectedStart = new Date(startDate);
+    const selectedEnd = new Date(endDate);
 
-      return selectedStart >= spaceStart && selectedEnd <= spaceEnd;
-    } catch (err) {
-      console.error("Error checking availability range:", err);
-      return false;
+    // ✅ Check if selected range is within available range
+    const withinRange = selectedStart >= spaceStart && selectedEnd <= spaceEnd;
+console.log("Checking space:", space.name, "within range:", withinRange);
+    // ✅ Check if selected range intersects with any campaign date
+    const hasIntersection = Array.isArray(space.campaignDates) &&
+      space.campaignDates.some(camp => {
+        const campStart = new Date(camp.startDate);
+        const campEnd = new Date(camp.endDate);
+        console.log("Campaign dates for space:", space.name, "are from", campStart, "to", campEnd);
+        return doesDateRangeIntersect(selectedStart, selectedEnd, campStart, campEnd);
+      });
+console.log("Space:", space.name, "has intersection with campaign dates:", hasIntersection);
+    // ✅ Update status according to your rules
+    if (withinRange && !hasIntersection && space.spaceType !== "DOOH") {
+      space.status = "Completely available";
     }
-  };
-
-  const filteredSpaces = (spaces || []).filter(space => {
-    if (!isSpaceAvailableInRange(space)) return false;
-    if (space.overlappingBooking && space.status === 'Completely booked') return false;
-    if ((space.status === 'Completely available' || space.status === 'Partialy available') && space.traded) return false;
-
-    if (campaign.searchQuery?.trim()) {
-      const query = campaign.searchQuery.toLowerCase();
-      return (
-        (space.name || '').toLowerCase().includes(query) ||
-        (space.city || '').toLowerCase().includes(query) ||
-        (space.category || '').toLowerCase().includes(query) ||
-        (space.specification || '').toLowerCase().includes(query) ||
-        (space.facia || '').toLowerCase().includes(query)
-      );
+    else if (withinRange && hasIntersection && space.spaceType !== "DOOH") {
+      space.status = "Completely booked";
     }
-    return true;
+    else if (space.spaceType === "DOOH" && withinRange && !hasIntersection) {
+      const occupied = space.occupiedUnits || 0;
+      space.status = occupied === 0 ? "Completely available" : "Partially available";
+    }
+
+    return withinRange;
+  } catch (err) {
+    console.error("Error checking availability range:", err);
+    return false;
+  }
+};
+
+
+const isDateOverlap = (start1, end1, start2, end2) => {
+  return start1 <= end2 && end1 >= start2; // overlap condition
+};
+const getInventoryStatus = (space) => {
+  if (!startDate || !endDate) return "Unknown";
+
+  const spaceStart = parseDDMMYY(space.availableFrom);
+  const spaceEnd = parseDDMMYY(space.availableTo);
+  const selectedStart = new Date(startDate);
+  const selectedEnd = new Date(endDate);
+
+  // Check if selected dates lie within available range
+  const withinAvailability = selectedStart >= spaceStart && selectedEnd <= spaceEnd;
+  if (!withinAvailability) return "Unknown";
+
+  // Check if selected range overlaps with any campaign date
+  const hasOverlap = space.campaignDates?.some(cd => {
+    const campStart = new Date(cd.startDate);
+    const campEnd = new Date(cd.endDate);
+    return isDateOverlap(selectedStart, selectedEnd, campStart, campEnd);
   });
+
+  if (hasOverlap) {
+    return "Completely booked";
+  } else {
+    return space.occupiedUnits === 0 ? "Completely available" : "Partialy available";
+  }
+};
+
+
+
+
+  // const filteredSpaces = (updatedSpaces || []).filter(space => {
+  //   if (!isSpaceAvailableInRange(space)) return false;
+  //   if (space.overlappingBooking ) return false;
+
+
+  //   if (campaign.searchQuery?.trim()) {
+  //     const query = campaign.searchQuery.toLowerCase();
+  //     return (
+  //       (space.name || '').toLowerCase().includes(query) ||
+  //       (space.city || '').toLowerCase().includes(query) ||
+  //       (space.category || '').toLowerCase().includes(query) ||
+  //       (space.specification || '').toLowerCase().includes(query) ||
+  //       (space.facia || '').toLowerCase().includes(query)
+  //     );
+  //   }
+  //   return true;
+  // });
+  const filteredSpaces = (spaces || []).filter(space => {
+  if (!isSpaceAvailableInRange(space)) return false;
+  // if (space.overlappingBooking) return false;
+ console.log("Checking space:", space.name, "with status:", space.status);
+  if (campaign.searchQuery?.trim()) {
+    const query = campaign.searchQuery.toLowerCase();
+    return (
+      (space.name || '').toLowerCase().includes(query) ||
+      (space.city || '').toLowerCase().includes(query) ||
+      (space.category || '').toLowerCase().includes(query) ||
+      (space.specification || '').toLowerCase().includes(query) ||
+      (space.facia || '').toLowerCase().includes(query)
+    );
+  }
+  return true;
+});
+
 
   const selectedSpaceIds = campaign.selectedSpaces?.map(s => s.id) || [];
   const selectedTableSpaces = filteredSpaces.filter(space => selectedSpaceIds.includes(space.id));
@@ -115,6 +190,21 @@ export default function InventorySelector({
           }`}>
             {space.status}
           </span>
+          {/* {(() => {
+  const status = getInventoryStatus(space);
+  console.log("Inventory status for space:", space.name, "is", status);
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+      status === "Completely available" ? "bg-green-100 text-green-700" :
+      status === "Partialy available" ? "bg-yellow-100 text-yellow-700" :
+      status === "Completely booked" ? "bg-red-100 text-red-700" :
+      "bg-gray-100 text-gray-700"
+    }`}>
+      {status}
+    </span>
+  );
+})()} */}
+
         </td>
         <td className="px-3 py-2">{space.facia}</td>
         <td className="px-3 py-2">{space.city}</td>

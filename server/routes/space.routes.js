@@ -219,6 +219,7 @@ router.get('/selectcampaignSpaces', async (req, res) => {
       overlappingBooking: 1,
       dates: 1,
       mainPhoto: 1,
+      campaignDates: 1,
       width: 1,
       height: 1,
     });

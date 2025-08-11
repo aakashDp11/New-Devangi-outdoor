@@ -67,6 +67,7 @@ export default function BookingFormOrderInfo() {
     const fetchSpaces = async () => {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/selectcampaignSpaces`);
       const data = await res.json();
+      console.log("Fetched spaces:", data);
       const transformed = data.filter(space => {
         if (typeof space.isInventoryEnabled === 'undefined') return true;
         return space.isInventoryEnabled === true;
@@ -83,6 +84,7 @@ export default function BookingFormOrderInfo() {
         occupiedUnits: space.occupiedUnits,
         ownershipType: space.ownershipType,
         specification:space.specification,
+        campaignDates:space.campaignDates,
         price: space.price,
         traded: space.traded,
         mainPhoto:space.mainPhoto,

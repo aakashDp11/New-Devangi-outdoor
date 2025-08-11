@@ -96,6 +96,7 @@ const spaceSchema = new Schema({
   // This correctly stores the dates from your controller
   dates: [{ type: String }],
   campaignDates: [{
+    campaignId: { type: Schema.Types.ObjectId, ref: "Campaign" },
     startDate: { type: String, },
     endDate: { type: String, }
   }],

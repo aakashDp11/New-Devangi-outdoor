@@ -59,6 +59,7 @@ export default function BookingDetails() {
         mainPhoto: space.mainPhoto,
         overlappingBooking: space.overlappingBooking,
         specification: space.specification,
+        campaignDates: space.campaignDates,
         width: space.width,
         height: space.height,
         availableFrom: space.dates?.[0],
