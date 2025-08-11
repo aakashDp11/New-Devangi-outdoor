@@ -1,8 +1,5 @@
 import express from 'express';
 import Campaign from '../models/campaign.model.js';
-// These imports are good for context but not strictly needed for the route to function
-// import Space from '../models/space.model.js'; 
-// import Pipeline from '../models/pipeline.model.js';
 
 const router = express.Router();
 
@@ -14,24 +11,14 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const campaigns = await Campaign.find({})
-      // 1. Select the top-level fields from the Campaign model.
-      // We must include 'pipeline' and 'spaces' so they are available to be populated.
       .select('campaignName startDate endDate pipeline spaces')
-
-      // 2. Populate the 'pipeline' field.
-      // The `printingStatus` and `mountingStatus` fields DO NOT exist on the Pipeline model,
-      // so we remove them from this selection.
       .populate({
         path: 'pipeline',
-        select: 'bookingStatus artwork po invoice' // <-- CORRECTED: Removed printing/mounting status
+        select: 'bookingStatus artwork po invoice'
       })
-
-      // 3. Populate the 'spaces' field.
-      // This is where `printingStatus` and `mountingStatus` ACTUALLY live.
-      // This part of your code was already correct.
       .populate({
-        path: 'spaces',
-        select: 'spaceName spaceType price printingStatus mountingStatus' // <-- This correctly fetches the statuses
+        path: 'spaces.id', // ✅ fixed populate path
+        select: 'spaceName spaceType price printingStatus mountingStatus'
       });
 
     res.status(200).json({ campaigns });
@@ -41,5 +28,26 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'Server error, could not fetch campaigns.' });
   }
 });
+
+/**
+ * @route   GET /api/campaigns/by-space/:spaceId
+ * @desc    Get all campaigns that include a specific space ID
+ * @access  Public
+ */
+router.get('/by-space/:spaceId', async (req, res) => {
+  try {
+    const { spaceId } = req.params;
+
+    // Find all campaigns where the `spaces` array contains an object with the given spaceId
+    const campaigns = await Campaign.find({ 'spaces.id': spaceId })
+      .select('campaignName startDate endDate'); // Select only the fields needed by the frontend
+
+    res.status(200).json(campaigns);
+  } catch (err) {
+    console.error('Error fetching campaigns by space:', err);
+    res.status(500).json({ message: 'Server error, could not fetch campaigns by space.' });
+  }
+});
+
 
 export default router;

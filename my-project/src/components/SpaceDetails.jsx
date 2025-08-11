@@ -19,6 +19,7 @@ export default function SpaceDetails() {
   const { isCollapsed } = useSidebar();
   const [space, setSpace] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [associatedCampaigns, setAssociatedCampaigns] = useState([]);
 
   const handleDelete = async () => {
     try {
@@ -53,7 +54,24 @@ export default function SpaceDetails() {
         toast.error(error.message || 'Could not load space details.');
       }
     };
+
+    const fetchAssociatedCampaigns = async () => {
+      if (!id) return;
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns/by-space/${id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch associated campaigns');
+        }
+        const data = await response.json();
+        setAssociatedCampaigns(data);
+      } catch (error) {
+        console.error(error);
+        toast.error('Could not load associated campaigns.');
+      }
+    };
+
     fetchSpace();
+    fetchAssociatedCampaigns();
   }, [id]);
 
   if (!space) {
@@ -81,7 +99,6 @@ export default function SpaceDetails() {
             </svg>
             Back
             </button>
-            {/* --- START: Integrated Feature --- */}
             <div className='flex gap-4'>
                 <button
                     onClick={() => navigate(`/space/${id}/edit`)}
@@ -117,7 +134,6 @@ export default function SpaceDetails() {
                     {space.isInventoryEnabled ? 'Disable Inventory' : 'Enable Inventory'}
                 </button>
             </div>
-            {/* --- END: Integrated Feature --- */}
         </div>
 
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg">
@@ -129,16 +145,12 @@ export default function SpaceDetails() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2 mb-6">
-              {/* --- All Fields Corrected --- */}
               <DetailItem label="Landlord" value={space.landlord} />
               <DetailItem label="Inventory Owner (Organization)" value={space.organization} />
               <DetailItem label="Peer Media Owner" value={space.peerMediaOwner} />
               <DetailItem label="Ownership Type" value={space.ownershipType} />
-
-              {/* FIX: Reading from the `dates` array at index 0 and 1 */}
               <DetailItem label="Start Date" value={space.dates?.[0]} />
               <DetailItem label="End Date" value={space.dates?.[1]} />
-
               <DetailItem label="Category" value={space.category} />
               <DetailItem label="Specification" value={space.specification} />
               <DetailItem label="Price" value={space.price ? `₹${space.price.toLocaleString()}`: null} />
@@ -178,37 +190,64 @@ export default function SpaceDetails() {
 
             <hr className="my-6 border-gray-200" />
 
-            <div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
                 <h2 className="text-xl font-semibold text-gray-700 mb-6">Space Images</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {space.mainPhoto && (
-                    <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
-                    <img src={space.mainPhoto} alt="Main" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
-                    </div>
-                )}
-                {space.longShot && (
-                    <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
-                    <img src={space.longShot} alt="Long Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
-                    </div>
-                )}
-                {space.closeShot && (
-                    <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
-                    <img src={space.closeShot} alt="Close Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
-                    </div>
-                )}
-                {space.otherPhotos && space.otherPhotos.length > 0 &&
-                    space.otherPhotos.map((photo, index) => (
-                    <div key={index} className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
-                        <img src={photo} alt={`Other ${index + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
-                    </div>
-                    ))
-                }
-                {!space.mainPhoto && !space.longShot && !space.closeShot && (!space.otherPhotos || space.otherPhotos.length === 0) && (
-                    <div className="col-span-full aspect-video flex items-center justify-center text-gray-500 text-sm bg-gray-50 rounded-lg border border-dashed p-8">
-                        No images have been uploaded for this space.
-                    </div>
-                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {space.mainPhoto && (
+                      <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
+                      <img src={space.mainPhoto} alt="Main" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
+                      </div>
+                  )}
+                  {space.longShot && (
+                      <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
+                      <img src={space.longShot} alt="Long Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
+                      </div>
+                  )}
+                  {space.closeShot && (
+                      <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
+                      <img src={space.closeShot} alt="Close Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
+                      </div>
+                  )}
+                  {space.otherPhotos && space.otherPhotos.length > 0 &&
+                      space.otherPhotos.map((photo, index) => (
+                      <div key={index} className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
+                          <img src={photo} alt={`Other ${index + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
+                      </div>
+                      ))
+                  }
+                  {!space.mainPhoto && !space.longShot && !space.closeShot && (!space.otherPhotos || space.otherPhotos.length === 0) && (
+                      <div className="col-span-full aspect-video flex items-center justify-center text-gray-500 text-sm bg-gray-50 rounded-lg border border-dashed p-8">
+                          No images have been uploaded for this space.
+                      </div>
+                  )}
                 </div>
+              </div>
+
+              {/* --- Associated Campaigns Section --- */}
+              <div className="lg:col-span-1">
+                <h2 className="text-xl font-semibold text-gray-700 mb-6">Associated Campaigns</h2>
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                  {associatedCampaigns.length > 0 ? (
+                    associatedCampaigns.map((campaign) => (
+                      <div 
+                        key={campaign._id} 
+                        className="bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 hover:shadow-sm transition-all"
+                        // THIS IS THE CORRECTED LINE
+                        onClick={() => navigate(`/campaign-details/${campaign._id}`)}
+                      >
+                        <DetailItem label="Campaign Name" value={campaign.campaignName} />
+                        <DetailItem label="Start Date" value={campaign.startDate} />
+                        <DetailItem label="End Date" value={campaign.endDate} />
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center justify-center text-center h-48 bg-gray-50 rounded-lg border border-dashed p-4">
+                      <p className="text-sm text-gray-500">No campaigns are associated with this space.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
         </div>
 
