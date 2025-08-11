@@ -227,18 +227,30 @@ export default function SpaceDetails() {
               {/* --- Associated Campaigns Section --- */}
               <div className="lg:col-span-1">
                 <h2 className="text-xl font-semibold text-gray-700 mb-6">Associated Campaigns</h2>
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                   {associatedCampaigns.length > 0 ? (
                     associatedCampaigns.map((campaign) => (
-                      <div 
-                        key={campaign._id} 
+                      <div
+                        key={campaign._id}
                         className="bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 hover:shadow-sm transition-all"
-                        // THIS IS THE CORRECTED LINE
                         onClick={() => navigate(`/campaign-details/${campaign._id}`)}
                       >
-                        <DetailItem label="Campaign Name" value={campaign.campaignName} />
-                        <DetailItem label="Start Date" value={campaign.startDate} />
-                        <DetailItem label="End Date" value={campaign.endDate} />
+                        <div className="flex justify-between items-center text-sm w-full">
+                          {/* Campaign Name */}
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wider">Campaign Name</p>
+                            <p className="font-medium text-gray-800 break-words">{campaign.campaignName}</p>
+                          </div>
+                          {/* Start and End Dates */}
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500 uppercase tracking-wider">Start Date</p>
+                            <p className="font-medium text-gray-800">{campaign.startDate}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500 uppercase tracking-wider">End Date</p>
+                            <p className="font-medium text-gray-800">{campaign.endDate}</p>
+                          </div>
+                        </div>
                       </div>
                     ))
                   ) : (

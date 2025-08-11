@@ -291,9 +291,6 @@ const BookingGraphDashboard = () => {
   
   const [tableBookings, setTableBookings] = useState([]);
 
-  // =================================================================
-  // START: getCampaignStatus FUNCTION
-  // =================================================================
   const getCampaignStatus = (startDate, endDate) => {
     const today = moment();
     const start = moment(startDate).startOf('day');
@@ -311,10 +308,6 @@ const BookingGraphDashboard = () => {
     }
     return 'completed';
   };
-  // =================================================================
-  // END: getCampaignStatus FUNCTION
-  // =================================================================
-
   
   useEffect(() => {
     fetchData();
@@ -347,22 +340,19 @@ const BookingGraphDashboard = () => {
   }, []); 
 
   // =================================================================
-  // START: CORRECTED useEffect for Payment and Revenue Data
+  // START: MODIFIED useEffect Blocks
   // =================================================================
+
+  // useEffect for Payment Data (Depends on the date range filter)
   useEffect(() => {
     if (bookingStats.length > 0) {
       const now = dayjs();
       const rangeStart = getRangeStart(now);
       
-      // FIX: Filter bookings based on their creation date to match other charts
       const filteredBookings = bookingStats.filter(b => {
-        // Ensure createdAt exists and is a valid date
         if (!b.createdAt) return false;
         const createdDate = dayjs(b.createdAt);
-        if (!createdDate.isValid()) return false;
-        
-        // Check if the booking's creation date is within the selected range
-        return createdDate.isAfter(rangeStart);
+        return createdDate.isValid() && createdDate.isAfter(rangeStart);
       });
   
       let totalReceived = 0;
@@ -372,12 +362,19 @@ const BookingGraphDashboard = () => {
         totalDue += b.paymentDue || 0;
       });
       setPaymentData({ received: totalReceived, due: totalDue });
-  
-      processRevenueData(filteredBookings);
     }
-  }, [range, bookingStats, revenueView]);
+  }, [range, bookingStats]);
+
+  // useEffect for Revenue Data (Independent of the date range filter)
+  useEffect(() => {
+    if (bookingStats.length > 0) {
+      // Process all booking stats for the revenue graph, ignoring the 'range' filter
+      processRevenueData(bookingStats);
+    }
+  }, [revenueView, bookingStats]);
+
   // =================================================================
-  // END: CORRECTED useEffect
+  // END: MODIFIED useEffect Blocks
   // =================================================================
   
   useEffect(() => {
@@ -444,7 +441,6 @@ const BookingGraphDashboard = () => {
       const statsData = await spaceRes.json();
       const proposalData = await proposalRes.json();
       
-      // IMPORTANT: Ensure `bookingStats` from the API includes `createdAt`
       setBookingStats(bookingData.bookingStats || []);
       setProposals(proposalData || []);
       setUnitUtilizationStats(statsData.doohUtilization || {});
@@ -500,11 +496,10 @@ const BookingGraphDashboard = () => {
     setBookingsAndProposalsData({ xLabels, bookingsData, proposalsData });
   };
   
-  const processRevenueData = (filteredBookings) => {
+  const processRevenueData = (bookingsToProcess) => {
     const revenueMap = new Map();
   
-    // The logic here remains the same, but it now operates on correctly filtered data
-    filteredBookings.forEach(({ createdAt, totalPaid }) => {
+    bookingsToProcess.forEach(({ createdAt, totalPaid }) => {
       if (totalPaid === null || totalPaid === undefined) return;
       
       const createdDate = dayjs(createdAt);
