@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 export default function InventorySelector({
   campaignIndex,
@@ -9,9 +9,15 @@ export default function InventorySelector({
   endDate,
   onToggleSpaceSelection,
   onUpdateSelectedUnits,
-  onSearchChange
+  onSearchChange,
+  onFilterChange // It's good practice to handle this from a parent component
 }) {
   const [selectedSpace, setSelectedSpace] = useState(null);
+  
+  // State for the new filters
+  const [statusFilter, setStatusFilter] = useState('');
+  const [ownershipFilter, setOwnershipFilter] = useState('');
+  const [spaceTypeFilter, setSpaceTypeFilter] = useState('');
 
   const parseDDMMYY = (str) => {
     if (!str || typeof str !== 'string') return null;
@@ -26,130 +32,101 @@ export default function InventorySelector({
   };
 
   const doesDateRangeIntersect = (rangeStart, rangeEnd, targetStart, targetEnd) => {
-  return rangeStart <= targetEnd && rangeEnd >= targetStart;
-};
+    return rangeStart <= targetEnd && rangeEnd >= targetStart;
+  };
 
-const isSpaceAvailableInRange = (space) => {
-  try {
-    if (!startDate || !endDate) return false;
+  const isSpaceAvailableInRange = (space) => {
+    try {
+      if (!startDate || !endDate) return false;
 
-    const spaceStart = parseDDMMYY(space.availableFrom);
-    const spaceEnd = parseDDMMYY(space.availableTo);
-    if (!spaceStart || !spaceEnd) return false;
+      const spaceStart = parseDDMMYY(space.availableFrom);
+      const spaceEnd = parseDDMMYY(space.availableTo);
+      if (!spaceStart || !spaceEnd) return false;
 
-    const selectedStart = new Date(startDate);
-    const selectedEnd = new Date(endDate);
+      const selectedStart = new Date(startDate);
+      const selectedEnd = new Date(endDate);
+      
+      const withinRange = selectedStart >= spaceStart && selectedEnd <= spaceEnd;
+      
+      const hasIntersection = Array.isArray(space.campaignDates) &&
+        space.campaignDates.some(camp => {
+          const campStart = new Date(camp.startDate);
+          const campEnd = new Date(camp.endDate);
+          return doesDateRangeIntersect(selectedStart, selectedEnd, campStart, campEnd);
+        });
 
-    // ✅ Check if selected range is within available range
-    const withinRange = selectedStart >= spaceStart && selectedEnd <= spaceEnd;
-console.log("Checking space:", space.name, "within range:", withinRange);
-    // ✅ Check if selected range intersects with any campaign date
-    const hasIntersection = Array.isArray(space.campaignDates) &&
-      space.campaignDates.some(camp => {
-        const campStart = new Date(camp.startDate);
-        const campEnd = new Date(camp.endDate);
-        console.log("Campaign dates for space:", space.name, "are from", campStart, "to", campEnd);
-        return doesDateRangeIntersect(selectedStart, selectedEnd, campStart, campEnd);
-      });
-console.log("Space:", space.name, "has intersection with campaign dates:", hasIntersection);
-    // ✅ Update status according to your rules
-    if (withinRange && !hasIntersection && space.spaceType !== "DOOH") {
-      space.status = "Completely available";
+      // This logic mutates the space object. Be mindful if this is not desired.
+      if (withinRange && !hasIntersection && space.spaceType !== "DOOH") {
+        space.status = "Completely available";
+      } else if (withinRange && hasIntersection && space.spaceType !== "DOOH") {
+        space.status = "Completely booked";
+      } else if (space.spaceType === "DOOH" && withinRange && !hasIntersection) {
+        const occupied = space.occupiedUnits || 0;
+        space.status = occupied === 0 ? "Completely available" : "Partially available";
+      }
+
+      return withinRange;
+    } catch (err) {
+      console.error("Error checking availability range:", err);
+      return false;
     }
-    else if (withinRange && hasIntersection && space.spaceType !== "DOOH") {
-      space.status = "Completely booked";
-    }
-    else if (space.spaceType === "DOOH" && withinRange && !hasIntersection) {
-      const occupied = space.occupiedUnits || 0;
-      space.status = occupied === 0 ? "Completely available" : "Partially available";
-    }
+  };
+  
+  const filteredSpaces = useMemo(() => {
+    // A temporary array to hold spaces with their calculated status
+    const spacesWithStatus = (spaces || []).map(space => {
+        // Clone the space to avoid direct mutation of the prop
+        const newSpace = { ...space };
+        isSpaceAvailableInRange(newSpace); // This will add the 'status' property
+        return newSpace;
+    }).filter(space => isSpaceAvailableInRange(space)); // Initial filter by date range
 
-    return withinRange;
-  } catch (err) {
-    console.error("Error checking availability range:", err);
-    return false;
-  }
-};
+    return spacesWithStatus.filter(space => {
+      // Apply new filters
+      if (statusFilter && space.status !== statusFilter) return false;
+      if (ownershipFilter && space.ownershipType !== ownershipFilter) return false;
+      if (spaceTypeFilter && space.spaceType !== spaceTypeFilter) return false;
 
-
-const isDateOverlap = (start1, end1, start2, end2) => {
-  return start1 <= end2 && end1 >= start2; // overlap condition
-};
-const getInventoryStatus = (space) => {
-  if (!startDate || !endDate) return "Unknown";
-
-  const spaceStart = parseDDMMYY(space.availableFrom);
-  const spaceEnd = parseDDMMYY(space.availableTo);
-  const selectedStart = new Date(startDate);
-  const selectedEnd = new Date(endDate);
-
-  // Check if selected dates lie within available range
-  const withinAvailability = selectedStart >= spaceStart && selectedEnd <= spaceEnd;
-  if (!withinAvailability) return "Unknown";
-
-  // Check if selected range overlaps with any campaign date
-  const hasOverlap = space.campaignDates?.some(cd => {
-    const campStart = new Date(cd.startDate);
-    const campEnd = new Date(cd.endDate);
-    return isDateOverlap(selectedStart, selectedEnd, campStart, campEnd);
-  });
-
-  if (hasOverlap) {
-    return "Completely booked";
-  } else {
-    return space.occupiedUnits === 0 ? "Completely available" : "Partialy available";
-  }
-};
-
-
-
-
-  // const filteredSpaces = (updatedSpaces || []).filter(space => {
-  //   if (!isSpaceAvailableInRange(space)) return false;
-  //   if (space.overlappingBooking ) return false;
-
-
-  //   if (campaign.searchQuery?.trim()) {
-  //     const query = campaign.searchQuery.toLowerCase();
-  //     return (
-  //       (space.name || '').toLowerCase().includes(query) ||
-  //       (space.city || '').toLowerCase().includes(query) ||
-  //       (space.category || '').toLowerCase().includes(query) ||
-  //       (space.specification || '').toLowerCase().includes(query) ||
-  //       (space.facia || '').toLowerCase().includes(query)
-  //     );
-  //   }
-  //   return true;
-  // });
-  const filteredSpaces = (spaces || []).filter(space => {
-  if (!isSpaceAvailableInRange(space)) return false;
-  // if (space.overlappingBooking) return false;
- console.log("Checking space:", space.name, "with status:", space.status);
-  if (campaign.searchQuery?.trim()) {
-    const query = campaign.searchQuery.toLowerCase();
-    return (
-      (space.name || '').toLowerCase().includes(query) ||
-      (space.city || '').toLowerCase().includes(query) ||
-      (space.category || '').toLowerCase().includes(query) ||
-      (space.specification || '').toLowerCase().includes(query) ||
-      (space.facia || '').toLowerCase().includes(query)
-    );
-  }
-  return true;
-});
+      if (campaign.searchQuery?.trim()) {
+        const query = campaign.searchQuery.toLowerCase();
+        return (
+          (space.name || '').toLowerCase().includes(query) ||
+          (space.city || '').toLowerCase().includes(query) ||
+          (space.category || '').toLowerCase().includes(query) ||
+          (space.specification || '').toLowerCase().includes(query) ||
+          (space.facia || '').toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
+  }, [spaces, startDate, endDate, statusFilter, ownershipFilter, spaceTypeFilter, campaign.searchQuery]);
 
 
   const selectedSpaceIds = campaign.selectedSpaces?.map(s => s.id) || [];
   const selectedTableSpaces = filteredSpaces.filter(space => selectedSpaceIds.includes(space.id));
   const unselectedTableSpaces = filteredSpaces.filter(space => !selectedSpaceIds.includes(space.id));
+  
+  // Create unique options for dropdowns dynamically
+  const uniqueStatuses = useMemo(() => {
+     const allSpacesWithStatus = (spaces || []).map(space => {
+        const newSpace = { ...space };
+        isSpaceAvailableInRange(newSpace);
+        return newSpace;
+     });
+     return [...new Set(allSpacesWithStatus.map(s => s.status).filter(Boolean))]
+  }, [spaces, startDate, endDate]);
 
-  const handleSpaceClick = (space) => {
-    setSelectedSpace(space);
-  };
+  const uniqueOwnerships = useMemo(() => [...new Set(spaces.map(s => s.ownershipType).filter(Boolean))], [spaces]);
+  
+  const spaceTypeOptions = useMemo(() => {
+    const types = new Set(spaces.map(s => s.spaceType).filter(Boolean));
+    types.add("Gantry");
+    return [...types];
+  }, [spaces]);
 
-  const closeModal = () => {
-    setSelectedSpace(null);
-  };
+
+  const handleSpaceClick = (space) => setSelectedSpace(space);
+  const closeModal = () => setSelectedSpace(null);
 
   const renderTableRow = (space, isSelectedRow) => {
     const globallySelectedUnits = globalAvailability[space.id] || 0;
@@ -161,9 +138,7 @@ const getInventoryStatus = (space) => {
     const canSelectUnits = remainingUnits > 0;
     const isDOOH = space.spaceType === 'DOOH';
 
-    const rowClass = isSelectedRow
-      ? "text-center hover:bg-gray-50 bg-blue-50"
-      : "text-center hover:bg-gray-50";
+    const rowClass = isSelectedRow ? "text-center hover:bg-gray-50 bg-blue-50" : "text-center hover:bg-gray-50";
 
     return (
       <tr key={space.id} className={rowClass}>
@@ -185,26 +160,11 @@ const getInventoryStatus = (space) => {
         <td className="px-3 py-2">
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
             space.status === "Completely available" ? "bg-green-100 text-green-700" :
-            space.status === "Partialy available" ? "bg-yellow-100 text-yellow-700" :
+            space.status === "Partially available" ? "bg-yellow-100 text-yellow-700" :
             "bg-red-100 text-red-700"
           }`}>
             {space.status}
           </span>
-          {/* {(() => {
-  const status = getInventoryStatus(space);
-  console.log("Inventory status for space:", space.name, "is", status);
-  return (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-      status === "Completely available" ? "bg-green-100 text-green-700" :
-      status === "Partialy available" ? "bg-yellow-100 text-yellow-700" :
-      status === "Completely booked" ? "bg-red-100 text-red-700" :
-      "bg-gray-100 text-gray-700"
-    }`}>
-      {status}
-    </span>
-  );
-})()} */}
-
         </td>
         <td className="px-3 py-2">{space.facia}</td>
         <td className="px-3 py-2">{space.city}</td>
@@ -220,18 +180,10 @@ const getInventoryStatus = (space) => {
           </span>
         </td>
         <td className="px-3 py-2">
-          {!isDOOH ? (
-            <span className="text-gray-400 italic">N/A</span>
-          ) : (
-            updatedOccupiedUnits
-          )}
+          {!isDOOH ? <span className="text-gray-400 italic">N/A</span> : updatedOccupiedUnits}
         </td>
         <td className="px-3 py-2">
-          {!isDOOH ? (
-            <span className="text-gray-400 italic">N/A</span>
-          ) : (
-            space.unit
-          )}
+          {!isDOOH ? <span className="text-gray-400 italic">N/A</span> : space.unit}
         </td>
         <td className="px-3 py-2">
           {!isDOOH || isActuallyBooked || !canSelectUnits ? (
@@ -259,10 +211,29 @@ const getInventoryStatus = (space) => {
         <div className="text-sm font-medium">
           Selected Places: {campaign.selectedSpaces?.length || 0}
         </div>
-        <div className="w-full max-w-xs sm:max-w-sm md:w-1/3">
+        <div className="flex items-center space-x-2">
+          {/* Status Filter - Now Fully Dynamic */}
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border px-3 py-1 rounded text-sm">
+            <option value="">All Statuses</option>
+            {uniqueStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+          </select>
+          
+          {/* Ownership Filter */}
+          <select value={ownershipFilter} onChange={e => setOwnershipFilter(e.target.value)} className="border px-3 py-1 rounded text-sm">
+            <option value="">All Ownerships</option>
+            {uniqueOwnerships.map(type => <option key={type} value={type}>{type}</option>)}
+          </select>
+
+          {/* SpaceType Filter - Includes Gantry */}
+          <select value={spaceTypeFilter} onChange={e => setSpaceTypeFilter(e.target.value)} className="border px-3 py-1 rounded text-sm">
+            <option value="">All Space Types</option>
+            {spaceTypeOptions.map(type => <option key={type} value={type}>{type}</option>)}
+          </select>
+
+          {/* Search Input */}
           <input
             type="text"
-            placeholder="Search by space name, city, etc."
+            placeholder="Search..."
             className="w-full border px-3 py-1 rounded text-sm"
             value={campaign.searchQuery || ''}
             onChange={(e) => onSearchChange(campaignIndex, e.target.value)}
@@ -292,15 +263,13 @@ const getInventoryStatus = (space) => {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {selectedTableSpaces.map(space => renderTableRow(space, true))}
-
             {selectedTableSpaces.length > 0 && unselectedTableSpaces.length > 0 && (
-                <tr className="bg-gray-200 font-semibold">
-                    <td colSpan="14" className="py-2 text-center text-gray-600">
-                        Not Selected
-                    </td>
-                </tr>
+              <tr className="bg-gray-200 font-semibold">
+                <td colSpan="14" className="py-2 text-center text-gray-600">
+                  Not Selected
+                </td>
+              </tr>
             )}
-
             {unselectedTableSpaces.map(space => renderTableRow(space, false))}
           </tbody>
         </table>
@@ -310,13 +279,13 @@ const getInventoryStatus = (space) => {
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold">{selectedSpace.name}</h2>
-                <button className="modal-close" onClick={closeModal}>×</button>
+              <h2 className="text-lg font-bold">{selectedSpace.name}</h2>
+              <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             {selectedSpace.mainPhoto ? (
-                <img src={selectedSpace.mainPhoto} alt={selectedSpace.name} className="modal-image" />
+              <img src={selectedSpace.mainPhoto} alt={selectedSpace.name} className="modal-image" />
             ) : (
-                <p className="text-gray-500">No image available.</p>
+              <p className="text-gray-500">No image available.</p>
             )}
           </div>
         </div>
@@ -324,52 +293,25 @@ const getInventoryStatus = (space) => {
 
       <style jsx>{`
         .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           background-color: rgba(0, 0, 0, 0.6);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-          padding: 1rem;
+          display: flex; justify-content: center; align-items: center;
+          z-index: 1000; padding: 1rem;
         }
-
         .modal-content {
-          background-color: white;
-          padding: 20px;
-          border-radius: 8px;
+          background-color: white; padding: 20px; border-radius: 8px;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          width: auto;
-          max-width: 90vw;
-          max-height: 90vh;
-          overflow-y: auto;
+          width: auto; max-width: 90vw; max-height: 90vh; overflow-y: auto;
         }
-
         .modal-close {
-          background: none;
-          border: none;
-          font-size: 24px;
-          line-height: 1;
-          color: #333;
-          cursor: pointer;
+          background: none; border: none; font-size: 24px;
+          line-height: 1; color: #333; cursor: pointer;
         }
-
         .modal-image {
-          width: 100%;
-          height: auto;
-          max-width: 80vw;
-          max-height: 70vh;
-          object-fit: contain;
-          margin-top: 10px;
+          width: 100%; height: auto; max-width: 80vw;
+          max-height: 70vh; object-fit: contain; margin-top: 10px;
         }
-
-        h2 {
-          font-size: 1.5rem;
-          margin: 0;
-        }
+        h2 { font-size: 1.5rem; margin: 0; }
       `}</style>
     </div>
   );

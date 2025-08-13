@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { PipelineContext } from '../../context/PipelineContext';
@@ -12,9 +10,10 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose }) {
   const [isArtworkSaved, setIsArtworkSaved] = useState(false);
   const [artworkUrl, setArtworkUrl] = useState('');
   const { pipelineData, setPipelineData } = useContext(PipelineContext);
- const username = localStorage.getItem('userName'); // Replace with your actual AuthContext or storage mechanism
+  const username = localStorage.getItem('userName'); // Replace with your actual AuthContext or storage mechanism
   const useremail = localStorage.getItem('userEmail');
   const userId = localStorage.getItem('userId');
+  
   useEffect(() => {
     const fetchArtwork = async () => {
       try {
@@ -58,11 +57,11 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose }) {
       toast.error('Please upload artwork and select received date.');
       return;
     }
-const previousArtworkStatus = { ...pipelineData?.artwork }; // Capture the previous booking status
+    const previousArtworkStatus = { ...pipelineData?.artwork }; // Capture the previous booking status
 
     const newArtworkStatus = {
       confirmed: true,
-     receivedDate,
+      receivedDate,
     };
 
     // Log the change to the ChangeLog table
@@ -77,8 +76,8 @@ const previousArtworkStatus = { ...pipelineData?.artwork }; // Capture the previ
     };
     try {
       console.log("Changelog data from fr is",changeLogData);
-            const res1=await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData); 
-            console.log("Change log for booking status form is",res1);
+      const res1=await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData); 
+      console.log("Change log for booking status form is",res1);
       const formData = new FormData();
       formData.append('file', artworkFile);
 
@@ -148,21 +147,29 @@ const previousArtworkStatus = { ...pipelineData?.artwork }; // Capture the previ
         <>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Received Date</label>
+              {/* MODIFICATION: Added red asterisk */}
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Received Date <span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 value={receivedDate}
                 onChange={(e) => setReceivedDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required // Added for browser-level validation
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Upload Artwork File</label>
+              {/* MODIFICATION: Added red asterisk */}
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Upload Artwork File <span className="text-red-500">*</span>
+              </label>
               <input
                 type="file"
                 onChange={handleFileChange}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                required // Added for browser-level validation
               />
             </div>
 

@@ -12,6 +12,32 @@ const DetailItem = ({ label, value, className = '' }) => (
   </div>
 );
 
+// Reusable component for displaying a campaign card.
+const CampaignCard = ({ campaign, navigate }) => (
+  <div
+    key={campaign._id}
+    className="bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 hover:shadow-sm transition-all"
+    onClick={() => navigate(`/campaign-details/${campaign._id}`)}
+  >
+    <div className="flex justify-between items-center text-sm w-full">
+      {/* Campaign Name */}
+      <div>
+        <p className="text-xs text-gray-500 uppercase tracking-wider">Campaign Name</p>
+        <p className="font-medium text-gray-800 break-words">{campaign.campaignName}</p>
+      </div>
+      {/* Start and End Dates */}
+      <div className="text-right">
+        <p className="text-xs text-gray-500 uppercase tracking-wider">Start Date</p>
+        <p className="font-medium text-gray-800">{campaign.startDate}</p>
+      </div>
+      <div className="text-right">
+        <p className="text-xs text-gray-500 uppercase tracking-wider">End Date</p>
+        <p className="font-medium text-gray-800">{campaign.endDate}</p>
+      </div>
+    </div>
+  </div>
+);
+
 
 export default function SpaceDetails() {
   const { id } = useParams();
@@ -19,7 +45,9 @@ export default function SpaceDetails() {
   const { isCollapsed } = useSidebar();
   const [space, setSpace] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [associatedCampaigns, setAssociatedCampaigns] = useState([]);
+  // --- MODIFIED: State for separated campaigns ---
+  const [ongoingCampaigns, setOngoingCampaigns] = useState([]);
+  const [upcomingCampaigns, setUpcomingCampaigns] = useState([]);
 
   const handleDelete = async () => {
     try {
@@ -62,8 +90,31 @@ export default function SpaceDetails() {
         if (!response.ok) {
           throw new Error('Failed to fetch associated campaigns');
         }
-        const data = await response.json();
-        setAssociatedCampaigns(data);
+        const campaigns = await response.json();
+        
+        // --- MODIFIED: Logic to separate campaigns ---
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to the start of the day for accurate comparison
+
+        const ongoing = [];
+        const upcoming = [];
+
+        campaigns.forEach(campaign => {
+          const startDate = new Date(campaign.startDate);
+          const endDate = new Date(campaign.endDate);
+          
+          if (endDate < today) {
+            // This is a past campaign, you can ignore it or create a separate list for it
+          } else if (startDate <= today && endDate >= today) {
+            ongoing.push(campaign);
+          } else if (startDate > today) {
+            upcoming.push(campaign);
+          }
+        });
+
+        setOngoingCampaigns(ongoing);
+        setUpcomingCampaigns(upcoming);
+
       } catch (error) {
         console.error(error);
         toast.error('Could not load associated campaigns.');
@@ -224,40 +275,40 @@ export default function SpaceDetails() {
                 </div>
               </div>
 
-              {/* --- Associated Campaigns Section --- */}
+              {/* --- MODIFIED: Associated Campaigns Section --- */}
               <div className="lg:col-span-1">
-                <h2 className="text-xl font-semibold text-gray-700 mb-6">Associated Campaigns</h2>
-                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                  {associatedCampaigns.length > 0 ? (
-                    associatedCampaigns.map((campaign) => (
-                      <div
-                        key={campaign._id}
-                        className="bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 hover:shadow-sm transition-all"
-                        onClick={() => navigate(`/campaign-details/${campaign._id}`)}
-                      >
-                        <div className="flex justify-between items-center text-sm w-full">
-                          {/* Campaign Name */}
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wider">Campaign Name</p>
-                            <p className="font-medium text-gray-800 break-words">{campaign.campaignName}</p>
-                          </div>
-                          {/* Start and End Dates */}
-                          <div className="text-right">
-                            <p className="text-xs text-gray-500 uppercase tracking-wider">Start Date</p>
-                            <p className="font-medium text-gray-800">{campaign.startDate}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-gray-500 uppercase tracking-wider">End Date</p>
-                            <p className="font-medium text-gray-800">{campaign.endDate}</p>
-                          </div>
-                        </div>
+                {/* --- Ongoing Campaigns --- */}
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-4">Ongoing Campaigns</h2>
+                  <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                    {ongoingCampaigns.length > 0 ? (
+                      ongoingCampaigns.map((campaign) => (
+                        <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} />
+                      ))
+                    ) : (
+                      <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4">
+                        <p className="text-sm text-gray-500">No ongoing campaigns.</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="flex items-center justify-center text-center h-48 bg-gray-50 rounded-lg border border-dashed p-4">
-                      <p className="text-sm text-gray-500">No campaigns are associated with this space.</p>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+
+                <hr className="my-6 border-gray-200" />
+
+                {/* --- Upcoming Campaigns --- */}
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-4">Upcoming Campaigns</h2>
+                  <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                    {upcomingCampaigns.length > 0 ? (
+                      upcomingCampaigns.map((campaign) => (
+                        <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} />
+                      ))
+                    ) : (
+                      <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4">
+                        <p className="text-sm text-gray-500">No upcoming campaigns for this space.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

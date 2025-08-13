@@ -54,13 +54,9 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
   };
 
   const handleSave = async () => {
-    // Simple validation to ensure required fields are filled
-    if (!bookingDate) {
-      toast.error("Please select a booking date.");
-      return;
-    }
-    if (!bookingNumber) {
-      toast.error("Booking number could not be generated. Please try again.");
+    // --- MODIFICATION 1: Updated validation to include the document ---
+    if (!bookingDate || !bookingNumber || !estimateDocument) {
+      toast.error("Please fill all mandatory fields, including the confirmation document.");
       return;
     }
 
@@ -91,9 +87,8 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
       formData.append('confirmed', true);
       formData.append('reference', bookingNumber);
       formData.append('bookingDate', bookingDate);
-      if (estimateDocument) {
-        formData.append('file', estimateDocument);
-      }
+      // The 'if' condition is no longer needed, as validation ensures the file exists
+      formData.append('file', estimateDocument);
 
       // Upload and update booking status
       const res = await axios.put(
@@ -111,7 +106,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
       onConfirm();
     } catch (err) {
       console.error('Failed to save booking status:', err);
-      toast.error('Failed to save booking status ❌');
+      toast.error('Failed to save booking status ');
       onConfirm();
     }
   };
@@ -167,7 +162,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
           <div className="space-y-5">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Booking Number
+                Booking Number <span className="text-red-500">*</span>
               </label>
               {/* The input for the booking number is now read-only */}
               <input
@@ -181,7 +176,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
 
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Booking Date
+                Booking Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -193,13 +188,16 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose }) => {
             </div>
 
             <div>
+              {/* --- MODIFICATION 2: Added asterisk to the label --- */}
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Upload Confirmation Document
+                Upload Confirmation Document <span className="text-red-500">*</span>
               </label>
               <input
                 type="file"
                 onChange={handleFileChange}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                // --- MODIFICATION 3: Added required attribute ---
+                required 
               />
             </div>
 

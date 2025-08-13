@@ -1,89 +1,79 @@
-
-
 import mongoose from 'mongoose';
 
 const { Schema, model } = mongoose;
 
+// --- Subdocument Schemas for each stage with automatic timestamps ---
+
+const BookingStatusSchema = new Schema({
+  confirmed: { type: Boolean, default: false },
+  reference: { type: String },
+  bookingDate: { type: String },
+  estimateDocument: { type: String },
+  completedAt: { type: Date }
+}, { _id: false, timestamps: true });
+
+const PoSchema = new Schema({
+  confirmed: { type: Boolean, default: false },
+  documentUrl: { type: String },
+  poNumber: { type: String },
+  poDate: { type: String },
+  poValue: Number,
+  completedAt: { type: Date }
+}, { _id: false, timestamps: true });
+
+const ArtworkSchema = new Schema({
+  confirmed: { type: Boolean, default: false },
+  documentUrl: { type: String },
+  recievedDate: { type: String },
+  completedAt: { type: Date }
+}, { _id: false, timestamps: true });
+
+const InvoiceItemSchema = new Schema({
+  invoiceNumber: { type: String },
+  invoiceDate: { type: String },
+  invoiceValue: { type: Number },
+  documentUrl: { type: String },
+  completedAt: { type: Date }
+}, { _id: false, timestamps: true });
+
+const CashMemoItemSchema = new Schema({
+  reference: String,
+  value: Number,
+  documentUrl: String,
+  completedAt: { type: Date }
+}, { _id: false, timestamps: true });
+
+const CreditNoteItemSchema = new Schema({
+  reference: String,
+  value: Number,
+  documentUrl: String,
+  completedAt: { type: Date }
+}, { _id: false, timestamps: true });
+
+const PaymentItemSchema = new Schema({
+  amount: Number,
+  date: Date,
+  modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc', 'rtgs', 'neft'], default: 'cash' },
+  referenceNumber: String,
+  documentUrl: String,
+  completedAt: { type: Date }
+}, { _id: false, timestamps: true });
+
+
+// --- Main Pipeline Schema using the new subdocument schemas ---
+
 const pipelineSchema = new Schema({
-  campaign: { type: Schema.Types.ObjectId, ref: 'Campaign', required: true, unique: true }, // ✅ Campaign → One Pipeline
-
-  spaces: [{ type: Schema.Types.ObjectId, ref: 'Space' }],  // ✅ Pipeline → Many Spaces
-  artwork: {
-    confirmed: { type: Boolean, default: false },
-    documentUrl: { type: String },
-    recievedDate: { type: String }
-  },
-  bookingStatus: {
-    confirmed: { type: Boolean, default: false },
-    reference: { type: String },
-    bookingDate: { type: String },
-    // memberName:{ type: String },
-    estimateDocument: { type: String }
-  },
-
-  po: {
-    confirmed: { type: Boolean, default: false },
-    documentUrl: { type: String },
-    poNumber: { type: String },
-    poDate: { type: String },
-    poValue: Number
-
-  },
-  printingStatus: {
-    confirmed: { type: Boolean, default: false },
-    printingDate: { type: String, default: '' },
-    printingMaterial: { type: String, default: '' },
-    assignedPerson: { type: String, default: '' },
-    assignedAgency: { type: String, default: '' },
-    note: { type: String }
-  },
-  mountingStatus: {
-    confirmed: { type: Boolean, default: false },
-    mountingDate: { type: String, default: '' },
-    assignedPerson: { type: String, default: '' },
-    assignedAgency: { type: String, default: '' },
-    note: { type: String }
-  },
-
-
-
-
-  // invoice: {
-  //   invoiceNumber: { type: String },
-  //   documentUrl: { type: String },
-  //   invoiceDate: { type: String },
-  //   invoiceValue: Number
-  // },
-  // cashMemo: {
-  //   reference: { type: String },
-  //   value: Number,
-  //   documentUrl: { type: String }
-  // },
-  // creditNote: {
-  //   reference: { type: String },
-  //   value: Number,
-  //   documentUrl: { type: String }
-  // },
-  invoice: [{
-    invoiceNumber:{ type:String },
-    invoiceDate: { type:String},
-    invoiceValue: { type:Number },
-    documentUrl:{ type:String }
-  }],
+  campaign: { type: Schema.Types.ObjectId, ref: 'Campaign', required: true, unique: true },
+  spaces: [{ type: Schema.Types.ObjectId, ref: 'Space' }],
   
-  cashMemo: [{
-    reference: String,
-    value: Number,
-    documentUrl: String,
-  }],
+  artwork: { type: ArtworkSchema, default: () => ({}) },
+  bookingStatus: { type: BookingStatusSchema, default: () => ({}) },
+  po: { type: PoSchema, default: () => ({}) },
   
-  creditNote: [{
-    reference: String,
-    value: Number,
-    documentUrl: String,
-  }],
+  invoice: [InvoiceItemSchema],
+  cashMemo: [CashMemoItemSchema],
+  creditNote: [CreditNoteItemSchema],
   
-
   payment: {
     mountingAmount: Number,
     printingAmount: Number,
@@ -93,24 +83,26 @@ const pipelineSchema = new Schema({
     finalAmountWithGST: Number,
     modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc', 'rtgs', 'neft'], default: undefined },
     cashMemoNo: Number,
-    payments: [
-      {
-        amount: Number,
-        date: Date,
-        modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc', 'rtgs', 'neft'], default: 'cash' },
-        referenceNumber: String,
-        documentUrl: String,
-      },
-    ],
-
+    payments: [PaymentItemSchema],
     totalPaid: Number,
     paymentDue: Number,
-
   },
-
-
 }, {
   timestamps: true,
+});
+
+// --- Middleware to automatically set 'completedAt' on confirmation ---
+pipelineSchema.pre('save', function(next) {
+  if (this.isModified('bookingStatus.confirmed') && this.bookingStatus.confirmed && !this.bookingStatus.completedAt) {
+    this.bookingStatus.completedAt = new Date();
+  }
+  if (this.isModified('po.confirmed') && this.po.confirmed && !this.po.completedAt) {
+    this.po.completedAt = new Date();
+  }
+  if (this.isModified('artwork.confirmed') && this.artwork.confirmed && !this.artwork.completedAt) {
+    this.artwork.completedAt = new Date();
+  }
+  next();
 });
 
 const Pipeline = model('Pipeline', pipelineSchema);

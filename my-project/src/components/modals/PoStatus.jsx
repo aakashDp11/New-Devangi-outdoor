@@ -1,5 +1,3 @@
-
-
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { PipelineContext } from '../../context/PipelineContext';
@@ -175,7 +173,7 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
 
               {/* PO Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Upload PO Document</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Upload PO Document <span className="text-red-500">*</span></label>
                 <input
                   type="file"
                   onChange={handleFileChange}
@@ -214,4 +212,3 @@ export default function POForm({ campaignId, onConfirm,onClose }) {
     </div>
   );
 }
-

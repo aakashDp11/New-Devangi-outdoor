@@ -5,8 +5,22 @@ import CampaignPipeline from "./CampaignPipeline";
 import { PieChart } from "@mui/x-charts/PieChart";
 import { toast } from "sonner";
 import { useSidebar } from "../context/SidebarContext";
-import { FaArrowLeft } from "react-icons/fa";
+import {
+  FaArrowLeft,
+  FaMapMarkerAlt,
+  FaRegBuilding,
+  FaTag,
+  FaLayerGroup,
+  FaCheckCircle,
+  FaLock,
+  FaEdit,
+  FaSave,
+  FaTimes,
+  FaBoxes,
+} from "react-icons/fa";
 import EditCampaignModal from "./modals/EditCampaignModel";
+
+// --- FIX START: Moved components outside of the main component ---
 
 const KeyValueItem = ({
   label,
@@ -32,6 +46,48 @@ const KeyValueItem = ({
   </div>
 );
 
+const DetailItem = ({ icon, label, value }) => (
+  <div className="flex items-center text-xs text-gray-600">
+    <span className="w-5">{icon}</span>
+    <span className="font-semibold mr-1">{label}:</span>
+    <span>{value}</span>
+  </div>
+);
+
+const CostInput = ({
+  label,
+  field,
+  value,
+  spaceId,
+  isEditable,
+  updateCostField,
+  isCurrency = false,
+}) => (
+  <div>
+    <label className="block text-xs font-medium text-gray-600 mb-1">
+      {label}
+    </label>
+    <div className="relative">
+      {isCurrency && (
+        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+          ₹
+        </span>
+      )}
+      <input
+        type="number"
+        className={`border rounded-md w-full py-1 text-sm ${
+          isCurrency ? "pl-7" : "px-2"
+        } ${!isEditable ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`}
+        value={value}
+        onChange={(e) => updateCostField(spaceId, field, e.target.value === '' ? '' : Number(e.target.value))}
+        readOnly={!isEditable}
+      />
+    </div>
+  </div>
+);
+
+// --- FIX END ---
+
 export default function CampaignDetails() {
   const { id } = useParams();
   const { isCollapsed } = useSidebar();
@@ -44,7 +100,7 @@ export default function CampaignDetails() {
   const [editableSpaces, setEditableSpaces] = useState(new Set());
   const [pipelineError, setPipelineError] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-
+  const [editedCosts, setEditedCosts] = useState({});
 
   useEffect(() => {
     const fetchCampaign = async () => {
@@ -106,12 +162,7 @@ export default function CampaignDetails() {
               mountingStatus: { confirmed: false },
               po: { confirmed: false },
               invoice: { invoiceNumber: "" },
-              payment: {
-                totalPaid: 0,
-                paymentDue: 0,
-                finalAmountWithGST: 0,
-                payments: [],
-              },
+              payment: { totalPaid: 0, paymentDue: 0, finalAmountWithGST: 0, payments: [] },
             });
             setPipelineError(true);
             return;
@@ -130,12 +181,7 @@ export default function CampaignDetails() {
           mountingStatus: { confirmed: false },
           po: { confirmed: false },
           invoice: { invoiceNumber: "" },
-          payment: {
-            totalPaid: 0,
-            paymentDue: 0,
-            finalAmountWithGST: 0,
-            payments: [],
-          },
+          payment: { totalPaid: 0, paymentDue: 0, finalAmountWithGST: 0, payments: [] },
         });
       }
     };
@@ -153,62 +199,73 @@ export default function CampaignDetails() {
     );
 
   const updateCostField = (spaceId, field, value) => {
-    setInventoryCosts((prev) => {
-      const index = prev.findIndex(
-        (cost) => cost.id === spaceId || cost.id?._id === spaceId
-      );
-      const updated = [...prev];
-      const space = spaceDetails.find(
-        (s) => s._id === spaceId || s._id?.toString() === spaceId.toString()
-      );
-      const computedArea = (space?.width || 0) * (space?.height || 0);
-
-      if (index !== -1) {
-        const updatedItem = { ...updated[index], [field]: value };
-        if (field !== "area") {
-          updatedItem.area = computedArea;
-        }
-        updated[index] = updatedItem;
-      } else {
-        updated.push({
-          id: spaceId,
-          displayCost: field === "displayCost" ? value : 0,
-          buyingPrice: field === "buyingPrice" ? value : 0,
-          sellingPrice: field === "sellingPrice" ? value : 0,
-          printingcostpersquareFeet:
-            field === "printingcostpersquareFeet" ? value : 0,
-          mountingcostpersquareFeet:
-            field === "mountingcostpersquareFeet" ? value : 0,
-          area: field === "area" ? value : computedArea,
-        });
-      }
-      return updated;
-    });
+    setEditedCosts((prev) => ({
+      ...prev,
+      [spaceId]: {
+        ...prev[spaceId],
+        [field]: value,
+      },
+    }));
   };
 
   const handleEditToggle = (spaceId) => {
-    setEditableSpaces((prev) => {
-      const updated = new Set(prev);
-      if (updated.has(spaceId)) {
-        updated.delete(spaceId);
-      } else {
-        updated.add(spaceId);
-      }
-      return updated;
-    });
+    const updated = new Set(editableSpaces);
+    if (updated.has(spaceId)) {
+      updated.delete(spaceId);
+      setEditedCosts((prev) => {
+        const newEditedCosts = { ...prev };
+        delete newEditedCosts[spaceId];
+        return newEditedCosts;
+      });
+    } else {
+      updated.add(spaceId);
+      const costItem = getCostItem(spaceId) || {};
+      const space = spaceDetails.find((s) => s._id === spaceId);
+      const computedArea = (space?.width || 0) * (space?.height || 0);
+
+      setEditedCosts((prev) => ({
+        ...prev,
+        [spaceId]: {
+          id: spaceId,
+          displayCost: costItem.displayCost || 0,
+          buyingPrice: costItem.buyingPrice || 0,
+          sellingPrice: costItem.sellingPrice || 0,
+          printingcostpersquareFeet: costItem.printingcostpersquareFeet || 0,
+          mountingcostpersquareFeet: costItem.mountingcostpersquareFeet || 0,
+          area: costItem.area || computedArea,
+        },
+      }));
+    }
+    setEditableSpaces(updated);
   };
 
   const handleSaveCostForSpace = async (spaceId) => {
-    const cost = getCostItem(spaceId);
-    if (!cost) {
-      toast.error("No cost data to save");
+    const costToSave = editedCosts[spaceId];
+    if (!costToSave) {
+      toast.error("No changes to save");
       return;
+    }
+    
+    // Convert empty strings back to 0 for saving
+    const sanitizedCostToSave = { ...costToSave };
+    for (const key in sanitizedCostToSave) {
+      if (sanitizedCostToSave[key] === '') {
+        sanitizedCostToSave[key] = 0;
+      }
     }
 
     try {
-      const updatedCosts = inventoryCosts.map((c) =>
-        c.id === spaceId || c.id?._id === spaceId ? cost : c
+      const index = inventoryCosts.findIndex(
+        (c) => c.id === spaceId || c.id?._id === spaceId
       );
+      let updatedCosts;
+      if (index !== -1) {
+        updatedCosts = inventoryCosts.map((c, i) =>
+          i === index ? sanitizedCostToSave : c
+        );
+      } else {
+        updatedCosts = [...inventoryCosts, sanitizedCostToSave];
+      }
 
       const res = await fetch(
         `${
@@ -222,11 +279,18 @@ export default function CampaignDetails() {
       );
 
       if (!res.ok) throw new Error("Failed to save costs");
+
+      setInventoryCosts(updatedCosts);
       toast.success("Costs saved for this space!");
-      setEditableSpaces((prev) => {
-        const updated = new Set(prev);
-        updated.delete(spaceId);
-        return updated;
+
+      const updated = new Set(editableSpaces);
+      updated.delete(spaceId);
+      setEditableSpaces(updated);
+      
+      setEditedCosts((prev) => {
+        const newEditedCosts = { ...prev };
+        delete newEditedCosts[spaceId];
+        return newEditedCosts;
       });
     } catch (err) {
       console.error(err);
@@ -258,16 +322,6 @@ export default function CampaignDetails() {
       key: "bookingStatus",
       data: pipelineData?.bookingStatus,
     },
-    // {
-    //   title: "Printing",
-    //   key: "printingStatus",
-    //   data: pipelineData?.printingStatus,
-    // },
-    // {
-    //   title: "Mounting",
-    //   key: "mountingStatus",
-    //   data: pipelineData?.mountingStatus,
-    // },
   ];
 
   return (
@@ -427,19 +481,8 @@ export default function CampaignDetails() {
                         series={[
                           {
                             data: [
-                              {
-                                id: 0,
-                                value: pipelineData.payment.totalPaid || 0,
-                                label: "Paid",
-                              },
-                              {
-                                id: 1,
-                                value:
-                                  pipelineData.payment.paymentDue === 0
-                                    ? 100
-                                    : pipelineData.payment.paymentDue || 100,
-                                label: "Due",
-                              },
+                              { id: 0, value: pipelineData.payment.totalPaid || 0, label: "Paid" },
+                              { id: 1, value: pipelineData.payment.paymentDue === 0 ? 100 : pipelineData.payment.paymentDue || 100, label: "Due" },
                             ],
                             innerRadius: 50,
                             outerRadius: 90,
@@ -450,31 +493,18 @@ export default function CampaignDetails() {
                       />
                       {pipelineData?.payment?.payments?.length > 0 ? (
                         <div className="text-xs mt-2 space-y-1">
-                          <p>
-                            <strong>Total:</strong> ₹
-                            {pipelineData.payment.finalAmountWithGST ?? 0}
-                          </p>
-                          <p>
-                            <strong>Paid:</strong> ₹
-                            {pipelineData.payment.totalPaid ?? 0}
-                          </p>
-                          <p>
-                            <strong>Due:</strong> ₹
-                            {pipelineData.payment.paymentDue ?? 0}
-                          </p>
+                          <p><strong>Total:</strong> ₹{pipelineData.payment.finalAmountWithGST ?? 0}</p>
+                          <p><strong>Paid:</strong> ₹{pipelineData.payment.totalPaid ?? 0}</p>
+                          <p><strong>Due:</strong> ₹{pipelineData.payment.paymentDue ?? 0}</p>
                         </div>
                       ) : (
-                        <h4 className="text-sm text-gray-600">
-                          Please enter the payment details in the pipeline.
-                        </h4>
+                        <h4 className="text-sm text-gray-600">Please enter the payment details in the pipeline.</h4>
                       )}
                     </div>
                   </div>
                 ) : (
                   <div className="mt-4">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
-                      Payment Overview
-                    </h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">Payment Overview</h3>
                     <div className="w-[200px]">
                       <div className="rounded-full bg-gray-300 h-[150px] w-[150px] mb-4"></div>
                       <div className="space-y-2 text-xs">
@@ -489,190 +519,151 @@ export default function CampaignDetails() {
             </div>
 
             {spaceDetails.map((space, index) => {
-              const cost = getCostItem(space._id);
-              const computedArea = space.width * space.height;
-              const displayCost = cost?.displayCost || 0;
-              const sellingPrice = cost?.sellingPrice || 0;
-              const printingCost = cost?.printingcostpersquareFeet || 0;
-              const mountingCost = cost?.mountingcostpersquareFeet || 0;
-              const area = cost?.area || computedArea || 0;
               const isEditable = editableSpaces.has(space._id);
+              const originalCost = getCostItem(space._id);
+              const currentCost = isEditable
+                ? editedCosts[space._id]
+                : originalCost;
 
-              // --- UPDATED TOTAL COST CALCULATION ---
-             let totalCost = displayCost; // Always starts with displayCost
+              const computedArea = space.width * space.height;
+              // Use Number() to ensure we are working with numbers for calculation
+              const displayCost = Number(currentCost?.displayCost || 0);
+              const buyingPrice = Number(currentCost?.buyingPrice || 0);
+              const sellingPrice = Number(currentCost?.sellingPrice || 0);
+              const printingCost = Number(currentCost?.printingcostpersquareFeet || 0);
+              const mountingCost = Number(currentCost?.mountingcostpersquareFeet || 0);
+              const area = Number(currentCost?.area || computedArea || 0);
 
+              let totalCost = displayCost;
               if (space.spaceType !== "DOOH") {
-                totalCost += (printingCost * area) + (mountingCost * area);
+                totalCost += printingCost * area + mountingCost * area;
               }
 
               return (
                 <div
                   key={space._id || index}
-                  className="bg-white shadow-md border rounded-xl p-4"
+                  className="bg-white shadow-md border rounded-xl p-4 flex flex-col"
                 >
-                  <h2 className="text-base font-semibold mb-2">
-                    Space {index + 1}
-                  </h2>
-                  {space.mainPhoto && (
-                    <img
-                      src={space.mainPhoto}
-                      alt="Main"
-                      className="w-48 h-32 object-cover rounded border mb-2"
-                    />
-                  )}
-                  <div className="text-sm space-y-1">
-                    <p>
-                      <strong>Name:</strong> {space.spaceName}
-                    </p>
-                    <p>
-                      <strong>Location:</strong> {space.city}, {space.state}
-                    </p>
-                    <p>
-                      <strong>Type:</strong> {space.spaceType}
-                    </p>
-                    <p>
-                      <strong>Total Units:</strong> {space.unit}
-                    </p>
-                    <p>
-                      <strong>Occupied Units:</strong> {space.occupiedUnits}
-                    </p>
-                    <p>
-                      <strong>Selected Units:</strong> {space.selectedUnits}
-                    </p>
-                    <p>
-                      <strong>Availability:</strong> {space.availability}
-                    </p>
-                    {/* --- CHANGE 1: Always show Ownership Type --- */}
-                    <p>
-                      <strong>Ownership Type: </strong> {space.ownershipType}
-                    </p>
-                    <hr className="my-2" />
-
-                    <div className="grid grid-cols-1 gap-2">
-                      <label>
-                        Display Cost:
-                        <input
-                          type="number"
-                          className="border rounded ml-2 px-2 py-1 w-[20%]"
-                          value={cost?.displayCost || 0}
-                          onChange={(e) =>
-                            updateCostField(
-                              space._id,
-                              "displayCost",
-                              Number(e.target.value)
-                            )
-                          }
-                          readOnly={!isEditable}
+                  <h3 className="text-base font-bold text-gray-800 mb-3">
+                    {space.spaceName || `Space ${index + 1}`}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-grow">
+                    <div className="md:col-span-2">
+                      {space.mainPhoto && (
+                        <img
+                          src={space.mainPhoto}
+                          alt={space.spaceName}
+                          className="w-full h-32 object-cover rounded-lg border mb-3"
                         />
-                      </label>
-                      
-                      {/* --- CHANGE 2: Conditionally render Buying/Selling Price --- */}
-                      {space.ownershipType === "Traded" && (
-                        <>
-                          <div className="mb-2">
-                            <label>
-                              Buying Price:
-                              <input
-                                type="number"
-                                className="border rounded ml-2 px-2 py-1 w-[20%]"
-                                value={cost?.buyingPrice || 0}
-                                onChange={(e) =>
-                                  updateCostField(
-                                    space._id,
-                                    "buyingPrice",
-                                    Number(e.target.value)
-                                  )
-                                }
-                                readOnly={!isEditable}
-                              />
-                            </label>
-                          </div>
-                          <div>
-                            <label>
-                              Selling Price:
-                              <input
-                                type="number"
-                                className="border rounded ml-2 px-2 py-1 w-[20%]"
-                                value={cost?.sellingPrice || 0}
-                                onChange={(e) =>
-                                  updateCostField(
-                                    space._id,
-                                    "sellingPrice",
-                                    Number(e.target.value)
-                                  )
-                                }
-                                readOnly={!isEditable}
-                              />
-                            </label>
-                          </div>
-                        </>
                       )}
-
-                      {/* --- CHANGE 3 & 4: Logic to handle DOOH vs. other types --- */}
-                      {[
-                        "printingcostpersquareFeet",
-                        "mountingcostpersquareFeet",
-                        "area",
-                      ].map((field) => {
-                        if (space.spaceType === "DOOH") {
-                          return null;
-                        }
-                        return (
-                          <label key={field}>
-                            {field === "printingcostpersquareFeet" && (
-                              <span>Printing Cost/sq.ft.:</span>
-                            )}
-                            {field === "mountingcostpersquareFeet" && (
-                              <span>Mounting Cost/sq.ft.:</span>
-                            )}
-                            {field === "area" && <span>Area (sq.ft.):</span>}
-                            <input
-                              type="number"
-                              className="border rounded ml-2 px-2 py-1 w-[20%]"
-                              value={
-                                cost?.[field] ||
-                                (field === "area" ? computedArea : 0)
-                              }
-                              onChange={(e) =>
-                                updateCostField(
-                                  space._id,
-                                  field,
-                                  Number(e.target.value)
-                                )
-                              }
-                              readOnly={!isEditable}
-                            />
-                          </label>
-                        );
-                      })}
-
-                      {/* --- CHANGE 5: Display the correctly calculated total cost --- */}
-                      <p>
-                        <strong>Total Cost:</strong> ₹{totalCost.toFixed(2)}
-                      </p>
-
-                      <div className="flex w-full gap-2 mt-2">
-                        <button
-                          onClick={() => handleEditToggle(space._id)}
-                          className={`text-xs px-2 py-1 rounded text-white ${
-                            isEditable
-                              ? "bg-red-500 hover:bg-red-600"
-                              : "bg-gray-500 hover:bg-gray-600"
-                          }`}
-                        >
-                          {isEditable ? "Cancel" : "Edit Costs"}
-                        </button>
-                        <button
-                          onClick={() => handleSaveCostForSpace(space._id)}
-                          disabled={!isEditable}
-                          className={`text-xs ml-auto px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 ${
-                            !isEditable ? "opacity-50 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          Save Costs
-                        </button>
+                      <div className="space-y-1.5">
+                        <DetailItem icon={<FaMapMarkerAlt />} label="Location" value={`${space.city}, ${space.state}`} />
+                        <DetailItem icon={<FaRegBuilding />} label="Type" value={space.spaceType} />
+                        <DetailItem icon={<FaTag />} label="Ownership" value={space.ownershipType} />
+                        <DetailItem icon={<FaBoxes />} label="Total Units" value={space.unit} />
+                        <DetailItem icon={<FaLock />} label="Occupied" value={space.occupiedUnits} />
+                        <DetailItem icon={<FaCheckCircle />} label="Selected" value={space.selectedUnits} />
                       </div>
                     </div>
+
+                    <div className="md:col-span-3 space-y-3">
+                      <CostInput
+                        label="Display Cost"
+                        field="displayCost"
+                        value={currentCost?.displayCost || 0}
+                        isCurrency
+                        isEditable={isEditable}
+                        updateCostField={updateCostField}
+                        spaceId={space._id}
+                      />
+
+                      {space.ownershipType === "Traded" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <CostInput
+                            label="Buying Price"
+                            field="buyingPrice"
+                            value={currentCost?.buyingPrice || 0}
+                            isCurrency
+                            isEditable={isEditable}
+                            updateCostField={updateCostField}
+                            spaceId={space._id}
+                          />
+                          <CostInput
+                            label="Selling Price"
+                            field="sellingPrice"
+                            value={currentCost?.sellingPrice || 0}
+                            isCurrency
+                            isEditable={isEditable}
+                            updateCostField={updateCostField}
+                            spaceId={space._id}
+                          />
+                        </div>
+                      )}
+
+                      {space.spaceType !== "DOOH" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <CostInput
+                            label="Printing/sq.ft"
+                            field="printingcostpersquareFeet"
+                            value={currentCost?.printingcostpersquareFeet || 0}
+                            isCurrency
+                            isEditable={isEditable}
+                            updateCostField={updateCostField}
+                            spaceId={space._id}
+                          />
+                          <CostInput
+                            label="Mounting/sq.ft"
+                            field="mountingcostpersquareFeet"
+                            value={currentCost?.mountingcostpersquareFeet || 0}
+                            isCurrency
+                            isEditable={isEditable}
+                            updateCostField={updateCostField}
+                            spaceId={space._id}
+                          />
+                          <CostInput
+                            label="Area (sq.ft)"
+                            field="area"
+                            value={currentCost?.area || computedArea}
+                            isEditable={isEditable}
+                            updateCostField={updateCostField}
+                            spaceId={space._id}
+                          />
+                        </div>
+                      )}
+
+                      <div className="border-t pt-3 mt-3">
+                        <p className="flex justify-between items-center text-sm font-bold">
+                          <span>Total Cost:</span>
+                          <span className="text-lg text-blue-600">
+                            ₹{totalCost.toFixed(2)}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex w-full gap-2 mt-4 pt-4 border-t">
+                    <button
+                      onClick={() => handleEditToggle(space._id)}
+                      className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md font-semibold transition-all ${
+                        isEditable
+                          ? "bg-red-100 text-red-700 hover:bg-red-200"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {isEditable ? <FaTimes /> : <FaEdit />}
+                      {isEditable ? "Cancel" : "Edit"}
+                    </button>
+                    {isEditable && (
+                      <button
+                        onClick={() => handleSaveCostForSpace(space._id)}
+                        disabled={!isEditable}
+                        className="inline-flex items-center gap-2 text-xs ml-auto px-3 py-1.5 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        <FaSave />
+                        Save
+                      </button>
+                    )}
                   </div>
                 </div>
               );

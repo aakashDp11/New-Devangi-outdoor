@@ -1,7 +1,6 @@
-// 
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export default function EditCampaignModal({
   campaignData,
@@ -17,6 +16,7 @@ export default function EditCampaignModal({
     industry: "",
   });
   const [dateError, setDateError] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (campaignData) {
@@ -29,6 +29,13 @@ export default function EditCampaignModal({
       });
     }
   }, [campaignData]);
+
+  const handleGoToInvoice = () => {
+    if (!campaignData?._id) return;
+    onClose(); 
+    // --- FIX: Changed path from "/campaigns/pipeline/..." to "/pipeline/..." ---
+    navigate(`/pipeline/${campaignData._id}?open=invoice`);
+  };
 
   const handleChange = async (e) => {
     const { name, value } = e.target;
@@ -59,10 +66,9 @@ export default function EditCampaignModal({
           }
 
           const overlaps = (space.campaignDates || []).some((cd) => {
-            // ✅ Skip the current campaign's own booking
             if (
-              cd.campaignId === campaignData._id || // direct match
-              cd.campaignId?._id === campaignData._id // populated ref match
+              cd.campaignId === campaignData._id ||
+              cd.campaignId?._id === campaignData._id
             ) {
               return false;
             }
@@ -80,7 +86,7 @@ export default function EditCampaignModal({
           }
         }
 
-        setDateError(""); // ✅ Valid
+        setDateError("");
       } catch (err) {
         console.error(err);
         setDateError("Error validating dates. Try again.");
@@ -158,34 +164,33 @@ export default function EditCampaignModal({
           {dateError && (
             <p className="text-red-600 text-xs mt-1">{dateError}</p>
           )}
-          {/* <label>
-            Industry (Optional):
-            <input
-              name="industry"
-              value={formData.industry}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2 mt-1"
-            />
-          </label> */}
         </div>
-        <div className="flex justify-end mt-6 space-x-2">
+        <div className="flex justify-between items-center mt-6">
           <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+              onClick={handleGoToInvoice}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
           >
-            Cancel
+              Update Invoice
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!!dateError}
-            className={`px-4 py-2 rounded text-white ${
-              dateError
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            Save Changes
-          </button>
+          <div className="space-x-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!!dateError}
+              className={`px-4 py-2 rounded text-white ${
+                dateError
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              Save Changes
+            </button>
+          </div>
         </div>
       </div>
     </div>

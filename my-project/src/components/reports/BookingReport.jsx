@@ -62,18 +62,20 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange }) => (
 const ITEMS_PER_PAGE = 10;
 const API_MAX_LIMIT = 50; // Use a larger limit for download fetches
 
-// --- Filter Options (Unchanged) ---
+// --- Filter Options ---
 const industryOptions = [
   "Tourism", "Retail", "Real Estate", "Other", "Movie", "Media and Entertainment",
   "FMCG", "Finance", "Financial Services", "Healthcare", "Hospitality", "IT Industry",
   "Automobile", "Clothing & Apparel", "Ecommerce", "Edtech", "Entertainment",
 ];
 const inventoryTypeOptions = ["Billboard", "DOOH", "Gantry", "Pole Kiosk", "BQS", "Miscellaneous"];
+// --- NEW CLIENT TYPE OPTIONS ---
+const clientTypeOptions = ["Corporate", "Agency", "Direct", "Government"];
 
 export default function BookingReport({ handleShowDateModal = () => {} }) {
   const navigate = useNavigate();
 
-  // --- SECTION 1: BOOKING REPORT STATE & LOGIC ---
+  // --- SECTION 1: BOOKING REPORT STATE & LOGIC (Unchanged) ---
   const [bookings, setBookings] = useState([]);
   const [bookingFilters, setBookingFilters] = useState({
     client: "",
@@ -130,7 +132,6 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
     }
   };
 
-  // MODIFICATION: This function now fetches all pages for a full report
   const downloadBookingExcel = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -218,14 +219,14 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
   // --- SECTION 2: PROPOSAL REPORT TABLE STATE & LOGIC ---
   const [proposals, setProposals] = useState([]);
   const [proposalTableFilters, setProposalTableFilters] = useState({
-    startDate: "", endDate: "", person: "", industry: "", inventoryType: "", agency: "",
+    startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "", // CHANGED: agency -> clientType
   });
   const [proposalCurrentPage, setProposalCurrentPage] = useState(1);
   const [proposalTotalPages, setProposalTotalPages] = useState(1);
 
   const resetProposalTableFilters = () => {
     setProposalTableFilters({
-        startDate: "", endDate: "", person: "", industry: "", inventoryType: "", agency: ""
+        startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "" // CHANGED: agency -> clientType
     });
     setProposalCurrentPage(1);
   };
@@ -258,7 +259,6 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
     setProposalTableFilters((prev) => ({ ...prev, [name]: value }));
   };
   
-  // MODIFICATION: This function now fetches all pages for a full report
   const downloadProposalExcel = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -302,7 +302,8 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
             COMPANY: p.companyName,
             CLIENT: p.clientName,
             INDUSTRY: p.industry,
-            "CLIENT TYPE": p.clientType,
+            "CLIENT TYPE": p.clientType, // Ensure this matches backend property name
+            "BOOKING SOURCE": p.bookingSource,
             DATE: dayjs(p.createdAt).format("DD MMM YYYY"),
             INVENTORIES: p.spaceDetails?.map((s) => s.spaceName).join(", ") || "N/A",
             "TYPE OF INVENTORIES": p.spaceDetails?.map((s) => s.spaceType).join(", ") || "N/A",
@@ -333,12 +334,12 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
   const [graphDimension, setGraphDimension] = useState("timeline");
   const [proposalChartData, setProposalChartData] = useState({ xLabels: [], yData: [] });
   const [proposalGraphFilters, setProposalGraphFilters] = useState({
-    startDate: "", endDate: "", person: "", industry: "", inventoryType: "", agency: "",
+    startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "", // CHANGED: agency -> clientType
   });
 
   const resetProposalGraphFilters = () => {
     setProposalGraphFilters({
-        startDate: "", endDate: "", person: "", industry: "", inventoryType: "", agency: ""
+        startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "" // CHANGED: agency -> clientType
     });
   };
 
@@ -393,7 +394,10 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                 dataMap.set(key, (dataMap.get(key) || 0) + 1);
               });
               return;
-            } else {
+            } else if (graphDimension === 'clientType') { // <<< ADDED LOGIC FOR CLIENT TYPE DIMENSION
+              key = proposal.clientType || "N/A";
+            }
+             else {
               key = proposal[graphDimension] || "N/A";
             }
             dataMap.set(key, (dataMap.get(key) || 0) + 1);
@@ -414,7 +418,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
 
   return (
     <div className="space-y-10">
-      {/* CARD 1: BOOKING REPORT TABLE */}
+      {/* CARD 1: BOOKING REPORT TABLE (Unchanged) */}
       <Card>
         <CardContent>
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Booking Report</h3>
@@ -439,7 +443,6 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
           </div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-md font-semibold text-gray-700">Bookings Table</h3>
-            {/* MODIFICATION: Updated button text */}
             <Button onClick={downloadBookingExcel} disabled={bookings.length === 0}>
               Download Full Report
             </Button>
@@ -492,7 +495,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
       <Card>
         <CardContent>
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Proposal Report</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-6 items-center">
             <Input name="person" placeholder="By Client Name , By Company Name" value={proposalTableFilters.person} onChange={handleProposalTableFilterChange} />
             <Select name="industry" value={proposalTableFilters.industry} onChange={handleProposalTableFilterChange}>
               <option value="">By Industry</option>
@@ -502,9 +505,17 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
               <option value="">By Inventory Type</option>
               {inventoryTypeOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
             </Select>
-            <Select name="agency" value={proposalTableFilters.agency} onChange={handleProposalTableFilterChange}>
-              <option value="">By Agency Status</option>
-              <option value="true">Is Agency</option>
+            
+            {/* <<< REPLACED 'By Agency Status' FILTER >>> */}
+            <Select name="clientType" value={proposalTableFilters.clientType} onChange={handleProposalTableFilterChange}>
+              <option value="">By Client Type</option>
+              {clientTypeOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
+            </Select>
+
+            <Select name="bookingSource" value={proposalTableFilters.bookingSource} onChange={handleProposalTableFilterChange}>
+                <option value="">By Booking Source</option>
+                <option value="Direct">Direct</option>
+                <option value="Agency">Agency</option>
             </Select>
             <button onClick={() => handleShowDateModal("proposals", proposalTableFilters, setProposalTableFilters)} className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50">
               {proposalTableFilters.startDate && proposalTableFilters.endDate ? `${proposalTableFilters.startDate} to ${proposalTableFilters.endDate}` : "Filter by Proposal Date"}
@@ -513,7 +524,6 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
           </div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-md font-semibold text-gray-700">Proposals Table</h3>
-            {/* MODIFICATION: Updated button text */}
             <Button onClick={downloadProposalExcel} disabled={proposals.length === 0}>
               Download Full Report
             </Button>
@@ -526,6 +536,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                   <th scope="col" className="px-6 py-3">Client</th>
                   <th scope="col" className="px-6 py-3">Industry</th>
                   <th scope="col" className="px-6 py-3">Client Type</th>
+                  <th scope="col" className="px-6 py-3">Booking Source</th>
                   <th scope="col" className="px-6 py-3">Date</th>
                   <th scope="col" className="px-6 py-3">Inventories</th>
                   <th scope="col" className="px-6 py-3">Type of Inventories</th>
@@ -538,14 +549,15 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                       <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.companyName}</td>
                       <td className="px-6 py-4">{p.clientName}</td>
                       <td className="px-6 py-4">{p.industry || "N/A"}</td>
-                      <td className="px-6 py-4">{p.clientType}</td>
+                      <td className="px-6 py-4">{p.clientType || "N/A"}</td> {/* Ensure clientType is displayed */}
+                      <td className="px-6 py-4">{p.bookingSource || "N/A"}</td>
                       <td className="px-6 py-4">{dayjs(p.createdAt).format("DD MMM YYYY")}</td>
                       <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceName).join(", ") || "N/A"}</td>
                       <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceType).join(", ") || "N/A"}</td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="7" className="text-center py-10 text-gray-500">No proposals found for the selected filters.</td></tr>
+                  <tr><td colSpan="8" className="text-center py-10 text-gray-500">No proposals found for the selected filters.</td></tr>
                 )}
               </tbody>
             </table>
@@ -560,7 +572,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-800">Proposal Graph</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6 p-4 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-6 p-4 items-center">
             <Input name="person" placeholder="By Client Name , By Company Name" value={proposalGraphFilters.person} onChange={handleProposalGraphFilterChange} />
             <Select name="industry" value={proposalGraphFilters.industry} onChange={handleProposalGraphFilterChange}>
               <option value="">By Industry</option>
@@ -570,9 +582,17 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
               <option value="">By Inventory Type</option>
               {inventoryTypeOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
             </Select>
-            <Select name="agency" value={proposalGraphFilters.agency} onChange={handleProposalGraphFilterChange}>
-              <option value="">By Agency Status</option>
-              <option value="true">Is Agency</option>
+            
+            {/* <<< REPLACED 'By Agency Status' FILTER >>> */}
+            <Select name="clientType" value={proposalGraphFilters.clientType} onChange={handleProposalGraphFilterChange}>
+              <option value="">By Client Type</option>
+              {clientTypeOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
+            </Select>
+            
+            <Select name="bookingSource" value={proposalGraphFilters.bookingSource} onChange={handleProposalGraphFilterChange}>
+                <option value="">By Booking Source</option>
+                <option value="Direct">Direct</option>
+                <option value="Agency">Agency</option>
             </Select>
             <button onClick={() => handleShowDateModal("graph", proposalGraphFilters, setProposalGraphFilters)} className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 bg-white">
               {proposalGraphFilters.startDate && proposalGraphFilters.endDate ? `${proposalGraphFilters.startDate} to ${proposalGraphFilters.endDate}` : "Filter by Proposal Date"}

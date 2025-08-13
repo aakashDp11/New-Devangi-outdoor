@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useSidebar } from '../context/SidebarContext';
-import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+import { FaArrowLeft, FaArrowRight, FaDownload } from 'react-icons/fa';
 
 // --- Component Definitions (Button, Input, Card, etc.) ---
-// These are standard UI components and are correct.
 const Button = ({ children, className = '', ...props }) => (
     <button className={`px-4 py-2 rounded bg-black text-white hover: transition ${className}`} {...props}>
         {children}
@@ -43,7 +42,6 @@ const PaginationLink = ({ children, isActive = false, onClick, disabled }) => (
         {children}
     </button>
 );
-
 
 export default function Gallery() {
     const navigate = useNavigate();
@@ -94,10 +92,7 @@ export default function Gallery() {
         return () => clearTimeout(timeout);
     }, [currentPage]);
 
-    // --- START: UPDATED FUNCTION ---
     const handleDownloadImages = async (item) => {
-        console.log("Preparing to download images for:", item.companyName);
-
         for (const campaign of item.campaigns || []) {
             const pipelines = Array.isArray(campaign.pipeline) ? campaign.pipeline : [campaign.pipeline].filter(Boolean);
             
@@ -106,35 +101,43 @@ export default function Gallery() {
                 if (url) {
                     try {
                         const response = await fetch(url);
-                        if (!response.ok) {
-                            throw new Error(`Network response was not ok for an image in campaign: ${campaign.campaignName}`);
-                        }
+                        if (!response.ok) throw new Error(`Network response was not ok`);
                         const blob = await response.blob();
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
-                        
-                        // Construct a descriptive file name
                         const fileName = `${campaign.campaignName || 'artwork'}_${url.substring(url.lastIndexOf('/') + 1)}`;
                         link.download = fileName;
-                        
-                        // Append, click, and remove the link
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        
-                        // Revoke the object URL after a short delay to ensure the download has time to start
                         setTimeout(() => URL.revokeObjectURL(link.href), 100);
-
                     } catch (error) {
                         console.error('Download failed, falling back to new tab:', url, error);
-                        // If the try block fails (e.g., due to CORS), open the image in a new tab as a fallback.
                         window.open(url, '_blank');
                     }
                 }
             }
         }
     };
-    // --- END: UPDATED FUNCTION ---
+
+    const handleDownloadSingleImage = async (event, url, fileName) => {
+        event.stopPropagation();
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Network response was not ok');
+            const blob = await response.blob();
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(link.href), 100);
+        } catch (error) {
+            console.error('Download failed for single image:', url, error);
+            window.open(url, '_blank');
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 h-screen w-screen text-black flex flex-col lg:flex-row overflow-hidden">
@@ -162,30 +165,68 @@ export default function Gallery() {
                         <Card key={item._id} className="transition hover:shadow-md">
                             <CardContent className="flex flex-col gap-4">
                                 <div className="text-md font-semibold text-black">
-                                    {item.campaigns?.[0]?.campaignName || 'No Campaign Name'}
+                                    {item.companyName || 'No Campaign Name'}
                                 </div>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                                     {(item.campaigns || []).flatMap((campaign, cIdx) => {
                                         const pipelines = Array.isArray(campaign.pipeline) ? campaign.pipeline : [campaign.pipeline].filter(Boolean);
+                                        
                                         return pipelines.map((pipe, pIdx) => {
                                             const url = pipe?.artwork?.documentUrl;
+                                            const campaignName = campaign.campaignName || 'Campaign';
+                                            const campaignId = campaign._id;
+                                            
+                                            // --- FINAL CORRECTED LOGIC ---
+                                            // This checks for dates in multiple possible locations to ensure they are found.
+                                            // 1. Checks for `startDate` directly on the campaign object.
+                                            // 2. If not found, it checks inside the pipeline's artwork object as a fallback.
+                                            const campaignStartDate = campaign.startDate || pipe?.artwork?.startDate;
+                                            const campaignEndDate = campaign.endDate || pipe?.artwork?.endDate;
+
                                             return url ? (
-                                                <img
-                                                key={`${cIdx}-${pIdx}`}
-                                                src={url}
-                                                alt={`Artwork for ${campaign.campaignName || 'Campaign'}`}
-                                                className="rounded w-full h-32 object-cover bg-gray-100"
-                                                loading="lazy"
-                                                />
+                                                <div
+                                                    key={`${cIdx}-${pIdx}`}
+                                                    className="relative group w-full h-32 cursor-pointer"
+                                                    onClick={() => navigate(`/campaign-details/${campaignId}`)}
+                                                >
+                                                    <img
+                                                        src={url}
+                                                        alt={`Artwork for ${campaignName}`}
+                                                        className="rounded w-full h-full object-cover bg-gray-100"
+                                                        loading="lazy"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2">
+                                                        <p className="text-white text-center text-xs font-semibold">{campaignName}</p>
+                                                        {campaignStartDate && (
+                                                            <p className="text-white text-center text-xs mt-1">
+                                                                Start: {new Date(campaignStartDate).toLocaleDateString()}
+                                                            </p>
+                                                        )}
+                                                        {campaignEndDate && (
+                                                            <p className="text-white text-center text-xs">
+                                                                End: {new Date(campaignEndDate).toLocaleDateString()}
+                                                            </p>
+                                                        )}
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const fileName = `${campaignName || 'artwork'}_${url.substring(url.lastIndexOf('/') + 1)}`;
+                                                                handleDownloadSingleImage(e, url, fileName);
+                                                            }}
+                                                            className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-full text-xs flex items-center gap-1 mt-2"
+                                                        >
+                                                            <FaDownload /> Download
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             ) : null;
-                                        }).filter(Boolean)
+                                        }).filter(Boolean);
                                     })}
                                 </div>
 
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
                                     <div className="flex-1 flex flex-col gap-1">
-                                        <div className="text-sm font-semibold break-words">{item.companyName}</div>
                                         <div className="text-xs text-gray-600">Client: {item.clientName || 'N/A'}</div>
                                         <div className="text-xs text-gray-600">Brand: {item.brandDisplayName || 'N/A'}</div>
                                     </div>

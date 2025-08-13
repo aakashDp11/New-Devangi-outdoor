@@ -13,13 +13,17 @@ const ProposalSchema = new mongoose.Schema({
   clientGstNumber: { type: String },
   clientContactNumber: { type: Number },
   brandDisplayName: { type: String },
-  clientType: { type: String },
+  clientType: { 
+    type: String,
+    enum: ["Corporate", "Agency", "Direct", "Government"] // <<< IMPROVEMENT
+  },
+  bookingSource: { 
+    type: String, 
+    required: true, 
+    enum: ['Direct', 'Agency'] 
+  },
   description: { type: String },
   spaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Space' }],
-
-  // --- THIS IS THE FIX ---
-  // The enum list has been updated to match every possible value from your frontend form,
-  // which will resolve the "not a valid enum value" error.
   industry: {
     type: String,
     enum: [

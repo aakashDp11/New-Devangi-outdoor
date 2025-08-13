@@ -14,7 +14,8 @@ export const getProposalReport = async (req, res) => {
       person,
       industry,
       inventoryType,
-      agency,
+      clientType, // <<< READ clientType
+      bookingSource,
       page = 1,
       limit = 10
     } = req.query;
@@ -37,7 +38,6 @@ export const getProposalReport = async (req, res) => {
     }
 
     if (person) {
-       // Search in both companyName and clientName for better filtering
       initialMatch.$or = [
           { companyName: { $regex: person, $options: 'i' } },
           { clientName: { $regex: person, $options: 'i' } }
@@ -46,9 +46,16 @@ export const getProposalReport = async (req, res) => {
     if (industry) {
       initialMatch.industry = industry;
     }
-    if (agency && agency.toLowerCase() === 'true') {
-      initialMatch.clientType = 'Agency';
+    
+    // --- THIS LOGIC IS REPLACED ---
+    if (clientType) {
+      initialMatch.clientType = clientType;
     }
+
+    if (bookingSource) {
+      initialMatch.bookingSource = bookingSource;
+    }
+
     if (Object.keys(initialMatch).length > 0) {
       pipeline.push({ $match: initialMatch });
     }
@@ -73,15 +80,15 @@ export const getProposalReport = async (req, res) => {
     }
     
     // --- 4. Add a $project stage to explicitly define the output ---
-    // This ensures all required fields are passed to the frontend.
     pipeline.push({
         $project: {
             companyName: 1,
             clientName: 1,
-            industry: 1, // <<< THIS IS THE FIX
+            industry: 1,
             clientType: 1,
+            bookingSource: 1,
             createdAt: 1,
-            spaceDetails: 1 // Keep the populated space details
+            spaceDetails: 1
         }
     });
 
@@ -90,7 +97,7 @@ export const getProposalReport = async (req, res) => {
       $facet: {
         metadata: [{ $count: 'total' }],
         data: [
-            { $sort: { createdAt: -1 } }, // Sorting by newest first
+            { $sort: { createdAt: -1 } },
             { $skip: skip }, 
             { $limit: parseInt(limit) }
         ]
@@ -133,6 +140,7 @@ router.post('/', async (req, res) => {
       clientContactNumber,
       brandDisplayName,
       clientType,
+      bookingSource,
       industry,
       description,
       spaces,
@@ -150,6 +158,7 @@ router.post('/', async (req, res) => {
       clientContactNumber,
       brandDisplayName,
       clientType,
+      bookingSource,
       industry,
       description,
       spaces: spaceIds

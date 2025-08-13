@@ -1,9 +1,5 @@
-
-
-
-
 import React, { useCallback, useEffect, useState, useContext } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom'; // --- NEW: Import useLocation
 import {
   ReactFlow,
   useNodesState,
@@ -32,11 +28,43 @@ const baseNodeStyle = {
   border: '2px solid',
   borderRadius: 8,
   fontWeight: 600,
+  textAlign: 'center',
 };
+
+const formatTimestamp = (isoString) => {
+  if (!isoString) return null;
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch (error) {
+    console.error("Invalid timestamp:", isoString);
+    return null;
+  }
+};
+
+const NodeLabel = ({ title, timestamp }) => (
+  <div>
+    <div>{title}</div>
+    {timestamp && (
+      <div style={{ fontSize: '9px', marginTop: '4px', color: '#4A5568', fontWeight: 400 }}>
+        {timestamp}
+      </div>
+    )}
+  </div>
+);
+
 
 function CampaignPipelineInternal({ campaignId }) {
   const { id } = useParams();
   const CampaignId = campaignId || id;
+  const location = useLocation(); // --- NEW: Get location object
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -58,24 +86,21 @@ function CampaignPipelineInternal({ campaignId }) {
 
   const isNodeCompleted = (nodeId, space = null) => {
     if (nodeId === 'booking') return pipelineData?.bookingStatus?.confirmed;
-    // if (nodeId === 'po') return !!pipelineData?.poStatus;
-    if (nodeId === 'po') return pipelineData?.po?.confirmed; 
+    if (nodeId === 'po') return pipelineData?.po?.confirmed;
     if (nodeId === 'artwork') return pipelineData?.artwork?.confirmed;
-    // if (nodeId === 'invoice') return !!pipelineData?.invoice?.invoiceNumber;
     if (nodeId === 'invoice') {
       return Array.isArray(pipelineData?.invoice) && pipelineData.invoice.length > 0 && pipelineData.invoice.some(inv => inv.invoiceNumber);
     }
-    
     if (nodeId === 'payment') return pipelineData?.payment?.payments?.length > 0;
     if (nodeId.startsWith('print-')) return space?.printingStatus?.confirmed;
     if (nodeId.startsWith('mount-')) return space?.mountingStatus?.confirmed;
     if (nodeId.startsWith('digital-')) return space?.digitalStatus?.confirmed;
-  if (nodeId.startsWith('live-')) return space?.digitalStatus?.isLive;
+    if (nodeId.startsWith('live-')) return space?.digitalStatus?.isLive;
     return false;
   };
 
   const getNodeStyle = (isComplete) => {
-    const bgColor = isComplete ? '#d1fae5' : '#fef08a'; // green or yellow
+    const bgColor = isComplete ? '#d1fae5' : '#fef08a';
     return {
       ...baseNodeStyle,
       background: bgColor,
@@ -88,7 +113,6 @@ function CampaignPipelineInternal({ campaignId }) {
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
         setPipelineData(res.data);
-        console.log("Pip data is", res.data);
       } catch (err) {
         if (err.response?.status === 404) {
           const createRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
@@ -98,7 +122,6 @@ function CampaignPipelineInternal({ campaignId }) {
         }
       }
     };
-
     if (CampaignId) fetchOrCreatePipeline();
   }, [CampaignId, refreshKey]);
 
@@ -112,7 +135,6 @@ function CampaignPipelineInternal({ campaignId }) {
         console.error('Failed to fetch campaign spaces:', error);
       }
     };
-
     if (pipelineData?.artwork?.confirmed) {
       fetchSpaces();
     }
@@ -127,7 +149,7 @@ function CampaignPipelineInternal({ campaignId }) {
     const staticNodes = [
       {
         id: 'booking',
-        data: { label: 'Booking confirmed' },
+        data: { label: <NodeLabel title="Booking Confirmed" timestamp={formatTimestamp(pipelineData.bookingStatus?.completedAt)} /> },
         position: { x: 0, y: 200 },
         style: getNodeStyle(isNodeCompleted('booking')),
       },
@@ -139,19 +161,19 @@ function CampaignPipelineInternal({ campaignId }) {
       staticNodes.push(
         {
           id: 'po',
-          data: { label: 'PO status' },
+          data: { label: <NodeLabel title="PO Status" timestamp={formatTimestamp(pipelineData.po?.completedAt)} /> },
           position: { x: 250, y: 200 },
           style: getNodeStyle(isNodeCompleted('po')),
         },
         {
           id: 'artwork',
-          data: { label: 'Artwork' },
+          data: { label: <NodeLabel title="Artwork" timestamp={formatTimestamp(pipelineData.artwork?.completedAt)} /> },
           position: { x: 450, y: 200 },
           style: getNodeStyle(isNodeCompleted('artwork')),
         },
         {
           id: 'invoice',
-          data: { label: 'Invoice details' },
+          data: { label: <NodeLabel title="Invoice Details" timestamp={formatTimestamp(pipelineData.invoice?.[0]?.completedAt)} /> },
           position: { x: 250, y: 400 },
           style: getNodeStyle(isNodeCompleted('invoice')),
         },
@@ -163,28 +185,13 @@ function CampaignPipelineInternal({ campaignId }) {
       );
     }
 
-    // if (pipelineData.invoice?.invoiceNumber) {
-    //   staticNodes.push({
-    //     id: 'payment',
-    //     data: { label: 'Payment status' },
-    //     position: { x: 450, y: 400 },
-    //     style: getNodeStyle(isNodeCompleted('payment')),
-    //   });
-    //   staticEdges.push({
-    //     id: 'e-invoice-payment',
-    //     source: 'invoice',
-    //     target: 'payment',
-    //     markerEnd: 'arrowclosed',
-    //   });
-    // }
     if (Array.isArray(pipelineData.invoice) && pipelineData.invoice.some(inv => inv.invoiceNumber)) {
       staticNodes.push({
         id: 'payment',
-        data: { label: 'Payment status' },
+        data: { label: <NodeLabel title="Payment Status" timestamp={formatTimestamp(pipelineData.payment?.payments?.[0]?.completedAt)} /> },
         position: { x: 450, y: 400 },
         style: getNodeStyle(isNodeCompleted('payment')),
       });
-    
       staticEdges.push({
         id: 'e-invoice-payment',
         source: 'invoice',
@@ -192,101 +199,65 @@ function CampaignPipelineInternal({ campaignId }) {
         markerEnd: 'arrowclosed',
       });
     }
-    
 
     if (pipelineData.artwork?.confirmed && pipelineData.spaces.length > 0) {
       pipelineData.spaces.forEach((space, index) => {
-        console.log(`Space details for ${index} is `, space);
-    
         const inventoryId = `inventory-${space._id}`;
         const printId = `print-${space._id}`;
         const mountId = `mount-${space._id}`;
         const digitalId = `digital-${space._id}`;
         const liveId = `live-${space._id}`;
-    
-        // Always add inventory node
+
         dynamicNodes.push({
           id: inventoryId,
           data: { label: space.spaceName },
           position: { x: 650, y: 100 + index * 200 },
-          style: getNodeStyle(true), // always completed
+          style: getNodeStyle(true),
         });
     
-        dynamicEdges.push({
-          id: `e-artwork-${space._id}`,
-          source: 'artwork',
-          target: inventoryId,
-          markerEnd: 'arrowclosed',
-        });
+        dynamicEdges.push({ id: `e-artwork-${space._id}`, source: 'artwork', target: inventoryId, markerEnd: 'arrowclosed' });
     
         if (space.spaceType === 'DOOH') {
-          // DOOH-specific nodes
           dynamicNodes.push(
             {
               id: digitalId,
-              data: { label: 'Digital Agency' },
+              data: { label: <NodeLabel title="Digital Agency" timestamp={formatTimestamp(space.digitalStatus?.completedAt)} /> },
               position: { x: 850, y: 100 + index * 200 },
               style: getNodeStyle(isNodeCompleted(digitalId, space)),
             },
             {
               id: liveId,
-              data: { label: 'Is Live' },
+              data: { label: <NodeLabel title="Is Live" timestamp={formatTimestamp(space.digitalStatus?.liveCompletedAt)} /> },
               position: { x: 1050, y: 100 + index * 200 },
               style: getNodeStyle(isNodeCompleted(liveId, space)),
             }
           );
-    
-          dynamicEdges.push({
-            id: `e-${space._id}-digital`,
-            source: inventoryId,
-            target: digitalId,
-            markerEnd: 'arrowclosed',
-          });
-    
+          dynamicEdges.push({ id: `e-${space._id}-digital`, source: inventoryId, target: digitalId, markerEnd: 'arrowclosed' });
           if (space.digitalStatus?.confirmed) {
-            dynamicEdges.push({
-              id: `e-digital-${space._id}-live`,
-              source: digitalId,
-              target: liveId,
-              markerEnd: 'arrowclosed',
-            });
+            dynamicEdges.push({ id: `e-digital-${space._id}-live`, source: digitalId, target: liveId, markerEnd: 'arrowclosed' });
           }
         } else {
-          // Standard printing & mounting flow
           dynamicNodes.push(
             {
               id: printId,
-              data: { label: 'Printing status' },
+              data: { label: <NodeLabel title="Printing Status" timestamp={formatTimestamp(space.printingStatus?.completedAt)} /> },
               position: { x: 850, y: 100 + index * 200 },
               style: getNodeStyle(isNodeCompleted(printId, space)),
             },
             {
               id: mountId,
-              data: { label: 'Mounting status' },
+              data: { label: <NodeLabel title="Mounting Status" timestamp={formatTimestamp(space.mountingStatus?.completedAt)} /> },
               position: { x: 1050, y: 100 + index * 200 },
               style: getNodeStyle(isNodeCompleted(mountId, space)),
             }
           );
-    
-          dynamicEdges.push({
-            id: `e-${space._id}-print`,
-            source: inventoryId,
-            target: printId,
-            markerEnd: 'arrowclosed',
-          });
-    
+          dynamicEdges.push({ id: `e-${space._id}-print`, source: inventoryId, target: printId, markerEnd: 'arrowclosed' });
           if (space.printingStatus?.confirmed) {
-            dynamicEdges.push({
-              id: `e-print-${space._id}-mount`,
-              source: printId,
-              target: mountId,
-              markerEnd: 'arrowclosed',
-            });
+            dynamicEdges.push({ id: `e-print-${space._id}-mount`, source: printId, target: mountId, markerEnd: 'arrowclosed' });
           }
         }
       });
     }
-    
     
     setNodes([...staticNodes, ...dynamicNodes]);
     setEdges([...staticEdges, ...dynamicEdges]);
@@ -295,6 +266,27 @@ function CampaignPipelineInternal({ campaignId }) {
       fitView({ padding: 0.2, duration: 500 });
     }, 0);
   }, [pipelineData, spaces]);
+
+  // --- NEW: Effect to handle opening a modal via URL query param ---
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const openNodeId = params.get('open');
+
+    // Wait until nodes are populated before trying to find one
+    if (openNodeId && nodes.length > 0) {
+      const nodeToOpen = nodes.find((node) => node.id === openNodeId);
+
+      // Check if the node is visible (e.g., invoice node requires PO confirmation)
+      if (nodeToOpen) {
+        setSelectedNode(nodeToOpen);
+        
+        // Optional: Remove the query parameter from the URL without reloading the page
+        const newUrl = `${window.location.pathname}`;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [location.search, nodes]); // Rerun when URL or nodes change
+
 
   if (!pipelineData) return <div>Loading Campaign Pipeline Data...</div>;
 
@@ -328,24 +320,21 @@ function CampaignPipelineInternal({ campaignId }) {
             {selectedNode.id === 'invoice' && <InvoiceForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
             {selectedNode.id === 'payment' && <PaymentStatusForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
             {selectedNode.id.startsWith('print-') && <PrintingStatus campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
-            {selectedNode.id.startsWith('mount-') && <MountingStatus campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />
-              }
-              {selectedNode.id.startsWith('digital-') && (
-  <DigitalStatusForm
-    campaignId={CampaignId}
-    spaceId={selectedNode.id.split('-')[1]}
-    onClose={() => setSelectedNode(null)}
-    onConfirm={() => { setSelectedNode(null); triggerRefresh(); }}
-  />
-)}
-{selectedNode.id.startsWith('live-') && (
-  <IsLiveStatusView
-    spaceId={selectedNode.id.split('-')[1]}
-    onClose={() => setSelectedNode(null)}
-  />
-)}
-
-
+            {selectedNode.id.startsWith('mount-') && <MountingStatus campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {selectedNode.id.startsWith('digital-') && (
+              <DigitalStatusForm
+                campaignId={CampaignId}
+                spaceId={selectedNode.id.split('-')[1]}
+                onClose={() => setSelectedNode(null)}
+                onConfirm={() => { setSelectedNode(null); triggerRefresh(); }}
+              />
+            )}
+            {selectedNode.id.startsWith('live-') && (
+              <IsLiveStatusView
+                spaceId={selectedNode.id.split('-')[1]}
+                onClose={() => setSelectedNode(null)}
+              />
+            )}
           </div>
         </div>
       )}
@@ -417,5 +406,3 @@ const modalContentStyle = {
   overflowY: 'auto',
   boxSizing: 'border-box',
 };
-
-
