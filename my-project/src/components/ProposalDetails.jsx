@@ -3,22 +3,28 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useBookingForm } from '../context/BookingFormContext';
 import { toast } from 'sonner';
-import { useSidebar } from '../context/SidebarContext'; // 1. IMPORT THE SIDEBAR HOOK
+import { useSidebar } from '../context/SidebarContext';
 
 const Button = ({ children, className = '', ...props }) => (
-  <button className={`px-4 py-2 rounded bg-black text-white hover: transition ${className}`} {...props}>
+  <button className={`px-3 py-1.5 text-sm rounded-md font-semibold transition-all duration-300 ${className}`} {...props}>
     {children}
   </button>
 );
 
 const Card = ({ children, className = '', ...props }) => (
-  <div className={`bg-white border shadow-sm rounded-xl w-full ${className}`} {...props}>
+  <div className={`bg-white border border-gray-200 shadow-sm rounded-xl w-full ${className}`} {...props}>
     {children}
   </div>
 );
 
 const CardContent = ({ children, className = '' }) => (
-  <div className={`p-4 ${className}`}>{children}
+  <div className={`p-6 ${className}`}>{children}</div>
+);
+
+const DetailItem = ({ label, value }) => (
+  <div className="flex flex-col">
+    <span className="text-xs font-medium text-gray-500">{label}</span>
+    <span className="text-sm text-gray-800">{value || 'N/A'}</span>
   </div>
 );
 
@@ -27,8 +33,7 @@ export default function ProposalDetails() {
   const navigate = useNavigate();
   const [proposal, setProposal] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const { setBasicInfo, setOrderInfo, setSelectedSpaces, setBookingDates, setProposalId } = useBookingForm();
-  const { isCollapsed } = useSidebar(); // 2. USE THE HOOK TO GET THE STATE
+  const { isCollapsed } = useSidebar();
 
   useEffect(() => {
     const fetchProposal = async () => {
@@ -38,9 +43,9 @@ export default function ProposalDetails() {
         setProposal(data);
       } catch (error) {
         console.error('Error fetching proposal:', error);
+        toast.error('Failed to fetch proposal details.');
       }
     };
-
     fetchProposal();
   }, [id]);
 
@@ -49,7 +54,6 @@ export default function ProposalDetails() {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/proposals/${id}`, {
         method: 'DELETE',
       });
-
       if (response.ok) {
         navigate('/proposal-dashboard');
         toast.success('Proposal deleted successfully.');
@@ -62,181 +66,112 @@ export default function ProposalDetails() {
     }
   };
 
-  function convertToInputDateFormat(dateString) {
-    if (!dateString) return '';
-    const [day, month, year] = dateString.split('-');
-    const fullYear = year.length === 2 ? `20${year}` : year;
-    return `${fullYear}-${month}-${day}`;
-  }
-  
   const handleEdit = () => {
-    setBasicInfo({
-      companyName: proposal.companyName || '',
-      clientName: proposal.clientName || '',
-      clientEmail: proposal.clientEmail || '',
-      clientContact: proposal.clientContactNumber || '',
-      clientPan: proposal.clientPanNumber || '',
-      clientGst: proposal.clientGstNumber || '',
-      brandName: proposal.brandName || '',
-      clientType: proposal.clientType || '',
-    });
-    setProposalId(proposal._id);
-
-    setOrderInfo({
-      campaignName: proposal.campaignName || '',
-      industry: proposal.industry || '',
-      description: proposal.description || '',
-    });
-
-    setSelectedSpaces(
-      (proposal.spaces || []).map((space) => ({
-        id: space._id || space.id || '',
-        name: space.spaceName || '',
-        status: 'Available',
-        facia: space.faciaTowards || '',
-        city: space.city || '',
-        category: space.category || '',
-        subCategory: space.subCategory || '',
-        price: space.price || 0,
-        availableFrom: space.dates?.[0] || '',
-        availableTo: space.dates?.[1] || '',
-      }))
-    );
-    
-    if (proposal.spaces && proposal.spaces.length > 0) {
-      const firstSpace = proposal.spaces[0];
-      setBookingDates({
-        startDate: convertToInputDateFormat(firstSpace.dates?.[0]),
-        endDate: convertToInputDateFormat(firstSpace.dates?.[1]),
-      });
-    } else {
-      setBookingDates({
-        startDate: '',
-        endDate: '',
-      });
-    }
-    
-    navigate('/create-booking'); 
-  }
+    navigate(`/edit-proposal/${id}`);
+  };
 
   if (!proposal) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div>Loading...</div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-gray-500">Loading Proposal...</div>
       </div>
     );
   }
+  
+  // Safely access the first space's dates
+  const firstSpace = proposal.spaces && proposal.spaces.length > 0 ? proposal.spaces[0] : null;
+  const startDate = firstSpace && firstSpace.dates && firstSpace.dates.length > 0 ? firstSpace.dates[0] : 'N/A';
+  const endDate = firstSpace && firstSpace.dates && firstSpace.dates.length > 1 ? firstSpace.dates[1] : 'N/A';
+
 
   return (
-    <div className="min-h-screen text-xs h-screen w-screen bg-white text-black flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen h-screen w-screen bg-gray-50 text-black flex flex-col lg:flex-row overflow-hidden">
       <Navbar />
-
-      {/* 3. MAKE THE MAIN ELEMENT'S CLASSNAME DYNAMIC */}
-      <main className={`flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-1xl md:text-2xl font-semibold">Proposal Details</h1>
-          <Button onClick={handleEdit}>Edit</Button>
-        </div>
-
-        <Card className="w-full max-w-3xl mx-auto">
-          <CardContent className="flex flex-col gap-4 text-sm">
-
+      <main className={`flex-1 h-full overflow-y-auto px-4 md:px-8 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <span className="font-semibold">Company Name: </span>
-              {proposal.companyName || 'N/A'}
+              <h1 className="text-2xl font-bold text-gray-800">Proposal Details</h1>
+              <p className="text-sm text-gray-500">Review the complete information for this proposal.</p>
+            </div>
+            <Button onClick={handleEdit} className="bg-black text-white hover:bg-gray-800 px-4 py-2">Edit Proposal</Button>
+          </div>
+
+          {/* New Two-Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            
+            {/* Left Column: Main Details */}
+            <div className="lg:col-span-2 flex flex-col gap-6">
+              <Card>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <DetailItem label="Company Name" value={proposal.companyName} />
+                    <DetailItem label="Client Name" value={proposal.clientName} />
+                    <DetailItem label="Client Email" value={proposal.clientEmail} />
+                    <DetailItem label="Client Contact Number" value={proposal.clientContactNumber} />
+                    <DetailItem label="Client PAN Number" value={proposal.clientPanNumber} />
+                    <DetailItem label="Client GST Number" value={proposal.clientGstNumber} />
+                    <DetailItem label="Client Type" value={proposal.clientType} />
+                    <DetailItem label="Industry" value={proposal.industry} />
+                    <DetailItem label="Campaign Name" value={proposal.campaignName} />
+                    {/* ===== NEWLY ADDED FIELDS ===== */}
+                    <DetailItem label="Start Date" value={startDate} />
+                    <DetailItem label="End Date" value={endDate} />
+                    {/* ============================== */}
+                  </div>
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <DetailItem label="Description" value={proposal.description} />
+                  </div>
+                </CardContent>
+                 {/* Action Buttons within the card footer */}
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center rounded-b-xl">
+                    <span className="text-xs text-gray-400">
+                        Created At: {new Date(proposal.createdAt).toLocaleString()}
+                    </span>
+                    <div className="flex gap-3">
+                        <Button onClick={() => navigate(-1)} className="bg-white text-black border border-gray-300 hover:bg-gray-100">Back</Button>
+                        <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => setShowDeleteModal(true)}>
+                        Delete
+                        </Button>
+                    </div>
+                </div>
+              </Card>
             </div>
 
-            <div>
-              <span className="font-semibold">Client Name: </span>
-              {proposal.clientName || 'N/A'}
-            </div>
-
-            <div>
-              <span className="font-semibold">Client Email: </span>
-              {proposal.clientEmail || 'N/A'}
-            </div>
-
-            <div>
-              <span className="font-semibold">Client Contact Number: </span>
-              {proposal.clientContactNumber || 'N/A'}
-            </div>
-
-            <div>
-              <span className="font-semibold">Client PAN Number: </span>
-              {proposal.clientPanNumber || 'N/A'}
-            </div>
-
-            <div>
-              <span className="font-semibold">Client GST Number: </span>
-              {proposal.clientGstNumber || 'N/A'}
-            </div>
-
-            <div>
-              <span className="font-semibold">Client Type: </span>
-              {proposal.clientType || 'N/A'}
-            </div>
-
-            <div>
-              <span className="font-semibold">Campaign Name: </span>
-              {proposal.campaignName || 'N/A'}
-            </div>
-
-            <div>
-              <span className="font-semibold">Industry: </span>
-              {proposal.industry || 'N/A'}
-            </div>
-
-            <div>
-              <span className="font-semibold">Description: </span>
-              {proposal.description || 'N/A'}
-            </div>
-
-            <div>
-              <span className="font-semibold">Spaces:</span>
+            {/* Right Column: Assigned Spaces (Sticky) */}
+            <div className="lg:col-span-1 lg:sticky top-8">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Assigned Spaces</h2>
               {proposal.spaces && proposal.spaces.length > 0 ? (
-                <div className="flex flex-col gap-4 mt-4">
+                <div className="flex flex-col gap-4">
                   {proposal.spaces.map((space, index) => (
-                    <div key={index} className="flex flex-col p-4 border rounded-lg shadow-sm">
-                      <span className="font-semibold text-sm">{space.spaceName || 'Unnamed Space'}</span>
-                      <span className="text-xs text-gray-600">{space.address || 'No Address Provided'}</span>
-                      <span className="text-xs text-gray-400">{space.city || 'No City Provided'}</span>
-
-                      <div className="mt-2 text-xs text-gray-700">
-                        <div><span className="font-semibold">Start Date:</span> {space.dates && space.dates[0] ? space.dates[0] : 'N/A'}</div>
-                        <div><span className="font-semibold">End Date:</span> {space.dates && space.dates[1] ? space.dates[1] : 'N/A'}</div>
+                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-md text-gray-900">{space.spaceName || 'Unnamed Space'}</span>
+                        <span className="text-sm text-gray-500">{space.address || 'No Address Provided'}</span>
+                        <span className="text-xs text-gray-400 mb-3">{space.city || 'No City Provided'}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-gray-400 text-sm mt-2">No Spaces Assigned</div>
+                <div className="text-center py-12 bg-white border border-dashed rounded-lg">
+                  <p className="text-gray-500">No Spaces assigned.</p>
+                </div>
               )}
             </div>
-
-            <div className="text-gray-400 text-xs mt-2">
-              Created At: {new Date(proposal.createdAt).toLocaleString()}
-            </div>
-
-          </CardContent>
-        </Card>
-
-        <div className="flex mt-4 gap-2">
-          <Button onClick={() => navigate(-1)}>Back</Button>
-          
-          <Button className="bg-red-600 hover:bg-red-700 ml-auto" onClick={() => setShowDeleteModal(true)}>
-            Delete
-          </Button>
+          </div>
         </div>
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-md flex flex-col gap-4 w-80">
-              <div className="text-lg font-semibold">Confirm Deletion</div>
-              <div className="text-sm text-gray-600">Are you sure you want to delete this proposal?</div>
-              <div className="flex gap-2 justify-end">
-                <Button onClick={() => setShowDeleteModal(false)}>Cancel</Button>
-                <Button className="bg-red-600 hover:bg-red-700" onClick={handleDelete}>Delete</Button>
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-xl shadow-2xl flex flex-col gap-4 w-96">
+              <div className="text-xl font-bold text-gray-800">Confirm Deletion</div>
+              <p className="text-sm text-gray-600">Are you absolutely sure you want to delete this proposal? This action cannot be undone.</p>
+              <div className="flex gap-3 justify-end mt-4">
+                <Button onClick={() => setShowDeleteModal(false)} className="bg-gray-200 text-black hover:bg-gray-300">Cancel</Button>
+                <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete}>Delete Proposal</Button>
               </div>
             </div>
           </div>

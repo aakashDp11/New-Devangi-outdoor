@@ -3,13 +3,13 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import { useBookingForm } from "../context/BookingFormContext";
-import { useSidebar } from "../context/SidebarContext"; // 1. Import the useSidebar hook
+import { useSidebar } from "../context/SidebarContext";
 
 export default function BookingPreview() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [assignedUser, setAssignedUser] = useState(null);
-  const { isCollapsed } = useSidebar(); // 2. Get the sidebar's collapsed state
+  const { isCollapsed } = useSidebar();
 
   const { basicInfo, orderInfo, resetForm, proposalId, setProposalId } =
     useBookingForm();
@@ -28,7 +28,6 @@ export default function BookingPreview() {
         console.error("Error fetching users:", err);
       }
     };
-
     if (basicInfo.user) {
       fetchUsers();
     }
@@ -51,15 +50,11 @@ export default function BookingPreview() {
     setLoading(true);
     try {
       const formData = new FormData();
-
-      // Basic Info
       Object.entries(basicInfo).forEach(([key, value]) => {
         if (key !== "companyLogo") {
           formData.append(key, value);
         }
       });
-
-      // Campaigns
       formData.append(
         "campaigns",
         JSON.stringify(
@@ -76,12 +71,9 @@ export default function BookingPreview() {
           }))
         )
       );
-
-      // Company Logo
       if (basicInfo.companyLogo && basicInfo.companyLogo.file) {
         formData.append("companyLogo", basicInfo.companyLogo.file);
       }
-
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/bookings`,
         {
@@ -89,12 +81,10 @@ export default function BookingPreview() {
           body: formData,
         }
       );
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to submit booking");
       }
-
       toast.success("Booking submitted successfully!");
       resetForm();
       navigate("/");
@@ -106,27 +96,50 @@ export default function BookingPreview() {
     }
   };
 
+  // =================================================================================
+  // ==================== THIS IS THE FULLY CORRECTED FUNCTION =======================
+  // =================================================================================
   const handleSaveProposal = async () => {
     setLoading(true);
     try {
+      // Safely get the first campaign object from your form's state.
+      const firstCampaign = orderInfo.campaigns[0] || {};
+
+      // 1. Build the "flat" payload that your CURRENT backend expects.
       const payload = {
-        ...basicInfo,
-        industry: orderInfo.campaigns[0]?.industry || "N/A",
+        // --- All the basic info fields ---
+        companyName: basicInfo.companyName,
+        clientName: basicInfo.clientName,
+        clientEmail: basicInfo.clientEmail,
+        clientType: basicInfo.clientType,
+        brandDisplayName: basicInfo.brandName,
+        bookingSource: basicInfo.bookingSource,
+        clientContactNumber: basicInfo.clientContact,
+        clientPanNumber: basicInfo.clientPan,
+        clientGstNumber: basicInfo.clientGst,
+
+        // --- "Lift" the campaign details to the top level of the payload ---
+        industry: firstCampaign.industry,
+        campaignName: firstCampaign.campaignName,
+        description: firstCampaign.description,
+        
+        // --- As requested, campaignStartDate and campaignEndDate are NOT included. ---
+
+        // --- The backend still needs this array just to get the space IDs ---
         campaigns: orderInfo.campaigns.map((c) => ({
-          campaignName: c.campaignName,
-          industry: c.industry,
-          description: c.description,
           selectedSpaces: c.selectedSpaces.map((s) => ({
             id: s.id,
             selectedUnits: s.selectedUnits,
           })),
         })),
       };
+      
+      console.log("Saving Proposal with this FLAT payload (NO DATES):", JSON.stringify(payload, null, 2));
 
+      // 2. The rest of the function sends this payload to the backend.
       const url = proposalId
         ? `${import.meta.env.VITE_API_BASE_URL}/api/proposals/${proposalId}`
         : `${import.meta.env.VITE_API_BASE_URL}/api/proposals`;
-
       const method = proposalId ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -149,12 +162,15 @@ export default function BookingPreview() {
       setProposalId(null);
       navigate("/proposal-dashboard");
     } catch (error) {
-      console.error(error);
+      console.error("Error saving proposal:", error);
       toast.error(error.message || "Something went wrong!");
     } finally {
       setLoading(false);
     }
   };
+  // =================================================================================
+  // ====================== END OF CORRECTED FUNCTION ================================
+  // =================================================================================
 
   const handleCancel = () => {
     if (window.confirm("Are you sure you want to cancel?")) {
@@ -164,17 +180,14 @@ export default function BookingPreview() {
   };
 
   return (
-    // 3. Apply flex to the root container and ensure full height
     <div className="flex min-h-screen bg-white">
       <Navbar />
-      {/* 4. Apply dynamic margin and flex properties to the main content area */}
       <main className={`flex-1 p-6 text-xs transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="max-w-screen-xl mx-auto">
           <h2 className="text-2xl font-semibold mb-6">
             Review & Confirm Booking
           </h2>
 
-          {/* Stepper */}
           <div className="flex gap-6 mb-6 text-sm font-medium">
             {stepOrder.map((label) => (
               <div key={label} className="text-green-600 flex items-center gap-1">
@@ -186,7 +199,6 @@ export default function BookingPreview() {
             ))}
           </div>
 
-          {/* Basic Info */}
           <div className="grid grid-cols-2 gap-6 mb-10">
             {Object.entries(basicInfo)
               .filter(
@@ -206,7 +218,6 @@ export default function BookingPreview() {
               ))}
           </div>
 
-          {/* Assigned User */}
           {assignedUser && (
             <div className="mb-6 grid grid-cols-2">
               <PreviewField
@@ -216,7 +227,6 @@ export default function BookingPreview() {
             </div>
           )}
 
-          {/* Company Logo */}
           {basicInfo.companyLogo && basicInfo.companyLogo.preview && (
             <div className="mb-10">
               <h3 className="font-semibold mb-2">Client logo</h3>
@@ -232,7 +242,6 @@ export default function BookingPreview() {
             </div>
           )}
 
-          {/* Campaigns & Selected Spaces */}
           {orderInfo.campaigns
             .filter((c) => c.isSaved)
             .map((campaign, cIdx) => (
@@ -294,7 +303,6 @@ export default function BookingPreview() {
               </div>
             ))}
 
-          {/* Actions */}
           <div className="flex text-xs justify-between mt-6">
             <div>
               <button onClick={handleCancel} className="border px-3 py-1 rounded">

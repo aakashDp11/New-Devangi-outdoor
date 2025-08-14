@@ -1,21 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { toast } from 'sonner';
-import { Dialog } from '@headlessui/react';
-import { Navigate } from 'react-router-dom';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
-import { useSidebar } from '../context/SidebarContext'; // 1. ADDED: Import the hook
+import { useSidebar } from '../context/SidebarContext';
 
-const Button = ({ children, className = '', ...props }) => (
-  <button className={`px-4 py-2 rounded bg-black text-white hover: transition ${className}`} {...props}>
-    {children}
-  </button>
-);
-
-const Input = ({ className = '', ...props }) => (
-  <input className={`border px-3 py-2 rounded w-full ${className}`} {...props} />
-);
+// --- UI HELPER COMPONENTS ---
 
 const Card = ({ children, className = '', ...props }) => (
   <div className={`bg-white border shadow-sm rounded-xl w-full ${className}`} {...props}>
@@ -27,24 +17,78 @@ const CardContent = ({ children, className = '' }) => (
   <div className={`p-4 ${className}`}>{children}</div>
 );
 
-const Pagination = ({ children }) => <div className="flex justify-center">{children}</div>;
-const PaginationContent = ({ children, className = '' }) => (
-  <div className={`flex gap-2 mt-4 flex-wrap ${className}`}>{children}</div>
-);
-const PaginationItem = ({ children }) => <div>{children}</div>;
-const PaginationLink = ({ children, isActive = false, onClick, disabled,className ='',}) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`px-3 py-1 rounded text-xs transition 
-      ${isActive ? 'bg-black text-white' : 'bg-gray-200 hover:bg-gray-300'}
-      ${disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
-      ${className}
-    `}
-  >
-    {children}
-  </button> 
-);
+/**
+ * MODIFIED: Pagination component with page search functionality.
+ */
+const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
+  const [pageInput, setPageInput] = useState(currentPage.toString());
+
+  useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
+
+  // Handler for submitting the page search input
+  const handlePageSubmit = (e) => {
+    e.preventDefault();
+    const pageNum = parseInt(pageInput, 10);
+    if (pageNum && pageNum > 0 && pageNum <= totalPages) {
+      onPageChange(pageNum);
+    } else {
+      // Reset input to current page if entry is invalid
+      setPageInput(currentPage.toString());
+    }
+  };
+  
+  if (totalCount === 0) {
+    return null; 
+  }
+
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalCount);
+
+  return (
+    <div className="flex flex-col sm:flex-row justify-between items-center mt-8 text-xs gap-4">
+       <span className="text-gray-600">
+           Showing {startItem} - {endItem} of {totalCount} results
+       </span>
+       {totalPages > 1 && (
+        <div className="flex items-center gap-4">
+            <button
+                onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
+                className="px-3 py-1.5 rounded-md bg-white border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                disabled={currentPage === 1}
+            >
+                <FaArrowLeft className='inline'/>
+            </button>
+
+            {/* NEW: Page search form */}
+            <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
+                <span className="text-gray-700">Page</span>
+                <input
+                    type="text"
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    className="w-12 h-8 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    aria-label="Go to page"
+                />
+                <span className="text-gray-700">of {totalPages}</span>
+            </form>
+
+            <button
+                onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)}
+                className="px-3 py-1.5 rounded-md bg-white border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                disabled={currentPage === totalPages}
+            >
+                <FaArrowRight className='inline'/>
+            </button>
+        </div>
+       )}
+    </div>
+  );
+};
+
+
+// --- MAIN USER COMPONENT ---
 
 export default function User() {
   const [users, setUsers] = useState([]);
@@ -52,6 +96,7 @@ export default function User() {
   const { isCollapsed } = useSidebar();
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   const [isAnimated, setIsAnimated] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
@@ -79,36 +124,67 @@ export default function User() {
       const result = await res.json();
       if (res.ok) {
         toast.success(result.message || 'User deleted successfully');
-        fetchUsers();
+        fetchUsers(); 
       } else {
         toast.error(result.message || 'Error deleting user');
       }
     } catch (err) {
-      toast.error('Error deleting user');
+      toast.error('An error occurred while deleting the user.');
     } finally {
       setShowModal(false);
       setUserToDelete(null);
     }
   };
   
-  // NOTE: This client-side filtering works for small datasets.
-  // For larger datasets, you would move filtering and pagination to the backend API.
-  const filteredData = users.filter((user) =>
-    user.name?.toLowerCase().includes(search.toLowerCase()) ||
-    user.email?.toLowerCase().includes(search.toLowerCase()) ||
-    user.phone?.includes(search)
-  );
+  const sortedData = useMemo(() => {
+    let sortableItems = [...users];
+    if (sortConfig.key) {
+      sortableItems.sort((a, b) => {
+        let aVal, bVal;
+        
+        if (sortConfig.key === 'createdAt') {
+          aVal = new Date(a[sortConfig.key]);
+          bVal = new Date(b[sortConfig.key]);
+        } else {
+          aVal = a[sortConfig.key]?.toString().toLowerCase() || "";
+          bVal = b[sortConfig.key]?.toString().toLowerCase() || "";
+        }
 
-  const paginatedData = filteredData.slice((currentPage - 1) * perPage, currentPage * perPage);
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [users, sortConfig]);
+
+  const filteredData = useMemo(() =>
+    sortedData.filter((user) =>
+      user.name?.toLowerCase().includes(search.toLowerCase()) ||
+      user.email?.toLowerCase().includes(search.toLowerCase()) ||
+      user.phone?.includes(search)
+    ), [sortedData, search]);
+
+  const paginatedData = useMemo(() =>
+    filteredData.slice((currentPage - 1) * perPage, currentPage * perPage),
+    [filteredData, currentPage, perPage]);
+
   const totalPages = Math.ceil(filteredData.length / perPage);
 
   useEffect(() => {
-    setIsAnimated(false); // Reset animation state on data change
+    setIsAnimated(false);
     const timeout = setTimeout(() => {
       setIsAnimated(true);
     }, 50);
     return () => clearTimeout(timeout);
-  }, []);
+  }, [currentPage, paginatedData]);
+
+  const handleSortChange = (e) => {
+    const [key, direction] = e.target.value.split(':');
+    setSortConfig({ key, direction });
+    setCurrentPage(1);
+  };
+
 
   return (
     <div className="min-h-screen h-screen w-screen bg-gray-50 text-black flex flex-col lg:flex-row overflow-hidden">
@@ -116,27 +192,37 @@ export default function User() {
 
       <main className={`flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-        <h2 className="text-2xl font-sans font-normal">Users</h2>
-
+            <h2 className="text-2xl font-sans font-normal">Users ({filteredData.length})</h2>
         </div>
-
-        {/* --- 2. CLEANED UP THE FILTER/ACTION BAR --- */}
         
-        <div className="flex flex-col mt-[2%] md:flex-row justify-between items-center gap-4">
-                <input
-                    type="text"
-                    className="w-full md:w-1/3 px-4 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Search by name, email, or phone..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
+        <div className="mt-6 text-sm flex flex-col md:flex-row justify-between gap-4 items-stretch md:items-center">
+            <input
+                type="text"
+                className="w-full md:w-1/3 px-4 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-[2.2rem]"
+                placeholder="Search by name, email, or phone..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            />
+            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                <select 
+                    onChange={handleSortChange} 
+                    className="px-3 py-2 border rounded-md w-full md:w-auto bg-white text-xs h-[2.2rem]"
+                    value={`${sortConfig.key}:${sortConfig.direction}`}
+                >
+                    <option value="createdAt:desc">Sort by: Newest</option>
+                    <option value="createdAt:asc">Sort by: Oldest</option>
+                    <option value="name:asc">Sort by: Name (A-Z)</option>
+                    <option value="name:desc">Sort by: Name (Z-A)</option>
+                </select>
                 <button 
                     onClick={()=>navigate('/create-user')} 
-                    className="px-4 py-2 rounded-md bg-black text-white text-xs font-medium hover:bg-gray-800 transition w-full md:w-auto"
+                    className="px-4 py-2 rounded-md bg-black text-white text-xs font-medium hover:bg-gray-800 transition w-full md:w-auto h-[2.2rem]"
                 >
                     + Create User
                 </button>
             </div>
+        </div>
+
         <div className={`mt-6 grid grid-cols-1 gap-4 w-full transform transition-all duration-500 ease-out ${
           isAnimated ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'
         }`}>
@@ -173,47 +259,15 @@ export default function User() {
             <div className="text-center py-10 text-gray-500 bg-white rounded-lg shadow-sm">No users found.</div>
           )}
         </div>
-
+        
         <div className="mt-6">
-          <Pagination>
-            <PaginationContent className="gap-2">
-              <PaginationLink
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="disabled:opacity-50"
-              >
-                <FaArrowLeft/>
-              </PaginationLink>
-              {/* {Array.from({ length: totalPages }).map((_, i) => (
-                <PaginationItem key={i}>
-                  <PaginationLink
-                    isActive={i + 1 === currentPage}
-                    onClick={() => setCurrentPage(i + 1)}
-                  >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))} */}
-              <PaginationItem>
-                <PaginationLink
-                  isActive
-                  onClick={() =>
-                    setCurrentPage(currentPage < totalPages ? currentPage + 1 : 1)
-                  }
-                >
-                  Page {currentPage} of {totalPages}
-                </PaginationLink>
-              </PaginationItem>
-
-              <PaginationLink
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="disabled:opacity-50"
-              >
-                <FaArrowRight/>
-              </PaginationLink>
-            </PaginationContent>
-          </Pagination>
+            <Pagination 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                onPageChange={setCurrentPage}
+                totalCount={filteredData.length}
+                itemsPerPage={perPage}
+            />
         </div>
       </main>
 

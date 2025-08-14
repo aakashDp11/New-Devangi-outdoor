@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { BarChart } from "@mui/x-charts/BarChart";
 
-// --- UI Components (Unchanged) ---
+// --- UI HELPER COMPONENTS ---
 const Input = ({ ...props }) => (
   <input
     className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -34,67 +34,100 @@ const Card = ({ children, className }) => (
   </div>
 );
 const CardContent = ({ children }) => <div className="p-6">{children}</div>;
-const PaginationControls = ({ currentPage, totalPages, onPageChange }) => (
-  <div className="flex justify-end items-center mt-4 text-xs">
-    <span className="mr-4 text-gray-600">
-      Page {currentPage} of {totalPages}
-    </span>
-    <div className="flex">
-      <button
-        onClick={() => onPageChange((p) => Math.max(1, p - 1))}
-        disabled={currentPage === 1}
-        className="px-3 py-1 border rounded-l-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+
+const SortableHeader = ({ title, sortKey, sortConfig = {}, onSort, disabled = false }) => {
+  const isSorting = sortConfig.key === sortKey;
+  const direction = isSorting ? sortConfig.direction : null;
+
+  const handleSort = () => {
+    if (disabled) return;
+    const newDirection = sortConfig.key === sortKey && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    onSort(sortKey, newDirection);
+  };
+
+  return (
+    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+      <div
+        onClick={handleSort}
+        className={`flex items-center gap-1.5 ${disabled ? 'cursor-default' : 'cursor-pointer select-none'}`}
       >
-        Previous
-      </button>
-      <button
-        onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
-        disabled={currentPage === totalPages}
-        className="px-3 py-1 border-t border-b border-r rounded-r-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Next
-      </button>
-    </div>
-  </div>
-);
-// --- End of UI Components ---
+        {title}
+        {!disabled && (
+          <span className="text-gray-400">
+            {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '⇅'}
+          </span>
+        )}
+      </div>
+    </th>
+  );
+};
+
+
+const EnhancedPaginationControls = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
+    const [pageInput, setPageInput] = useState(currentPage.toString());
+
+    useEffect(() => {
+        setPageInput(currentPage.toString());
+    }, [currentPage]);
+
+    const handlePageSubmit = (e) => {
+        e.preventDefault();
+        const pageNum = parseInt(pageInput, 10);
+        if (pageNum && pageNum > 0 && pageNum <= totalPages) {
+            onPageChange(pageNum);
+        } else {
+            setPageInput(currentPage.toString()); // Reset if invalid
+        }
+    };
+
+    if (totalCount === 0) return null;
+
+    return (
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-xs gap-4">
+            <span className="text-gray-600">
+                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)} - {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} results
+            </span>
+            {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                    <button onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)} disabled={currentPage === 1} className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50">Previous</button>
+                    <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
+                        <span className="text-gray-700">Page</span>
+                        <input type="text" value={pageInput} onChange={(e) => setPageInput(e.target.value)} className="w-10 h-7 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                        <span className="text-gray-700">of {totalPages}</span>
+                    </form>
+                    <button onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)} disabled={currentPage === totalPages} className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50">Next</button>
+                </div>
+            )}
+        </div>
+    );
+};
+// --- End of UI Helper Components ---
 
 const ITEMS_PER_PAGE = 10;
-const API_MAX_LIMIT = 50; // Use a larger limit for download fetches
+const API_MAX_LIMIT = 50; // Use a larger limit for download fetching
 
-// --- Filter Options ---
-const industryOptions = [
-  "Tourism", "Retail", "Real Estate", "Other", "Movie", "Media and Entertainment",
-  "FMCG", "Finance", "Financial Services", "Healthcare", "Hospitality", "IT Industry",
-  "Automobile", "Clothing & Apparel", "Ecommerce", "Edtech", "Entertainment",
-];
+const industryOptions = ["Tourism", "Retail", "Real Estate", "Other", "Movie", "Media and Entertainment", "FMCG", "Finance", "Financial Services", "Healthcare", "Hospitality", "IT Industry", "Automobile", "Clothing & Apparel", "Ecommerce", "Edtech", "Entertainment"];
 const inventoryTypeOptions = ["Billboard", "DOOH", "Gantry", "Pole Kiosk", "BQS", "Miscellaneous"];
-// --- NEW CLIENT TYPE OPTIONS ---
 const clientTypeOptions = ["Corporate", "Agency", "Direct", "Government"];
 
 export default function BookingReport({ handleShowDateModal = () => {} }) {
   const navigate = useNavigate();
 
-  // --- SECTION 1: BOOKING REPORT STATE & LOGIC (Unchanged) ---
+  // --- SECTION 1: BOOKING REPORT STATE & LOGIC ---
   const [bookings, setBookings] = useState([]);
-  const [bookingFilters, setBookingFilters] = useState({
-    client: "",
-    paymentStatus: "",
-    poStatus: "",
-    startDate: "",
-    endDate: "",
-  });
+  const [bookingFilters, setBookingFilters] = useState({ client: "", paymentStatus: "", poStatus: "", startDate: "", endDate: "" });
   const [bookingCurrentPage, setBookingCurrentPage] = useState(1);
   const [bookingTotalPages, setBookingTotalPages] = useState(1);
+  const [bookingTotalCount, setBookingTotalCount] = useState(0);
+  const [bookingSortConfig, setBookingSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
   const resetBookingFilters = () => {
-    setBookingFilters({
-      client: "",
-      paymentStatus: "",
-      poStatus: "",
-      startDate: "",
-      endDate: "",
-    });
+    setBookingFilters({ client: "", paymentStatus: "", poStatus: "", startDate: "", endDate: "" });
+    setBookingCurrentPage(1);
+  };
+
+  const handleBookingSort = (key, direction) => {
+    setBookingSortConfig({ key, direction });
     setBookingCurrentPage(1);
   };
 
@@ -106,6 +139,8 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
       const params = new URLSearchParams({
         page: bookingCurrentPage,
         limit: ITEMS_PER_PAGE,
+        sortKey: bookingSortConfig.key,
+        sortDirection: bookingSortConfig.direction,
       });
       if (bookingFilters.client) params.append("search", bookingFilters.client);
       if (bookingFilters.paymentStatus) params.append("paymentStatus", bookingFilters.paymentStatus);
@@ -126,108 +161,112 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
 
       const data = await res.json();
       setBookings(data.bookings || []);
-      setBookingTotalPages(data.totalPages || 1);
+      setBookingTotalPages(data.pagination?.totalPages || 1);
+      setBookingTotalCount(data.pagination?.totalCount || 0);
     } catch (err) {
       console.error("Failed to fetch bookings:", err);
     }
   };
 
+  /**
+   * FIXED: Implemented download logic for bookings.
+   */
   const downloadBookingExcel = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-        alert("Authentication failed. Please log in.");
+        alert("Authentication failed. Please log in again.");
         return;
     }
 
     try {
-      const fetchAllBookings = async () => {
         let allBookings = [];
         let currentPage = 1;
         let totalPages = 1;
 
+        // Loop to fetch all pages of data
         do {
-          const params = new URLSearchParams({ page: currentPage, limit: API_MAX_LIMIT });
-          if (bookingFilters.client) params.append("search", bookingFilters.client);
-          if (bookingFilters.paymentStatus) params.append("paymentStatus", bookingFilters.paymentStatus);
-          if (bookingFilters.poStatus) {
-              const poVal = bookingFilters.poStatus.toLowerCase();
-              if (poVal === "pending") params.append("poStatus", "false");
-              if (poVal === "completed") params.append("poStatus", "true");
-          }
-          if (bookingFilters.startDate) params.append("startDate", bookingFilters.startDate);
-          if (bookingFilters.endDate) params.append("endDate", bookingFilters.endDate);
+            const params = new URLSearchParams({
+                page: currentPage,
+                limit: API_MAX_LIMIT, // Fetch in larger chunks
+                sortKey: bookingSortConfig.key,
+                sortDirection: bookingSortConfig.direction,
+            });
+            // Apply the same filters as the table
+            if (bookingFilters.client) params.append("search", bookingFilters.client);
+            if (bookingFilters.paymentStatus) params.append("paymentStatus", bookingFilters.paymentStatus);
+            if (bookingFilters.poStatus) {
+                const poVal = bookingFilters.poStatus.toLowerCase();
+                if (poVal === "pending") params.append("poStatus", "false");
+                if (poVal === "completed") params.append("poStatus", "true");
+            }
+            if (bookingFilters.startDate) params.append("startDate", bookingFilters.startDate);
+            if (bookingFilters.endDate) params.append("endDate", bookingFilters.endDate);
 
-          const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings?${params.toString()}`, {
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          });
-
-          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-          const data = await res.json();
-          allBookings = allBookings.concat(data.bookings || []);
-          totalPages = data.totalPages || 1;
-          currentPage++;
+            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings?${params.toString()}`, {
+                headers: { "Authorization": `Bearer ${token}` },
+            });
+            
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            
+            const data = await res.json();
+            allBookings = allBookings.concat(data.bookings || []);
+            totalPages = data.pagination?.totalPages || 1;
+            currentPage++;
         } while (currentPage <= totalPages);
-        return allBookings;
-      };
-      
-      const allData = await fetchAllBookings();
 
-      if (allData.length === 0) {
-        alert("No booking data to download for the selected filters.");
-        return;
-      }
+        if (allBookings.length === 0) {
+            alert("No booking data to download.");
+            return;
+        }
 
-      const rows = allData.map((b) => {
-        let totalPaid = 0, totalAmount = 0;
-        b.campaigns?.forEach((c) => {
-          const p = c.pipeline?.payment;
-          if (p) {
-            totalPaid += p.totalPaid || 0;
-            totalAmount += p.totalAmount || 0;
-          }
+        // Format data for Excel sheet
+        const excelData = allBookings.map(b => {
+            let totalPaid = 0, totalDue = 0;
+            b.campaigns?.forEach(c => {
+                totalPaid += c.paymentSummary?.totalPaid || 0;
+                totalDue += c.paymentSummary?.Due || 0;
+            });
+            return {
+                'Company Name': b.companyName,
+                'Client Name': b.clientName,
+                'Booking Date': dayjs(b.createdAt).format("DD/MM/YYYY"),
+                'Payment Status': (totalPaid < totalDue && totalDue > 0) ? "Pending" : "Completed",
+                'PO Status': b.campaigns?.some(c => !c.pipeline?.po?.confirmed) ? "Pending" : "Completed",
+            };
         });
-        return {
-          Company: b.companyName,
-          Client: b.clientName,
-          CreatedAt: dayjs(b.createdAt).format("DD MMM YYYY"),
-          PaymentStatus: totalPaid < totalAmount && totalAmount > 0 ? "Pending" : "Completed",
-          POStatus: b.campaigns?.some((c) => !c.pipeline?.po?.confirmed) ? "Pending" : "Completed",
-        };
-      });
 
-      const sheet = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, sheet, "Bookings");
-      const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      saveAs(new Blob([buf], { type: "application/octet-stream" }), `bookings_report_${dayjs().format("YYYYMMDD")}.xlsx`);
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings Report");
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        saveAs(new Blob([excelBuffer]), `bookings_report_${dayjs().format("YYYY-MM-DD")}.xlsx`);
+
     } catch (error) {
-        console.error("Error downloading booking report:", error);
-        alert("Failed to download full booking report. Please try again.");
+        console.error("Error downloading bookings report:", error);
+        alert("Failed to download the report. Please try again.");
     }
   };
 
   useEffect(() => {
-    if (bookingCurrentPage !== 1) setBookingCurrentPage(1);
-    else fetchBookings();
-  }, [bookingFilters]);
-
-  useEffect(() => {
     fetchBookings();
-  }, [bookingCurrentPage]);
+  }, [bookingFilters, bookingCurrentPage, bookingSortConfig]);
   // --- END OF SECTION 1 ---
 
   // --- SECTION 2: PROPOSAL REPORT TABLE STATE & LOGIC ---
   const [proposals, setProposals] = useState([]);
-  const [proposalTableFilters, setProposalTableFilters] = useState({
-    startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "", // CHANGED: agency -> clientType
-  });
+  const [proposalTableFilters, setProposalTableFilters] = useState({ startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "" });
   const [proposalCurrentPage, setProposalCurrentPage] = useState(1);
   const [proposalTotalPages, setProposalTotalPages] = useState(1);
+  const [proposalTotalCount, setProposalTotalCount] = useState(0);
+  const [proposalSortConfig, setProposalSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
   const resetProposalTableFilters = () => {
-    setProposalTableFilters({
-        startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "" // CHANGED: agency -> clientType
-    });
+    setProposalTableFilters({ startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "" });
+    setProposalCurrentPage(1);
+  };
+
+  const handleProposalSort = (key, direction) => {
+    setProposalSortConfig({ key, direction });
     setProposalCurrentPage(1);
   };
 
@@ -236,7 +275,12 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
       const token = localStorage.getItem("accessToken");
       if (!token) { navigate("/login"); return; }
 
-      const params = new URLSearchParams({ page: proposalCurrentPage, limit: ITEMS_PER_PAGE });
+      const params = new URLSearchParams({
+        page: proposalCurrentPage,
+        limit: ITEMS_PER_PAGE,
+        sortKey: proposalSortConfig.key,
+        sortDirection: proposalSortConfig.direction,
+      });
       Object.entries(proposalTableFilters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
@@ -248,7 +292,8 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       setProposals(data.proposals || []);
-      setProposalTotalPages(data.pagination.totalPages || 1);
+      setProposalTotalPages(data.pagination?.totalPages || 1);
+      setProposalTotalCount(data.pagination?.totalCount || 0);
     } catch (err) {
       console.error("Failed to fetch proposals:", err);
     }
@@ -257,89 +302,88 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
   const handleProposalTableFilterChange = (e) => {
     const { name, value } = e.target;
     setProposalTableFilters((prev) => ({ ...prev, [name]: value }));
+    setProposalCurrentPage(1);
   };
   
+  /**
+   * FIXED: Implemented download logic for proposals.
+   */
   const downloadProposalExcel = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-        alert("Authentication failed. Please log in.");
+        alert("Authentication failed. Please log in again.");
         return;
     }
-    
-    try {
-        const fetchAllProposals = async () => {
-            let allProposals = [];
-            let currentPage = 1;
-            let totalPages = 1;
-            
-            do {
-                const params = new URLSearchParams({ page: currentPage, limit: API_MAX_LIMIT });
-                Object.entries(proposalTableFilters).forEach(([key, value]) => {
-                    if (value) params.append(key, value);
-                });
 
-                const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/proposals/proposalreport?${params.toString()}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-                const data = await res.json();
-                allProposals = allProposals.concat(data.proposals || []);
-                totalPages = data.pagination?.totalPages || 1;
-                currentPage++;
-            } while (currentPage <= totalPages);
-            return allProposals;
-        };
-        
-        const allData = await fetchAllProposals();
-        
-        if (allData.length === 0) {
-            alert("No proposal data to download for the selected filters.");
+    try {
+        let allProposals = [];
+        let currentPage = 1;
+        let totalPages = 1;
+
+        do {
+            const params = new URLSearchParams({
+                page: currentPage,
+                limit: API_MAX_LIMIT,
+                sortKey: proposalSortConfig.key,
+                sortDirection: proposalSortConfig.direction,
+            });
+            Object.entries(proposalTableFilters).forEach(([key, value]) => {
+                if (value) params.append(key, value);
+            });
+
+            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/proposals/proposalreport?${params.toString()}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+            allProposals = allProposals.concat(data.proposals || []);
+            totalPages = data.pagination?.totalPages || 1;
+            currentPage++;
+        } while (currentPage <= totalPages);
+
+        if (allProposals.length === 0) {
+            alert("No proposal data to download.");
             return;
         }
 
-        const rows = allData.map((p) => ({
-            COMPANY: p.companyName,
-            CLIENT: p.clientName,
-            INDUSTRY: p.industry,
-            "CLIENT TYPE": p.clientType, // Ensure this matches backend property name
-            "BOOKING SOURCE": p.bookingSource,
-            DATE: dayjs(p.createdAt).format("DD MMM YYYY"),
-            INVENTORIES: p.spaceDetails?.map((s) => s.spaceName).join(", ") || "N/A",
-            "TYPE OF INVENTORIES": p.spaceDetails?.map((s) => s.spaceType).join(", ") || "N/A",
+        const excelData = allProposals.map(p => ({
+            'Company Name': p.companyName,
+            'Client Name': p.clientName,
+            'Industry': p.industry || "N/A",
+            'Client Type': p.clientType || "N/A",
+            'Booking Source': p.bookingSource || "N/A",
+            'Proposal Date': dayjs(p.createdAt).format("DD/MM/YYYY"),
+            'Inventories': p.spaceDetails?.map(s => s.spaceName).join(", ") || "N/A",
+            'Inventory Types': p.spaceDetails?.map(s => s.spaceType).join(", ") || "N/A",
         }));
         
-        const sheet = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, sheet, "Proposals");
-        const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-        saveAs(new Blob([buf], { type: "application/octet-stream" }), `proposals_report_${dayjs().format("YYYYMMDD")}.xlsx`);
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Proposals Report");
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        saveAs(new Blob([excelBuffer]), `proposals_report_${dayjs().format("YYYY-MM-DD")}.xlsx`);
     } catch (error) {
-        console.error("Error downloading proposal report:", error);
-        alert("Failed to download full proposal report. Please try again.");
+        console.error("Error downloading proposals report:", error);
+        alert("Failed to download the report. Please try again.");
     }
   };
 
   useEffect(() => {
-    if (proposalCurrentPage !== 1) setProposalCurrentPage(1);
-    else fetchProposals();
-  }, [proposalTableFilters]);
-
-  useEffect(() => {
     fetchProposals();
-  }, [proposalCurrentPage]);
+  }, [proposalTableFilters, proposalCurrentPage, proposalSortConfig]);
   // --- END OF SECTION 2 ---
 
   // --- SECTION 3: PROPOSAL GRAPH STATE & LOGIC ---
   const [graphDimension, setGraphDimension] = useState("timeline");
   const [proposalChartData, setProposalChartData] = useState({ xLabels: [], yData: [] });
   const [proposalGraphFilters, setProposalGraphFilters] = useState({
-    startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "", // CHANGED: agency -> clientType
+    startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "",
   });
 
   const resetProposalGraphFilters = () => {
     setProposalGraphFilters({
-        startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "" // CHANGED: agency -> clientType
+        startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: ""
     });
   };
 
@@ -354,7 +398,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
         const token = localStorage.getItem("accessToken");
         if (!token) { navigate("/login"); return; }
 
-        const params = new URLSearchParams({ limit: "2000" });
+        const params = new URLSearchParams({ limit: "2000" }); // Fetch all data for graph
         Object.entries(proposalGraphFilters).forEach(([key, value]) => {
           if (value) params.append(key, value);
         });
@@ -394,10 +438,9 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                 dataMap.set(key, (dataMap.get(key) || 0) + 1);
               });
               return;
-            } else if (graphDimension === 'clientType') { // <<< ADDED LOGIC FOR CLIENT TYPE DIMENSION
+            } else if (graphDimension === 'clientType') {
               key = proposal.clientType || "N/A";
-            }
-             else {
+            } else {
               key = proposal[graphDimension] || "N/A";
             }
             dataMap.set(key, (dataMap.get(key) || 0) + 1);
@@ -418,20 +461,20 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
 
   return (
     <div className="space-y-10">
-      {/* CARD 1: BOOKING REPORT TABLE (Unchanged) */}
+      {/* CARD 1: BOOKING REPORT TABLE */}
       <Card>
         <CardContent>
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">Booking Report</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Booking Report ({bookingTotalCount})</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6 items-center">
-            <Input placeholder="Client Name" value={bookingFilters.client} onChange={(e) => setBookingFilters({ ...bookingFilters, client: e.target.value })} />
-            <Select value={bookingFilters.paymentStatus} onChange={(e) => setBookingFilters({ ...bookingFilters, paymentStatus: e.target.value })}>
+            <Input placeholder="Client Name" value={bookingFilters.client} onChange={(e) => {setBookingFilters({ ...bookingFilters, client: e.target.value }); setBookingCurrentPage(1);}} />
+            <Select value={bookingFilters.paymentStatus} onChange={(e) => {setBookingFilters({ ...bookingFilters, paymentStatus: e.target.value }); setBookingCurrentPage(1);}}>
               <option value="">All Payment Status</option>
               <option value="Paid">Paid</option>
               <option value="Unpaid">Unpaid</option>
               <option value="Partial">Partial</option>
               <option value="Not Applicable">N/A</option>
             </Select>
-            <Select value={bookingFilters.poStatus} onChange={(e) => setBookingFilters({ ...bookingFilters, poStatus: e.target.value })}>
+            <Select value={bookingFilters.poStatus} onChange={(e) => {setBookingFilters({ ...bookingFilters, poStatus: e.target.value }); setBookingCurrentPage(1);}}>
               <option value="">All PO Status</option>
               <option value="pending">Pending</option>
               <option value="completed">Completed</option>
@@ -443,19 +486,17 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
           </div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-md font-semibold text-gray-700">Bookings Table</h3>
-            <Button onClick={downloadBookingExcel} disabled={bookings.length === 0}>
-              Download Full Report
-            </Button>
+            <Button onClick={downloadBookingExcel} disabled={bookings.length === 0}>Download Full Report</Button>
           </div>
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
             <table className="w-full text-xs text-left text-gray-600">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3">Company</th>
-                  <th scope="col" className="px-6 py-3">Client</th>
-                  <th scope="col" className="px-6 py-3">Created At</th>
-                  <th scope="col" className="px-6 py-3">Payment Status</th>
-                  <th scope="col" className="px-6 py-3">PO Status</th>
+                  <SortableHeader title="Company" sortKey="companyName" sortConfig={bookingSortConfig} onSort={handleBookingSort} />
+                  <SortableHeader title="Client" sortKey="clientName" sortConfig={bookingSortConfig} onSort={handleBookingSort} />
+                  <SortableHeader title="Created At" sortKey="createdAt" sortConfig={bookingSortConfig} onSort={handleBookingSort} />
+                  <SortableHeader title="Payment Status" disabled={true} />
+                  <SortableHeader title="PO Status" disabled={true} />
                 </tr>
               </thead>
               <tbody>
@@ -472,7 +513,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                     const paymentStatus = totalPaid < totalDue && totalDue > 0 ? "Pending" : "Completed";
                     const poStatus = b.campaigns?.some((c) => !c.pipeline?.po?.confirmed) ? "Pending" : "Completed";
                     return (
-                      <tr key={b._id} className="bg-white border-b hover:bg-gray-50">
+                      <tr key={b._id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/booking-details/${b._id}`)}>
                         <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{b.companyName}</td>
                         <td className="px-6 py-4">{b.clientName}</td>
                         <td className="px-6 py-4">{dayjs(b.createdAt).format("DD MMM YYYY")}</td>
@@ -487,14 +528,14 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
               </tbody>
             </table>
           </div>
-          <PaginationControls currentPage={bookingCurrentPage} totalPages={bookingTotalPages} onPageChange={setBookingCurrentPage} />
+          <EnhancedPaginationControls currentPage={bookingCurrentPage} totalPages={bookingTotalPages} onPageChange={setBookingCurrentPage} totalCount={bookingTotalCount} itemsPerPage={ITEMS_PER_PAGE} />
         </CardContent>
       </Card>
 
       {/* CARD 2: PROPOSAL REPORT TABLE */}
       <Card>
         <CardContent>
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">Proposal Report</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Proposal Report ({proposalTotalCount})</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-6 items-center">
             <Input name="person" placeholder="By Client Name , By Company Name" value={proposalTableFilters.person} onChange={handleProposalTableFilterChange} />
             <Select name="industry" value={proposalTableFilters.industry} onChange={handleProposalTableFilterChange}>
@@ -505,13 +546,10 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
               <option value="">By Inventory Type</option>
               {inventoryTypeOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
             </Select>
-            
-            {/* <<< REPLACED 'By Agency Status' FILTER >>> */}
             <Select name="clientType" value={proposalTableFilters.clientType} onChange={handleProposalTableFilterChange}>
               <option value="">By Client Type</option>
               {clientTypeOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
             </Select>
-
             <Select name="bookingSource" value={proposalTableFilters.bookingSource} onChange={handleProposalTableFilterChange}>
                 <option value="">By Booking Source</option>
                 <option value="Direct">Direct</option>
@@ -524,32 +562,30 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
           </div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-md font-semibold text-gray-700">Proposals Table</h3>
-            <Button onClick={downloadProposalExcel} disabled={proposals.length === 0}>
-              Download Full Report
-            </Button>
+            <Button onClick={downloadProposalExcel} disabled={proposals.length === 0}>Download Full Report</Button>
           </div>
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
             <table className="w-full text-xs text-left text-gray-600">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3">Company</th>
-                  <th scope="col" className="px-6 py-3">Client</th>
-                  <th scope="col" className="px-6 py-3">Industry</th>
-                  <th scope="col" className="px-6 py-3">Client Type</th>
-                  <th scope="col" className="px-6 py-3">Booking Source</th>
-                  <th scope="col" className="px-6 py-3">Date</th>
-                  <th scope="col" className="px-6 py-3">Inventories</th>
-                  <th scope="col" className="px-6 py-3">Type of Inventories</th>
+                  <SortableHeader title="Company" sortKey="companyName" sortConfig={proposalSortConfig} onSort={handleProposalSort} />
+                  <SortableHeader title="Client" sortKey="clientName" sortConfig={proposalSortConfig} onSort={handleProposalSort} />
+                  <SortableHeader title="Industry" sortKey="industry" sortConfig={proposalSortConfig} onSort={handleProposalSort} />
+                  <SortableHeader title="Client Type" sortKey="clientType" sortConfig={proposalSortConfig} onSort={handleProposalSort} />
+                  <SortableHeader title="Booking Source" sortKey="bookingSource" sortConfig={proposalSortConfig} onSort={handleProposalSort} />
+                  <SortableHeader title="Date" sortKey="createdAt" sortConfig={proposalSortConfig} onSort={handleProposalSort} />
+                  <SortableHeader title="Inventories" disabled={true} />
+                  <SortableHeader title="Type of Inventories" disabled={true} />
                 </tr>
               </thead>
               <tbody>
                 {proposals.length > 0 ? (
                   proposals.map((p) => (
-                    <tr key={p._id} className="bg-white border-b hover:bg-gray-50">
+                    <tr key={p._id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/proposal-details/${p._id}`)}>
                       <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.companyName}</td>
                       <td className="px-6 py-4">{p.clientName}</td>
                       <td className="px-6 py-4">{p.industry || "N/A"}</td>
-                      <td className="px-6 py-4">{p.clientType || "N/A"}</td> {/* Ensure clientType is displayed */}
+                      <td className="px-6 py-4">{p.clientType || "N/A"}</td>
                       <td className="px-6 py-4">{p.bookingSource || "N/A"}</td>
                       <td className="px-6 py-4">{dayjs(p.createdAt).format("DD MMM YYYY")}</td>
                       <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceName).join(", ") || "N/A"}</td>
@@ -562,7 +598,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
               </tbody>
             </table>
           </div>
-          <PaginationControls currentPage={proposalCurrentPage} totalPages={proposalTotalPages} onPageChange={setProposalCurrentPage} />
+          <EnhancedPaginationControls currentPage={proposalCurrentPage} totalPages={proposalTotalPages} onPageChange={setProposalCurrentPage} totalCount={proposalTotalCount} itemsPerPage={ITEMS_PER_PAGE} />
         </CardContent>
       </Card>
 
@@ -582,13 +618,10 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
               <option value="">By Inventory Type</option>
               {inventoryTypeOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
             </Select>
-            
-            {/* <<< REPLACED 'By Agency Status' FILTER >>> */}
             <Select name="clientType" value={proposalGraphFilters.clientType} onChange={handleProposalGraphFilterChange}>
               <option value="">By Client Type</option>
               {clientTypeOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
             </Select>
-            
             <Select name="bookingSource" value={proposalGraphFilters.bookingSource} onChange={handleProposalGraphFilterChange}>
                 <option value="">By Booking Source</option>
                 <option value="Direct">Direct</option>

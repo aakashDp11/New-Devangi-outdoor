@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
   getNotifications,
   markAsRead,
@@ -125,6 +125,9 @@ const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const { isCollapsed } = useSidebar();
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const observer = useRef();
 
   // State for filters
   const [filter, setFilter] = useState('all');
@@ -137,25 +140,46 @@ const NotificationsPage = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [markAsReadTarget, setMarkAsReadTarget] = useState(null);
   const [isMarkAllReadConfirming, setIsMarkAllReadConfirming] = useState(false);
-  
+
   // State for date picker modal
   const [showDateModal, setShowDateModal] = useState(false);
   const [tempDateRange, setTempDateRange] = useState([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
 
+  const loadNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getNotifications({ page, filter, sort, searchQuery, startDate, endDate });
+      setNotifications(prev => [...prev, ...res.data]);
+      setHasMore(res.data.length > 0);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, filter, sort, searchQuery, startDate, endDate]);
+
   useEffect(() => {
-    const loadNotifications = async () => {
-      setLoading(true);
-      try {
-        const res = await getNotifications();
-        setNotifications(res.data);
-      } catch (err) {
-        console.error('Error fetching notifications:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    setNotifications([]);
+    setPage(1);
     loadNotifications();
-  }, []);
+  }, [filter, sort, searchQuery, startDate, endDate]);
+
+  useEffect(() => {
+    if (page > 1) {
+      loadNotifications();
+    }
+  }, [page, loadNotifications]);
+
+  const lastNotificationElementRef = useCallback(node => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loading, hasMore]);
 
   // --- DATE FILTER HANDLERS ---
   const formatDate = (date) => {
@@ -168,7 +192,7 @@ const NotificationsPage = () => {
     setShowDateModal(true);
     setTempDateRange([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
   };
-  
+
   const handleApplyDateFilter = () => {
     setStartDate(formatDate(tempDateRange[0].startDate));
     setEndDate(formatDate(tempDateRange[0].endDate));
@@ -234,40 +258,8 @@ const NotificationsPage = () => {
 
   // --- FILTERING AND SORTING LOGIC ---
   const processedNotifications = useMemo(() => {
-    let filtered = [...notifications];
-
-    if (filter === 'unread') filtered = filtered.filter((n) => !n.read);
-    else if (filter === 'read') filtered = filtered.filter((n) => n.read);
-    
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter((n) => 
-        n.campaignName?.toLowerCase().includes(q) ||
-        n.companyName?.toLowerCase().includes(q) ||
-        n.spaceName?.toLowerCase().includes(q)
-      );
-    }
-    
-    if (startDate && endDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-
-        filtered = filtered.filter(n => {
-            const notifDate = new Date(n.createdAt);
-            return notifDate >= start && notifDate <= end;
-        });
-    }
-
-    filtered.sort((a, b) => {
-      const dA = new Date(a.createdAt);
-      const dB = new Date(b.createdAt);
-      return sort === 'newest' ? dB - dA : dA - dB;
-    });
-
-    return groupNotificationsByDate(filtered);
-  }, [notifications, filter, sort, searchQuery, startDate, endDate]);
+    return groupNotificationsByDate(notifications);
+  }, [notifications]);
 
   return (
     <div className="min-h-screen bg-gray-50 h-screen w-screen flex flex-col lg:flex-row overflow-hidden">
@@ -294,10 +286,10 @@ const NotificationsPage = () => {
 
                 {/* Filter Controls Group */}
                 <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                    <select 
-                        id="filter" 
-                        value={filter} 
-                        onChange={(e) => setFilter(e.target.value)} 
+                    <select
+                        id="filter"
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value)}
                         className="w-full sm:w-auto px-3 py-2 border border-gray-300 bg-white rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     >
                         <option value="all">All Status</option>
@@ -305,23 +297,23 @@ const NotificationsPage = () => {
                         <option value="read">Read</option>
                     </select>
 
-                    <select 
-                        id="sort" 
-                        value={sort} 
-                        onChange={(e) => setSort(e.target.value)} 
+                    <select
+                        id="sort"
+                        value={sort}
+                        onChange={(e) => setSort(e.target.value)}
                         className="w-full sm:w-auto px-3 py-2 border border-gray-300 bg-white rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     >
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
                     </select>
 
-                    <button 
-                        onClick={handleShowDateModal} 
+                    <button
+                        onClick={handleShowDateModal}
                         className="w-full sm:w-auto px-3 py-2 border border-gray-300 bg-white rounded-md hover:bg-gray-50 text-xs whitespace-nowrap"
                     >
                         {startDate && endDate ? `${startDate} to ${endDate}` : "Date Filter"}
                     </button>
-                    
+
                     <button
                         onClick={handleResetFilters}
                         className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-xs font-medium"
@@ -334,60 +326,63 @@ const NotificationsPage = () => {
 
         {/* Notification List */}
         <div className="space-y-8">
-          {loading ? (
-            <p className="text-center text-gray-500">Loading notifications...</p>
-          ) : Object.values(processedNotifications).every((arr) => arr.length === 0) ? (
+          {Object.entries(processedNotifications).map(([group, notifs]) =>
+            notifs.length > 0 && (
+              <div key={group}>
+                <h2 className="text-lg font-semibold text-gray-700 mb-3 ml-1">{group}</h2>
+                <div className="grid grid-cols-1 gap-3">
+                  {notifs.map((notif, index) => {
+                      const isLastElement = notifs.length === index + 1;
+                      return (
+                        <Card
+                          ref={isLastElement ? lastNotificationElementRef : null}
+                          key={notif._id}
+                          className={`transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${
+                            !notif.read ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
+                          }`}
+                        >
+                          <CardContent className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-4">
+                              {!notif.read && (
+                                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0 animate-pulse"></div>
+                              )}
+                              <div className="flex-shrink-0 mt-1">{getNotificationIcon(notif.type)}</div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className={`text-base ${!notif.read ? 'font-bold text-gray-800' : 'font-semibold text-gray-700'}`}>
+                                    {formatNotificationTitle(notif.type)}
+                                  </h3>
+                                </div>
+                                <p className="text-sm text-gray-600">{notif.message}</p>
+                                <p className="text-xs text-gray-400 mt-1.5">{new Date(notif.createdAt).toLocaleString()}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              {!notif.read && (
+                                <button onClick={() => requestMarkAsRead(notif._id)} className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors" title="Mark as read">
+                                  <FaCheckCircle size={18} />
+                                </button>
+                              )}
+                              <button onClick={() => requestDelete(notif._id)} className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" title="Delete">
+                                <FaTrashAlt size={18} />
+                              </button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                  })}
+                </div>
+              </div>
+            )
+          )}
+          {loading && <p className="text-center text-gray-500">Loading more notifications...</p>}
+          {!loading && !hasMore && notifications.length > 0 && <p className="text-center text-gray-500">You've reached the end.</p>}
+          {!loading && notifications.length === 0 && (
             <div className="text-center text-gray-500 py-16">
               <div className="text-6xl inline-block">🔕</div>
-              <p className="mt-4 text-xl">{notifications.length === 0 ? "You're all caught up!" : "No notifications match your filters."}</p>
-              <p className="text-sm text-gray-400 mt-2">Try adjusting your search or filter criteria.</p>
+              <p className="mt-4 text-xl">You're all caught up!</p>
+              <p className="text-sm text-gray-400 mt-2">No new notifications.</p>
             </div>
-          ) : (
-            Object.entries(processedNotifications).map(([group, notifs]) =>
-              notifs.length > 0 && (
-                <div key={group}>
-                  <h2 className="text-lg font-semibold text-gray-700 mb-3 ml-1">{group}</h2>
-                  <div className="grid grid-cols-1 gap-3">
-                    {notifs.map((notif) => (
-                      <Card
-                        key={notif._id}
-                        className={`transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${
-                          !notif.read ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
-                        }`}
-                      >
-                        <CardContent className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-4">
-                            {!notif.read && (
-                              <div className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0 animate-pulse"></div>
-                            )}
-                            <div className="flex-shrink-0 mt-1">{getNotificationIcon(notif.type)}</div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className={`text-base ${!notif.read ? 'font-bold text-gray-800' : 'font-semibold text-gray-700'}`}>
-                                  {formatNotificationTitle(notif.type)}
-                                </h3>
-                              </div>
-                              <p className="text-sm text-gray-600">{notif.message}</p>
-                              <p className="text-xs text-gray-400 mt-1.5">{new Date(notif.createdAt).toLocaleString()}</p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            {!notif.read && (
-                              <button onClick={() => requestMarkAsRead(notif._id)} className="p-2 rounded-full text-green-600 hover:bg-green-100 transition-colors" title="Mark as read">
-                                <FaCheckCircle size={18} />
-                              </button>
-                            )}
-                            <button onClick={() => requestDelete(notif._id)} className="p-2 rounded-full text-red-600 hover:bg-red-100 transition-colors" title="Delete">
-                              <FaTrashAlt size={18} />
-                            </button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )
-            )
           )}
         </div>
       </main>
@@ -396,7 +391,7 @@ const NotificationsPage = () => {
       <DeleteConfirmationDialog isOpen={!!deleteTarget} onConfirm={confirmDelete} onCancel={cancelDelete} />
       <MarkAsReadConfirmationDialog isOpen={!!markAsReadTarget} onConfirm={confirmMarkAsRead} onCancel={cancelMarkAsRead} />
       <MarkAllReadConfirmationDialog isOpen={isMarkAllReadConfirming} onConfirm={confirmMarkAllRead} onCancel={cancelMarkAllRead} />
-      
+
       {showDateModal && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={handleCancelDateFilter}>
             <div className="bg-white rounded-xl shadow-lg p-2" onClick={(e) => e.stopPropagation()}>

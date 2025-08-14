@@ -44,7 +44,15 @@ export const getPaymentReport = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const { clientName, bookingName, startDate, endDate, paymentDate } = req.query;
+    const { 
+    clientName, 
+    bookingName, 
+    startDate, 
+    endDate, 
+    paymentDate,
+    sortKey = 'paymentDate',      // NEW
+    sortDirection = 'desc'    // NEW
+} = req.query;
 
     const pipeline = [
       // 1. Join Campaigns
@@ -122,11 +130,12 @@ export const getPaymentReport = async (req, res) => {
         },
       },
     ];
+    const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
 
     // Paginated result pipeline
     const reportPipeline = [
       ...pipeline,
-      { $sort: { paymentDate: -1 } },
+      { $sort: sortOptions },
       { $skip: skip },
       { $limit: limit },
     ];
@@ -280,12 +289,23 @@ export const getAllBookings = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const { paymentStatus, poStatus, startDate, endDate, search } = req.query;
+    const { 
+    paymentStatus, 
+    poStatus, 
+    startDate, 
+    endDate, 
+    search,
+    sortKey = 'createdAt',      // NEW
+    sortDirection = 'desc'    // NEW
+} = req.query;
     const searchRegex = search ? new RegExp(search, 'i') : null;
 
     const start = startDate ? new Date(startDate) : null;
     const endDt = endDate ? new Date(endDate) : null;
     if (endDt) endDt.setHours(23, 59, 59, 999);
+
+    const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
+
 
     const pipeline = [];
 
@@ -519,7 +539,7 @@ export const getAllBookings = async (req, res) => {
     }
 
     pipeline.push(
-      { $sort: { createdAt: -1 } },
+      { $sort: sortOptions }, // MODIFIED: Use dynamic sort
       {
         $facet: {
           bookings: [{ $skip: skip }, { $limit: limit }],
@@ -534,11 +554,13 @@ export const getAllBookings = async (req, res) => {
     const totalCount = result[0].totalCount[0]?.count || 0;
 
     return res.json({
-      bookings,
-      totalPages: Math.ceil(totalCount / limit), // Corrected to match frontend
-      currentPage: page,
-      totalCount: totalCount,
-    });
+  bookings,
+  pagination: { // This nested structure is important
+    totalPages: Math.ceil(totalCount / limit),
+    currentPage: page,
+    totalCount: totalCount,
+  }
+});
   } catch (err) {
     console.error('Error in getAllBookings:', err);
     res.status(500).json({ message: 'Server Error' });
@@ -940,6 +962,7 @@ export const getAllBookings1 = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const search = req.query.search || '';
+    const { sortKey = 'createdAt', sortDirection = 'desc' } = req.query;
 
     // Build search filter
     const searchFilter = {
@@ -963,11 +986,12 @@ export const getAllBookings1 = async (req, res) => {
     };
 
     const totalCount = await Booking.countDocuments(searchFilter);
+    const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
 
     const bookings = await Booking.find(searchFilter, projection)
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 }).populate({
+      .sort(sortOptions).populate({
         path: 'campaigns',
         select: 'campaignName startDate endDate industry', // Include startDate and endDate
         populate: [

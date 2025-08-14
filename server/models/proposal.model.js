@@ -22,6 +22,7 @@ const ProposalSchema = new mongoose.Schema({
     required: true, 
     enum: ['Direct', 'Agency'] 
   },
+  campaignName: { type: String },
   description: { type: String },
   spaces: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Space' }],
   industry: {

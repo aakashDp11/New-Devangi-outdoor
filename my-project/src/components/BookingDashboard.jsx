@@ -10,7 +10,8 @@ import "react-date-range/dist/theme/default.css";
 import { useSidebar } from "../context/SidebarContext";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 
-// Re-using the Input component from your original code
+// --- UI HELPER COMPONENTS ---
+
 const Input = ({ className = "", ...props }) => (
   <input
     className={`border px-3 py-2 rounded w-full ${className}`}
@@ -18,7 +19,6 @@ const Input = ({ className = "", ...props }) => (
   />
 );
 
-// Re-using the SortableHeader component from your original code
 const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
   const isSorting = sortConfig.key === sortKey;
   const direction = isSorting ? sortConfig.direction : null;
@@ -45,6 +45,72 @@ const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
     </th>
   );
 };
+
+/**
+ * NEW: Reusable Pagination component with results count.
+ */
+const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage, loading }) => {
+    const [pageInput, setPageInput] = useState(currentPage.toString());
+
+    useEffect(() => {
+        setPageInput(currentPage.toString());
+    }, [currentPage]);
+
+    const handlePageSubmit = (e) => {
+        e.preventDefault();
+        const pageNum = parseInt(pageInput, 10);
+        if (pageNum && pageNum > 0 && pageNum <= totalPages) {
+            onPageChange(pageNum);
+        } else {
+            setPageInput(currentPage.toString()); // Reset if invalid
+        }
+    };
+
+    if (totalCount === 0 && !loading) {
+        return null; // Don't render pagination if there are no results
+    }
+
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalCount);
+
+    return (
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 text-xs gap-4">
+            <span className="text-gray-600">
+                {totalCount > 0 ? `Showing ${startItem} - ${endItem} of ${totalCount} results` : ''}
+            </span>
+            {totalPages > 1 && (
+                <div className="flex items-center gap-4">
+                    <button
+                        className="px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
+                        onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
+                        disabled={currentPage === 1 || loading}
+                    >
+                        <FaArrowLeft />
+                    </button>
+                    <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
+                        <span className="text-gray-600">Page</span>
+                        <input
+                            type="text"
+                            value={pageInput}
+                            onChange={(e) => setPageInput(e.target.value)}
+                            className="w-12 h-8 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <span className="text-gray-600">of {totalPages}</span>
+                    </form>
+                    <button
+                        className="px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
+                        onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)}
+                        disabled={currentPage === totalPages || loading}
+                    >
+                        <FaArrowRight />
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT ---
 
 export default function BookingsDashboard1() {
   const navigate = useNavigate();
@@ -75,7 +141,6 @@ export default function BookingsDashboard1() {
     return format(date, "dd/MM/yyyy");
   };
 
-  // Helper function to get the earliest/latest campaign date for local sorting/display
   const getUpcomingCampaignDate = (campaigns, type = "startDate") => {
     if (!campaigns?.length) return null;
     const sorted = campaigns
@@ -84,14 +149,12 @@ export default function BookingsDashboard1() {
     return sorted[0]?.[type] || null;
   };
 
-  // Memoized function to fetch bookings from the backend API
   const fetchBookings = useCallback(async () => {
     setLoading(true);
     setError(null);
     const token = localStorage.getItem("accessToken");
 
     try {
-      // Format dates for backend query parameters
       const startDateParam = dateRange[0].startDate
         ? format(dateRange[0].startDate, "yyyy-MM-dd")
         : "";
@@ -99,11 +162,10 @@ export default function BookingsDashboard1() {
         ? format(dateRange[0].endDate, "yyyy-MM-dd")
         : "";
 
-      // Construct query parameters
       const queryParams = new URLSearchParams({
         page: currentPage,
         limit: limit,
-        search: search, // Send search term to backend
+        search: search,
       });
 
       if (startDateParam) {
@@ -113,8 +175,6 @@ export default function BookingsDashboard1() {
         queryParams.append("endDate", endDateParam);
       }
 
-      // IMPORTANT: Ensure VITE_API_BASE_URL is correctly configured in your .env file
-      // e.g., VITE_API_BASE_URL=http://localhost:5000
       const response = await fetch(
         `${
           import.meta.env.VITE_API_BASE_URL
@@ -123,12 +183,9 @@ export default function BookingsDashboard1() {
       );
 
       if (response.status === 403) {
-        const errorData = await response.json();
-        if (errorData.message === "Invalid or expired token") {
-          localStorage.clear();
-          navigate("/login");
-          return;
-        }
+        localStorage.clear();
+        navigate("/login");
+        return;
       }
 
       if (!response.ok) {
@@ -149,29 +206,23 @@ export default function BookingsDashboard1() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, limit, search, dateRange, navigate]); // Dependencies for useCallback
+  }, [currentPage, limit, search, dateRange, navigate]);
 
-  // Effect hook to fetch bookings whenever pagination or filter parameters change
   useEffect(() => {
     fetchBookings();
-  }, [fetchBookings]); // Re-run effect when fetchBookings changes (due to its dependencies)
+  }, [fetchBookings]);
 
-  // Handler for applying date filters from the modal
   const handleApplyDateFilters = () => {
-    setCurrentPage(1); // Reset to first page when applying new filters
-    setShowDateModal(false); // Close the modal
-    // fetchBookings will be triggered by the `dateRange` state change in `useEffect`
+    setCurrentPage(1);
+    setShowDateModal(false);
   };
 
-  // Handler for clearing all filters (search and date)
   const handleClearAllFilters = () => {
     setSearch("");
     setDateRange([{ startDate: null, endDate: null, key: "selection" }]);
-    setCurrentPage(1); // Reset to first page
-    // fetchBookings will be triggered by the state changes
+    setCurrentPage(1);
   };
 
-  // Local sorting of the currently displayed data (if backend sorting is not implemented)
   const sortedData = [...bookings].sort((a, b) => {
     const { key, direction } = sortConfig;
     if (!key) return 0;
@@ -185,10 +236,19 @@ export default function BookingsDashboard1() {
         b.campaigns,
         key === "upcomingStartDate" ? "startDate" : "endDate"
       );
-      if (!aDate || !bDate) return 0;
+      if (!aDate) return 1;
+      if (!bDate) return -1;
       return direction === "asc"
         ? new Date(aDate) - new Date(bDate)
         : new Date(bDate) - new Date(aDate);
+    }
+
+    if (key === "createdAt") {
+        const aDate = a[key] ? new Date(a[key]) : null;
+        const bDate = b[key] ? new Date(b[key]) : null;
+        if (!aDate) return 1;
+        if (!bDate) return -1;
+        return direction === 'asc' ? aDate - bDate : bDate - aDate;
     }
 
     const aVal = a[key]?.toString().toLowerCase() || "";
@@ -197,18 +257,6 @@ export default function BookingsDashboard1() {
     if (aVal > bVal) return direction === "asc" ? 1 : -1;
     return 0;
   });
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage((prevPage) => prevPage + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prevPage) => prevPage - 1);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 h-screen w-screen text-black flex flex-col lg:flex-row overflow-hidden">
@@ -219,7 +267,7 @@ export default function BookingsDashboard1() {
         }`}
       >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <h2 className="text-2xl">Bookings</h2>
+          <h2 className="text-2xl">Bookings ({totalCount})</h2>
           <button
             onClick={() => navigate("/create-booking")}
             className="bg-black text-white text-xs px-3 py-2 rounded hover:scale-105 transition"
@@ -235,13 +283,13 @@ export default function BookingsDashboard1() {
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              setCurrentPage(1); // Reset to first page on search
+              setCurrentPage(1);
             }}
           />
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowDateModal(true)}
-              className="border px-4 py-1 rounded bg-gray-100 text-xs hover:bg-gray-200"
+              className="border px-4 py-1 rounded bg-white text-xs hover:bg-gray-100"
             >
               Date Filter
             </button>
@@ -260,9 +308,9 @@ export default function BookingsDashboard1() {
           <div className="flex justify-end">
             <button
               onClick={handleClearAllFilters}
-              className="px-3 py-1 rounded bg-black text-white text-xs hover:bg-red-200 transition"
+              className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700 transition"
             >
-              Clear 
+              Clear
             </button>
           </div>
         </div>
@@ -274,30 +322,12 @@ export default function BookingsDashboard1() {
                 <th scope="col" className="px-6 py-3">
                   #
                 </th>
-                <th scope="col" className="px-6 py-3">
-                  Booking ID
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Company Name
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Client Name
-                </th>
-                <th scope="col" className="px-6 py-3">
-                  Booking Date
-                </th>
-                <SortableHeader
-                  title="Upcoming Start Date"
-                  sortKey="upcomingStartDate"
-                  sortConfig={sortConfig}
-                  setSortConfig={setSortConfig}
-                />
-                <SortableHeader
-                  title="Upcoming End Date"
-                  sortKey="upcomingEndDate"
-                  sortConfig={sortConfig}
-                  setSortConfig={setSortConfig}
-                />
+                <SortableHeader title="Booking ID" sortKey="_id" sortConfig={sortConfig} setSortConfig={setSortConfig}/>
+                <SortableHeader title="Company Name" sortKey="companyName" sortConfig={sortConfig} setSortConfig={setSortConfig}/>
+                <SortableHeader title="Client Name" sortKey="clientName" sortConfig={sortConfig} setSortConfig={setSortConfig}/>
+                <SortableHeader title="Booking Date" sortKey="createdAt" sortConfig={sortConfig} setSortConfig={setSortConfig}/>
+                <SortableHeader title="Upcoming Start Date" sortKey="upcomingStartDate" sortConfig={sortConfig} setSortConfig={setSortConfig}/>
+                <SortableHeader title="Upcoming End Date" sortKey="upcomingEndDate" sortConfig={sortConfig} setSortConfig={setSortConfig}/>
               </tr>
             </thead>
             <tbody>
@@ -322,52 +352,17 @@ export default function BookingsDashboard1() {
                 </tr>
               ) : (
                 sortedData.map((item, index) => {
-                  const upcomingStart = getUpcomingCampaignDate(
-                    item.campaigns,
-                    "startDate"
-                  );
-                  const upcomingEnd = getUpcomingCampaignDate(
-                    item.campaigns,
-                    "endDate"
-                  );
-
+                  const upcomingStart = getUpcomingCampaignDate(item.campaigns, "startDate");
+                  const upcomingEnd = getUpcomingCampaignDate(item.campaigns, "endDate");
                   return (
-                    <tr
-                      key={item._id}
-                      className="bg-white border-b hover:bg-gray-50 cursor-pointer"
-                      onClick={() => navigate(`/booking/${item._id}`)}
-                    >
-                      <td className="px-6 py-4 text-gray-500">
-                        {(currentPage - 1) * limit + index + 1}
-                      </td>
-                      <td className="px-6 py-4 font-mono text-gray-500">
-                        {item._id?.substring(0, 6).toUpperCase() || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                        <div className="font-semibold text-gray-800">
-                          {item.companyName || "No Company"}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-mono text-gray-500">
-                        <div className="text-gray-500 text-xs">
-                          {item.clientName || "No Client"}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {formatDate(item.createdAt) || (
-                          <span className="text-gray-400 italic">Not set</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {formatDate(upcomingStart) || (
-                          <span className="text-gray-400 italic">Not set</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {formatDate(upcomingEnd) || (
-                          <span className="text-gray-400 italic">Not set</span>
-                        )}
-                      </td>
+                    <tr key={item._id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/booking/${item._id}`)}>
+                      <td className="px-6 py-4 text-gray-500">{(currentPage - 1) * limit + index + 1}</td>
+                      <td className="px-6 py-4 font-mono text-gray-500">{item._id?.substring(0, 6).toUpperCase() || "N/A"}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{item.companyName || "No Company"}</td>
+                      <td className="px-6 py-4">{item.clientName || "No Client"}</td>
+                      <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
+                      <td className="px-6 py-4">{formatDate(upcomingStart)}</td>
+                      <td className="px-6 py-4">{formatDate(upcomingEnd)}</td>
                     </tr>
                   );
                 })
@@ -375,57 +370,26 @@ export default function BookingsDashboard1() {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="mt-6 text-xs flex justify-center gap-2">
-            <button
-              className="px-3 py-1  bg-gray-200 hover:bg-gray-300"
-              onClick={handlePrevPage}
-              disabled={currentPage === 1 || loading}
-            >
-              <FaArrowLeft />
-            </button>
-            <button
-              onClick={() => setCurrentPage(i + 1)}
-              className="bg-black text-white"
-              disabled={loading}
-            >
-              {currentPage}
-            </button>
-            <button
-              className="px-3 py-1 bg-gray-200 hover:bg-gray-300"
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages || loading}
-            >
-              <FaArrowRight />
-            </button>
-          </div>
-        )}
+
+        {/* MODIFIED: Replaced old pagination with new component */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalCount={totalCount}
+          itemsPerPage={limit}
+          loading={loading}
+        />
 
         {showDateModal && (
           <div className="fixed inset-0 text-xs flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div className="bg-white rounded-xl shadow-lg p-2 py-[1%]">
-              <DateRange
-                editableDateInputs={true}
-                onChange={(item) => setDateRange([item.selection])}
-                moveRangeOnFirstSelection={false}
-                ranges={dateRange}
-                className="text-xs"
-              />
+              <DateRange editableDateInputs={true} onChange={(item) => setDateRange([item.selection])} moveRangeOnFirstSelection={false} ranges={dateRange} className="text-xs"/>
               <div className="flex justify-end gap-2 mt-4 mx-2">
-                <button
-                  onClick={() => {
-                    setShowDateModal(false);
-                    // Optionally reset dateRange if cancelled
-                    // setDateRange([{ startDate: null, endDate: null, key: 'selection' }]);
-                  }}
-                  className="text-xs px-3 py-1 rounded bg-gray-200 mr-auto hover:bg-gray-300"
-                >
+                <button onClick={() => setShowDateModal(false)} className="text-xs px-3 py-1 rounded bg-gray-200 mr-auto hover:bg-gray-300">
                   Cancel
                 </button>
-                <button
-                  onClick={handleApplyDateFilters}
-                  className="text-xs px-3 py-1 rounded bg-black text-white hover:bg-gray-900"
-                >
+                <button onClick={handleApplyDateFilters} className="text-xs px-3 py-1 rounded bg-black text-white hover:bg-gray-900">
                   Apply
                 </button>
               </div>

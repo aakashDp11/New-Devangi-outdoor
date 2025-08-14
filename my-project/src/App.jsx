@@ -38,6 +38,7 @@ import Report from "./components/Report.jsx";
 import PrivacyPolicy from "./components/PrivacyPolicy";
 import DisclaimerPolicy from "./components/DisclaimerPolicy";
 import NotificationsPage from "./components/NotificationsPage";
+import EditProposal from "./components/EditProposal";
 
 // --- Error Pages ---
 import NotFound from "./components/NotFound";
@@ -129,6 +130,8 @@ export default function App() {
                 </BookingFormProvider>
               }
             />
+
+            <Route path="/edit-proposal/:id" element={<EditProposal />} />
 
             {/* Campaign Pipeline Flow */}
             <Route

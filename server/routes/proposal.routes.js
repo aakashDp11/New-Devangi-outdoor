@@ -17,7 +17,9 @@ export const getProposalReport = async (req, res) => {
       clientType, // <<< READ clientType
       bookingSource,
       page = 1,
-      limit = 10
+      limit = 10,
+      sortKey = 'createdAt',   // NEW
+      sortDirection = 'desc' // NEW
     } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -91,13 +93,15 @@ export const getProposalReport = async (req, res) => {
             spaceDetails: 1
         }
     });
+    // NEW: Define dynamic sort options before the facet stage
+  const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
 
     // --- 5. Facet Stage for Pagination and Total Count ---
     pipeline.push({
       $facet: {
         metadata: [{ $count: 'total' }],
         data: [
-            { $sort: { createdAt: -1 } },
+            { $sort: sortOptions },
             { $skip: skip }, 
             { $limit: parseInt(limit) }
         ]
@@ -144,8 +148,12 @@ router.post('/', async (req, res) => {
       industry,
       description,
       spaces,
-      campaigns
+      campaigns,
+      campaignName,
+      
+
     } = req.body;
+    
 
     const spaceIds = campaigns[0]?.selectedSpaces?.map(space => space.id) || [];
     
@@ -161,6 +169,7 @@ router.post('/', async (req, res) => {
       bookingSource,
       industry,
       description,
+      campaignName,
       spaces: spaceIds
     });
 

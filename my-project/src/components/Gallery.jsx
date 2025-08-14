@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useSidebar } from '../context/SidebarContext';
+// NEW: Import necessary icons
 import { FaArrowLeft, FaArrowRight, FaDownload } from 'react-icons/fa';
 
-// --- Component Definitions (Button, Input, Card, etc.) ---
+// --- UI HELPER COMPONENTS ---
 const Button = ({ children, className = '', ...props }) => (
-    <button className={`px-4 py-2 rounded bg-black text-white hover: transition ${className}`} {...props}>
+    <button className={`px-4 py-2 rounded bg-black text-white hover:transition ${className}`} {...props}>
         {children}
     </button>
 );
@@ -25,23 +26,48 @@ const CardContent = ({ children, className = '' }) => (
     <div className={`p-4 ${className}`}>{children}</div>
 );
 
-const Pagination = ({ children }) => <div className="flex justify-center">{children}</div>;
+/**
+ * NEW: Enhanced Pagination Component with page search input.
+ */
+const EnhancedPaginationControls = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
+    const [pageInput, setPageInput] = useState(currentPage.toString());
 
-const PaginationContent = ({ children, className = '' }) => (
-    <div className={`flex gap-2 mt-4 text-xs flex-wrap ${className}`}>{children}</div>
-);
+    useEffect(() => {
+        setPageInput(currentPage.toString());
+    }, [currentPage]);
 
-const PaginationItem = ({ children }) => <div>{children}</div>;
+    const handlePageSubmit = (e) => {
+        e.preventDefault();
+        const pageNum = parseInt(pageInput, 10);
+        if (pageNum && pageNum > 0 && pageNum <= totalPages) {
+            onPageChange(pageNum);
+        } else {
+            setPageInput(currentPage.toString()); // Reset if invalid
+        }
+    };
 
-const PaginationLink = ({ children, isActive = false, onClick, disabled }) => (
-    <button
-        onClick={onClick}
-        disabled={disabled}
-        className={`px-3 py-1 rounded ${isActive ? 'bg-black text-white' : 'bg-gray-200 hover:bg-gray-300'} transition ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
-    >
-        {children}
-    </button>
-);
+    if (totalCount === 0) return null;
+
+    return (
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 text-xs gap-4">
+            <span className="text-gray-600">
+                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)} - {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} results
+            </span>
+            {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                    <button onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)} disabled={currentPage === 1} className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50">Previous</button>
+                    <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
+                        <span className="text-gray-700">Page</span>
+                        <input type="text" value={pageInput} onChange={(e) => setPageInput(e.target.value)} className="w-10 h-7 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                        <span className="text-gray-700">of {totalPages}</span>
+                    </form>
+                    <button onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)} disabled={currentPage === totalPages} className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50">Next</button>
+                </div>
+            )}
+        </div>
+    );
+};
+// --- End of UI Helper Components ---
 
 export default function Gallery() {
     const navigate = useNavigate();
@@ -49,40 +75,46 @@ export default function Gallery() {
     const [bookings, setBookings] = useState([]);
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalCount, setTotalCount] = useState(0); // NEW: State for total count
+    const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' }); // NEW: State for sorting
     const [isAnimated, setIsAnimated] = useState(false);
 
     useEffect(() => {
         const fetchBookings = async () => {
             const token = localStorage.getItem('accessToken');
             try {
+                // MODIFIED: Added sortKey and sortDirection to the API call
+                const params = new URLSearchParams({
+                    page: currentPage,
+                    limit: 10,
+                    search: search,
+                    sortKey: sortConfig.key,
+                    sortDirection: sortConfig.direction,
+                });
+
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_BASE_URL}/api/bookings/optimized?page=${currentPage}&limit=10&search=${search}`,
+                    `${import.meta.env.VITE_API_BASE_URL}/api/bookings/optimized?${params.toString()}`,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
 
                 if (response.status === 403) {
-                    const errorData = await response.json();
-                    if (errorData.message === 'Invalid or expired token') {
-                        localStorage.clear();
-                        navigate('/login');
-                        return;
-                    }
+                    localStorage.clear();
+                    navigate('/login');
+                    return;
                 }
 
                 const data = await response.json();
-                data.bookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                setBookings(data.bookings);
+                setBookings(data.bookings || []);
                 setTotalPages(data.totalPages || 1);
+                setTotalCount(data.totalCount || 0); // NEW: Set the total count from the API response
             } catch (error) {
                 console.error('Error fetching bookings:', error);
             }
         };
 
         fetchBookings();
-    }, [currentPage, search, navigate]);
-
-    const filteredData = bookings;
+    }, [currentPage, search, navigate, sortConfig]); // MODIFIED: Added sortConfig to dependency array
 
     useEffect(() => {
         setIsAnimated(false);
@@ -90,8 +122,15 @@ export default function Gallery() {
             setIsAnimated(true);
         }, 50);
         return () => clearTimeout(timeout);
-    }, [currentPage]);
+    }, [currentPage, bookings]);
 
+    const handleSortChange = (e) => { // NEW: Handler for the sort dropdown
+        const [key, direction] = e.target.value.split(':');
+        setSortConfig({ key, direction });
+        setCurrentPage(1); // Reset to first page on sort change
+    };
+
+    // --- Download handlers remain unchanged ---
     const handleDownloadImages = async (item) => {
         for (const campaign of item.campaigns || []) {
             const pipelines = Array.isArray(campaign.pipeline) ? campaign.pipeline : [campaign.pipeline].filter(Boolean);
@@ -144,24 +183,38 @@ export default function Gallery() {
             <Navbar />
             <main className={`flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                    <h2 className="text-2xl font-sans font-normal">Gallery</h2>
+                    {/* MODIFIED: Title now shows total count */}
+                    <h2 className="text-2xl font-sans font-normal">Gallery ({totalCount})</h2>
                 </div>
                 
-                <input
-                    type="text"
-                    className="w-full md:w-1/3 my-4 px-4 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Search by Company, Client, Campaign..."
-                    value={search}
-                    onChange={(e) => {
-                        setSearch(e.target.value);
-                        setCurrentPage(1);
-                    }}
-                />
+                {/* MODIFIED: Filter bar now includes a sort dropdown */}
+                <div className="flex flex-col md:flex-row gap-4 my-4">
+                    <input
+                        type="text"
+                        className="w-full md:w-1/3 px-4 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Search by Company, Client, Booking..."
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                    />
+                    <select 
+                        onChange={handleSortChange} 
+                        className="px-3 py-2 border rounded-md w-full md:w-auto bg-white text-xs h-[2.2rem]"
+                        value={`${sortConfig.key}:${sortConfig.direction}`}
+                    >
+                        <option value="createdAt:desc">Sort by: Newest</option>
+                        <option value="createdAt:asc">Sort by: Oldest</option>
+                        <option value="companyName:asc">Sort by: Company (A-Z)</option>
+                        <option value="companyName:desc">Sort by: Company (Z-A)</option>
+                    </select>
+                </div>
 
                 <div className={`mt-6 grid grid-cols-1 gap-4 w-full transform transition-all duration-500 ease-out ${
                 isAnimated ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'
                 }`}>
-                    {filteredData.length > 0 ? filteredData.map((item) => (
+                    {bookings.length > 0 ? bookings.map((item) => (
                         <Card key={item._id} className="transition hover:shadow-md">
                             <CardContent className="flex flex-col gap-4">
                                 <div className="text-md font-semibold text-black">
@@ -177,10 +230,6 @@ export default function Gallery() {
                                             const campaignName = campaign.campaignName || 'Campaign';
                                             const campaignId = campaign._id;
                                             
-                                            // --- FINAL CORRECTED LOGIC ---
-                                            // This checks for dates in multiple possible locations to ensure they are found.
-                                            // 1. Checks for `startDate` directly on the campaign object.
-                                            // 2. If not found, it checks inside the pipeline's artwork object as a fallback.
                                             const campaignStartDate = campaign.startDate || pipe?.artwork?.startDate;
                                             const campaignEndDate = campaign.endDate || pipe?.artwork?.endDate;
 
@@ -251,34 +300,15 @@ export default function Gallery() {
                         <div className="text-center py-10 text-gray-500 bg-white rounded-lg shadow-sm">No bookings with artwork found.</div>
                     )}
                 </div>
-
-                <div className="mt-6">
-                    <Pagination>
-                        <PaginationContent>
-                            <PaginationItem>
-                                <PaginationLink
-                                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                                    disabled={currentPage <= 1}
-                                >
-                                    <FaArrowLeft className='inline'/>
-                                </PaginationLink>
-                            </PaginationItem>
-                            <PaginationItem>
-                                <PaginationLink isActive>
-                                    Page {currentPage} of {totalPages}
-                                </PaginationLink>
-                            </PaginationItem>
-                            <PaginationItem>
-                                <PaginationLink
-                                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage >= totalPages}
-                                >
-                                    <FaArrowRight className='inline'/>
-                                </PaginationLink>
-                            </PaginationItem>
-                        </PaginationContent>
-                    </Pagination>
-                </div>
+                
+                {/* MODIFIED: Using the new enhanced pagination component */}
+                <EnhancedPaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalCount={totalCount}
+                    itemsPerPage={10}
+                />
             </main>
         </div>
     );

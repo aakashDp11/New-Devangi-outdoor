@@ -179,77 +179,112 @@ router.post('/change-Log', async (req, res) => {
 });
 
 // Activites Tab Endpoint.
+// Activities Tab Endpoint (Upgraded with Aggregation Pipeline for Sorting and Performance)
 router.get('/change-Log', async (req, res) => {
   try {
+    // 1. Get parameters from query
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const { startDate, endDate, search = '' } = req.query;
+    const { 
+      startDate, 
+      endDate, 
+      search = '',
+      sortKey = 'createdAt',
+      sortDirection = 'desc'
+    } = req.query;
 
-    // Date filter logic
+    const searchRegex = new RegExp(search, 'i');
+
+    // 2. Build the main aggregation pipeline
+    const pipeline = [];
+    
+    // --- Date Filtering Stage ---
     const dateFilter = {};
-    if (startDate) {
-      dateFilter.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      dateFilter.$lte = new Date(new Date(endDate).setHours(23, 59, 59, 999));
-    }
-
-    const filter = {};
+    if (startDate) dateFilter.$gte = new Date(startDate);
+    if (endDate) dateFilter.$lte = new Date(new Date(endDate).setHours(23, 59, 59, 999));
+    
     if (Object.keys(dateFilter).length > 0) {
-      filter.timestamp = dateFilter;
+      pipeline.push({ $match: { createdAt: dateFilter } });
     }
 
-    // Fetch changelogs with filtering
-    const changelogs = await ChangeLog.find(filter)
-      .sort({ createdAt: -1 })
-      .populate('campaignId', 'campaignName')
-      .populate('userId', 'name')
-      .lean(); // convert to plain JS objects to allow string matching
+    // --- Join with Users and Campaigns ---
+    pipeline.push({ $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'userInfo' } });
+    pipeline.push({ $lookup: { from: 'campaigns', localField: 'campaignId', foreignField: '_id', as: 'campaignInfo' } });
+    
+    // Deconstruct the joined arrays
+    pipeline.push({ $unwind: { path: '$userInfo', preserveNullAndEmptyArrays: true } });
+    pipeline.push({ $unwind: { path: '$campaignInfo', preserveNullAndEmptyArrays: true } });
 
-    // Apply search after population
-    const searchLower = search.toLowerCase();
-    const filteredLogs = changelogs.filter((log) => {
-      const campaignName = log.campaignId?.campaignName?.toLowerCase() || '';
-      const userName = log.userId?.name?.toLowerCase() || '';
-      const userEmail = log.userEmail?.toLowerCase() || '';
-      const changeType = log.changeType?.toLowerCase() || '';
-      return (
-        campaignName.includes(searchLower) ||
-        userName.includes(searchLower) ||
-        userEmail.includes(searchLower) ||
-        changeType.includes(searchLower)
-      );
-    });
-
-    const paginatedLogs = filteredLogs.slice(skip, skip + limit);
-
-    // Fetch bookings to enrich
-    const bookings = await Booking.find().select('campaigns companyName clientName');
-    const campaignToBookingMap = {};
-    bookings.forEach((booking) => {
-      booking.campaigns.forEach((campaignId) => {
-        campaignToBookingMap[campaignId.toString()] = {
-          bookingName: booking.companyName,
-          clientName: booking.clientName,
-        };
+    // --- Search Filtering Stage (on populated fields) ---
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { 'userInfo.name': searchRegex },
+            { 'userEmail': searchRegex },
+            { 'campaignInfo.campaignName': searchRegex },
+            { 'changeType': searchRegex },
+          ],
+        },
       });
+    }
+
+    // --- Facet for efficient counting and pagination ---
+    const countPipeline = [...pipeline, { $count: 'total' }];
+
+    // --- Prepare main data pipeline with sorting and pagination ---
+    
+    // Map frontend sort keys to backend field names
+    const sortKeyMap = {
+      campaignName: 'campaignInfo.campaignName',
+      userName: 'userInfo.name',
+      changeType: 'changeType',
+      createdAt: 'createdAt'
+    };
+    
+    const backendSortKey = sortKeyMap[sortKey] || 'createdAt';
+    const sortOrder = sortDirection === 'asc' ? 1 : -1;
+
+    pipeline.push({ $sort: { [backendSortKey]: sortOrder } });
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
+    
+    // Final projection to shape the output
+    pipeline.push({
+      $project: {
+        _id: 1,
+        changeType: 1,
+        previousValue: 1,
+        newValue: 1,
+        createdAt: 1,
+        userName: '$userInfo.name',
+        userEmail: '$userEmail', // Use the original field as it's reliable
+        campaignId: {
+          _id: '$campaignInfo._id',
+          campaignName: '$campaignInfo.campaignName',
+        },
+      },
     });
 
-    const enrichedLogs = paginatedLogs.map((log) => {
-      const bookingInfo = campaignToBookingMap[log.campaignId?._id?.toString()] || {};
-      return {
-        ...log,
-        bookingName: bookingInfo.bookingName || null,
-        clientName: bookingInfo.clientName || null,
-      };
-    });
+    // 3. Execute both queries in parallel
+    const [changelogs, countResult] = await Promise.all([
+      ChangeLog.aggregate(pipeline),
+      ChangeLog.aggregate(countPipeline),
+    ]);
 
+    const totalCount = countResult[0]?.total || 0;
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // 4. Send the structured response
     res.json({
-      changelogs: enrichedLogs,
-      totalPages: Math.ceil(filteredLogs.length / limit),
-      currentPage: page,
+      changelogs,
+      pagination: {
+        totalCount,
+        totalPages,
+        currentPage: page,
+      },
     });
   } catch (error) {
     console.error('Error fetching changelogs:', error);

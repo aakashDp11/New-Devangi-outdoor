@@ -4,7 +4,7 @@ import Space from '../models/space.model.js';
 import mongoose from 'mongoose';
 
 /**
- * Controller to generate a Trade Margin Report with advanced filtering and pagination.
+ * Controller to generate a Trade Margin Report with advanced filtering, sorting, and pagination.
  * This function uses a MongoDB Aggregation Pipeline to correctly join and filter
  * data across the Campaign, Booking, and Space collections.
  */
@@ -22,15 +22,33 @@ export const getTradeMarginReport = async (req, res) => {
       startDate,
       endDate,
       all,
+      // MODIFIED: Destructure sorting params with defaults
+      sortKey: frontendSortKey = 'date',
+      sortDirection = 'desc',
     } = req.query;
 
     console.log("Received Filters:", req.query);
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Step 2: Dynamically build the aggregation pipeline
+    // NEW: Add dynamic sorting logic block
+    // This maps frontend keys to backend fields before the final projection
+    const sortKeyMap = {
+        inventory: 'spaceInfo.spaceName',
+        inventoryType: 'spaceInfo.spaceType',
+        booking: 'campaignName',
+        tradeMargin: 'matchedCost.calculatedMargin',
+        date: 'startDate',
+    };
+    const backendSortKey = sortKeyMap[frontendSortKey] || 'startDate';
+    const sortDirectionValue = sortDirection === 'asc' ? 1 : -1;
+    const sortStage = { $sort: { [backendSortKey]: sortDirectionValue } };
+    console.log("Applying Sort:", sortStage);
+
+
+    // Step 2: Dynamically build the aggregation pipeline (Existing logic unchanged)
     const pipeline = [];
 
-    // --- Stage 1: Initial match on non-date Campaign fields ---
+    // --- Stage 1: Initial match on non-date Campaign fields (Existing logic unchanged) ---
     const initialCampaignMatch = { "inventoryCosts.0": { "$exists": true } };
     if (booking) {
       initialCampaignMatch.campaignName = { $regex: new RegExp(booking, 'i') };
@@ -38,8 +56,7 @@ export const getTradeMarginReport = async (req, res) => {
     pipeline.push({ $match: initialCampaignMatch });
 
 
-    // --- FINAL FIX: Apply date filter in a separate stage with data type conversion ---
-    // This is the most robust way to handle dates that might be stored as strings.
+    // --- Date filter stage (Existing logic unchanged) ---
     if (startDate && endDate) {
       const parsedStartDate = new Date(startDate);
       const nextDay = new Date(endDate);
@@ -47,20 +64,18 @@ export const getTradeMarginReport = async (req, res) => {
 
       pipeline.push({
         $match: {
-          $expr: { // Use $expr to allow aggregation expressions inside $match
+          $expr: {
             $and: [
-              { $gte: [{ $toDate: "$startDate" }, parsedStartDate] }, // Convert field to date before comparing
-              { $lt: [{ $toDate: "$startDate" }, nextDay] }             // Convert field to date before comparing
+              { $gte: [{ $toDate: "$startDate" }, parsedStartDate] },
+              { $lt: [{ $toDate: "$startDate" }, nextDay] }
             ]
           }
         }
       });
       console.log('Querying with robust date conversion:', { $gte: parsedStartDate.toISOString(), $lt: nextDay.toISOString() });
     }
-    // --- END OF FINAL FIX ---
-
-
-    // --- Stages 3-8 (No changes needed in this logic) ---
+    
+    // --- Stages 3-8 (Existing logic unchanged) ---
     pipeline.push({
       $lookup: { from: "bookings", localField: "_id", foreignField: "campaigns", as: "bookingInfo" }
     });
@@ -107,20 +122,21 @@ export const getTradeMarginReport = async (req, res) => {
     pipeline.push({ $match: { "matchedCost.calculatedMargin": { $gt: 0 } } });
 
     // --- Stage 9: Use $facet for efficient pagination ---
+    // MODIFIED: Replaced hardcoded sort with the dynamic sortStage variable
     const facetPipeline = {
       metadata: [{ $count: "total" }],
       data: [
-        { $sort: { startDate: -1 } },
+        sortStage, // Apply dynamic sorting here
       ]
     };
 
-    // Conditionally apply pagination
+    // Conditionally apply pagination (Existing logic unchanged)
     if (all !== 'true') {
         facetPipeline.data.push({ $skip: skip });
         facetPipeline.data.push({ $limit: parseInt(limit) });
     }
 
-    // Add the final projection to the data pipeline inside the facet
+    // Final projection (Existing logic unchanged)
     facetPipeline.data.push({
         $project: {
           _id: 0,
@@ -136,7 +152,7 @@ export const getTradeMarginReport = async (req, res) => {
     
     pipeline.push({ $facet: facetPipeline });
 
-    // --- Execute the pipeline ---
+    // --- Execute the pipeline (Existing logic unchanged) ---
     const result = await Campaign.aggregate(pipeline);
 
     const reportData = result[0].data;
@@ -145,11 +161,13 @@ export const getTradeMarginReport = async (req, res) => {
 
     console.log(`Aggregation successful. Returning ${reportData.length} rows. Total matching docs: ${totalCount}.`);
 
+    // MODIFIED: Add totalCount to the pagination object in the response
     res.status(200).json({
       tradeMargins: reportData,
       pagination: {
         totalPages,
         currentPage: all === 'true' ? 1 : parseInt(page),
+        totalCount: totalCount, // Added this required field
       },
     });
 

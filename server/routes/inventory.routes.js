@@ -13,105 +13,55 @@ router.use(authenticate);
 
 
 
-// 1. All Inventories Report with pagination and filtering
-// routes/inventory.js (or wherever your router lives)
+// 1. All Inventories Report with pagination and filtering (CORRECTED AND FINAL VERSION)
 router.get('/inventory-report', async (req, res) => {
     try {
-
         const {
             page = 1,
             limit = 10,
             name = '',
             type = '',
             agency = '',
-            industry = ''
+            industry = '',
+            sortKey = 'revenue',      // Default sort key
+            sortDirection = 'desc'    // Default sort direction
         } = req.query;
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const lim = parseInt(limit);
 
-        // ───────────────────────────────────────── 2. BASE FILTER (on Space itself)
         const baseFilter = {};
         if (name) baseFilter.spaceName = { $regex: name, $options: 'i' };
         if (type) baseFilter.spaceType = { $regex: type, $options: 'i' };
 
-        // ───────────────────────────────────────── 3. AGGREGATION PIPELINE
         const pipeline = [
             { $match: baseFilter },
-
-            // --- Bring in bookings + campaign + pipeline data -----------------------
             {
                 $lookup: {
                     from: 'bookings',
                     let: { spaceId: '$_id' },
                     pipeline: [
-                        {
-                            $lookup: {
-                                from: 'campaigns',
-                                localField: 'campaigns',
-                                foreignField: '_id',
-                                as: 'campaignData'
-                            }
-                        },
+                        { $lookup: { from: 'campaigns', localField: 'campaigns', foreignField: '_id', as: 'campaignData' } },
                         { $unwind: '$campaignData' },
-
-                        // keep only bookings that reference this space
-                        {
-                            $match: {
-                                $expr: { $in: ['$$spaceId', '$campaignData.spaces.id'] }
-                            }
-                        },
-
-                        // Pull the pipeline (payments etc.) for each campaign -------------
-                        {
-                            $lookup: {
-                                from: 'pipelines',
-                                localField: 'campaignData.pipeline',
-                                foreignField: '_id',
-                                as: 'pipelineData'
-                            }
-                        },
-                        {
-                            $unwind: {
-                                path: '$pipelineData',
-                                preserveNullAndEmptyArrays: true     // OK if a campaign has no pipeline yet
-                            }
-                        }
+                        { $match: { $expr: { $in: ['$$spaceId', '$campaignData.spaces.id'] } } },
+                        { $lookup: { from: 'pipelines', localField: 'campaignData.pipeline', foreignField: '_id', as: 'pipelineData' } },
+                        { $unwind: { path: '$pipelineData', preserveNullAndEmptyArrays: true } }
                     ],
                     as: 'bookingData'
                 }
             },
-
-            // --- Compute totals & flat fields --------------------------------------
             {
                 $addFields: {
-                    /* Protect against null/undefined booking entries */
-                    bookingData: {
-                        $filter: { input: '$bookingData', as: 'b', cond: { $ne: ['$$b', null] } }
-                    },
-
+                    bookingData: { $filter: { input: '$bookingData', as: 'b', cond: { $ne: ['$$b', null] } } },
                     totalBookings: { $size: '$bookingData' },
-
-                    totalRevenue: {
-                        $sum: {
-                            $map: {
-                                input: '$bookingData',
-                                as: 'b',
-                                in: { $ifNull: ['$$b.pipelineData.payment.finalAmountWithGST', 0] }
-                            }
-                        }
-                    },
-
+                    totalRevenue: { $sum: { $map: { input: '$bookingData', as: 'b', in: { $ifNull: ['$$b.pipelineData.payment.finalAmountWithGST', 0] } } } },
                     lastBookedDate: { $max: '$bookingData.createdAt' },
-
-                    /* First agency / industry we bump into (you can tweak if you need all of them) */
                     agency: { $first: '$bookingData.agencyName' },
                     industry: { $first: '$bookingData.campaignData.industry' }
                 }
             }
         ];
 
-        // ───────────────────────────────────────── 4. FILTER ON COMPUTED FIELDS
         if (agency) {
             pipeline.push({ $match: { agency: { $regex: agency, $options: 'i' } } });
         }
@@ -119,13 +69,33 @@ router.get('/inventory-report', async (req, res) => {
             pipeline.push({ $match: { industry: { $regex: industry, $options: 'i' } } });
         }
 
-        // ───────────────────────────────────────── 5. CLONE FOR COUNT
         const countPipeline = [...pipeline, { $count: 'total' }];
 
-        // ───────────────────────────────────────── 6. PROJECTION + PAGINATION
+        // --- START OF CORRECTION ---
+        // 1. Map frontend sort keys to the actual field names available BEFORE projection
+        const sortKeyMap = {
+            name: 'spaceName',
+            type: 'spaceType',
+            agency: 'agency',
+            industry: 'industry',
+            bookings: 'totalBookings',
+            revenue: 'totalRevenue'
+        };
+
+        const backendSortKey = sortKeyMap[sortKey] || 'totalRevenue'; // Default to revenue
+        const sortOrder = sortDirection === 'asc' ? 1 : -1;
+        
+        // 2. Add the dynamic sort stage HERE, before pagination and projection
+        pipeline.push({ $sort: { [backendSortKey]: sortOrder } });
+        // --- END OF CORRECTION ---
+
+        // Add pagination and the final projection
         pipeline.push(
+            { $skip: skip },
+            { $limit: lim },
             {
                 $project: {
+                    _id: 0, // Exclude original _id to avoid conflicts
                     id: { $toString: '$_id' },
                     name: '$spaceName',
                     type: { $ifNull: ['$spaceType', null] },
@@ -140,30 +110,24 @@ router.get('/inventory-report', async (req, res) => {
                     state: { $ifNull: ['$state', null] },
                     price: { $ifNull: ['$price', null] }
                 }
-            },
-            { $sort: { name: 1 } },
-            { $skip: skip },
-            { $limit: lim }
+            }
         );
 
-        // ───────────────────────────────────────── 7. RUN BOTH AGGREGATIONS
         const [items, countRes] = await Promise.all([
             Space.aggregate(pipeline),
             Space.aggregate(countPipeline)
         ]);
 
-        const totalItems = countRes[0]?.total || 0;
-        const totalPages = Math.ceil(totalItems / lim);
+        const totalCount = countRes[0]?.total || 0;
+        const totalPages = Math.ceil(totalCount / lim);
 
-        // ───────────────────────────────────────── 8. RESPONSE
         res.json({
             success: true,
             data: items,
             pagination: {
                 currentPage: parseInt(page),
                 totalPages,
-                totalItems,
-                itemsPerPage: lim
+                totalCount: totalCount, // Correctly named 'totalCount'
             }
         });
     } catch (err) {

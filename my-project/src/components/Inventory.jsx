@@ -1057,116 +1057,141 @@
 // }
 
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import toast from 'react-hot-toast';
-import { useSidebar } from '../context/SidebarContext'; // 1. IMPORT THE SIDEBAR HOOK
-
-// Import Leaflet for Map View
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { useSidebar } from '../context/SidebarContext';
 
 // Import the date range picker and its CSS
 import { DateRange } from 'react-date-range';
-import 'react-date-range/dist/styles.css'; // main style file
-import 'react-date-range/dist/theme/default.css'; // theme css file
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
-// Fix for default Leaflet marker icon issue
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-});
-
-
 // --- UI HELPER COMPONENTS ---
+
 const Button = ({ children, className = '', ...props }) => (
   <button className={`px-4 py-2 rounded-md bg-black text-white text-xs font-medium hover:bg-gray-800 transition ${className}`} {...props}>
     {children}
   </button>
 );
 
-const Pagination = ({ currentPage, totalPages, onPageChange }) => (
-  <div className="flex justify-center mt-8">
-    <div className="flex gap-2 flex-wrap">
-      <button
-        onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
-        className={`px-3 py-1 rounded-md text-sm ${currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border border-gray-300 hover:bg-gray-100'} transition`}
-        disabled={currentPage === 1}
-      >
-        <FaArrowLeft className='inline'/>
-      </button>
-      {/* {Array.from({ length: totalPages }).map((_, i) => (
-        <button
-          key={i}
-          onClick={() => onPageChange(i + 1)}
-          className={`px-3 py-1 rounded-md text-sm ${i + 1 === currentPage ? 'bg-black text-white' : 'bg-white border border-gray-300 hover:bg-gray-100'} transition`}
-        >
-          {cur}
-        </button>
-      ))} */}
-      <button
-        onClick={() =>
-          onPageChange(currentPage < totalPages ? currentPage + 1 : 1)
-        }
-  className="px-3 py-1 rounded-md text-sm bg-black text-white transition"
-      >
-        Page {currentPage} of {totalPages}
-      </button>
-      <button
-        onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)}
-        className={`px-3 py-1 rounded-md text-sm ${currentPage === totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border border-gray-300 hover:bg-gray-100'} transition`}
-        disabled={currentPage === totalPages}
-      >
-        <FaArrowRight className='inline'/>
-      </button>
+/**
+ * NEW: Enhanced Pagination Component with "Showing X-Y of Z" results text.
+ */
+const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
+  const [pageInput, setPageInput] = useState(currentPage.toString());
+
+  useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
+
+  const handlePageSubmit = (e) => {
+    e.preventDefault();
+    const pageNum = parseInt(pageInput, 10);
+    if (pageNum && pageNum > 0 && pageNum <= totalPages) {
+      onPageChange(pageNum);
+    } else {
+      setPageInput(currentPage.toString()); // Reset if invalid
+    }
+  };
+
+  if (totalCount === 0) {
+      return <div className="text-center py-10 text-gray-500">No inventories found.</div>;
+  }
+
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalCount);
+
+  return (
+    <div className="flex flex-col sm:flex-row justify-between items-center mt-8 text-xs gap-4">
+       <span className="text-gray-600">
+           Showing {startItem} - {endItem} of {totalCount} results
+       </span>
+       {totalPages > 1 && (
+         <div className="flex items-center gap-4">
+             <button
+               onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
+               className="px-3 py-1.5 rounded-md bg-white border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+               disabled={currentPage === 1}
+             >
+               <FaArrowLeft className='inline'/>
+             </button>
+
+             <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
+               <span className="text-gray-700">Page</span>
+               <input
+                 type="text"
+                 value={pageInput}
+                 onChange={(e) => setPageInput(e.target.value)}
+                 className="w-12 h-8 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+               />
+               <span className="text-gray-700">of {totalPages}</span>
+             </form>
+
+             <button
+               onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)}
+               className="px-3 py-1.5 rounded-md bg-white border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+               disabled={currentPage === totalPages}
+             >
+               <FaArrowRight className='inline'/>
+             </button>
+         </div>
+       )}
     </div>
-  </div>
-);
+  );
+};
+
 
 const AvailabilityBadge = ({ availabilityStatus }) => {
   let colorClasses, text;
-
   switch (availabilityStatus) {
     case 'Completely booked':
     case 'Booked':
-      colorClasses = 'bg-red-100 text-red-700';
-      text = 'Booked';
-      break;
+      colorClasses = 'bg-red-100 text-red-700'; text = 'Booked'; break;
+    case 'Partially available':
     case 'Partialy available':
-      colorClasses = 'bg-yellow-100 text-yellow-700';
-      text = 'Partially Available';
-      break;
+      colorClasses = 'bg-yellow-100 text-yellow-700'; text = 'Partially Available'; break;
     case 'Overlapping booking':
-      colorClasses = 'bg-orange-100 text-orange-700';
-      text = 'Overlapping Booking';
-      break;
+      colorClasses = 'bg-orange-100 text-orange-700'; text = 'Overlapping'; break;
     case 'Completely available':
     default:
-      colorClasses = 'bg-green-100 text-green-700';
-      text = 'Completely Available';
-      break;
+      colorClasses = 'bg-green-100 text-green-700'; text = 'Available'; break;
   }
+  return <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${colorClasses}`}>{text}</span>;
+};
+
+const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
+  const isSorting = sortConfig.key === sortKey;
+  const direction = isSorting ? sortConfig.direction : null;
+
+  const handleSort = () => {
+    setSortConfig((prev) => ({
+      key: sortKey,
+      direction: prev.key === sortKey && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
 
   return (
-    <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${colorClasses}`}>
-      {text}
-    </span>
+    <th scope="col" className="px-6 py-3">
+      <div onClick={handleSort} className="flex items-center gap-1.5 cursor-pointer select-none">
+        {title}
+        <span className="text-gray-400">
+          {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '⇅'}
+        </span>
+      </div>
+    </th>
   );
 };
 
 
 // --- VIEW COMPONENTS ---
 const InventoryGridView = ({ data, onTagUpdate, navigate }) => {
-  if (!data || data.length === 0) {
-    return <div className="text-center py-10 text-gray-500">No inventories found.</div>;
-  }
+  // No need for a message here as the pagination component will show it.
+  if (!data || data.length === 0) return null;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 text-xs gap-5">
@@ -1176,22 +1201,15 @@ const InventoryGridView = ({ data, onTagUpdate, navigate }) => {
           : String(item.tags || '').split(',').filter(tag => tag.trim() !== '');
 
         return (
-          <div
-            key={item._id}
-            className="bg-white border border-gray-200 shadow-sm rounded-lg text-xs hover:shadow-md cursor-pointer transition-shadow flex flex-col"
-            onClick={() => navigate(`/space/${item._id}`)}
-          >
+          <div key={item._id} className="bg-white border border-gray-200 shadow-sm rounded-lg text-xs hover:shadow-md cursor-pointer transition-shadow flex flex-col" onClick={() => navigate(`/space/${item._id}`)}>
             <img src={item.mainPhoto || 'https://via.placeholder.com/300x200'} alt="Space" className="w-full h-40 object-cover rounded-t-lg bg-gray-100" />
             <div className="p-4 flex flex-col flex-grow">
               <div className="flex-grow">
                 <div className="flex justify-between items-start gap-2">
                   <h3 className="font-semibold text-gray-800 leading-tight">{item.spaceName}</h3>
-                  <div className="flex-shrink-0">
-                    <AvailabilityBadge availabilityStatus={item.availability} />
-                  </div>
+                  <div className="flex-shrink-0"><AvailabilityBadge availabilityStatus={item.availability} /></div>
                 </div>
-                <p className="text-sm text-gray-500 mt-1 mb-3">{item.address || 'No address provided'}</p>
-
+                <p className="text-sm text-gray-500 mt-1 mb-3">{item.address || 'No address'}</p>
                 <div className="flex gap-2 text-xs flex-wrap mb-2">
                   <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">{item.city || 'N/A'}</span>
                   <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800">{item.spaceType || 'N/A'}</span>
@@ -1200,28 +1218,15 @@ const InventoryGridView = ({ data, onTagUpdate, navigate }) => {
                   {tags.map((tag, idx) => (
                     <div key={idx} className="relative group text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-700 flex items-center">
                       {tag}
-                      <span
-                        onClick={(e) => { e.stopPropagation(); onTagUpdate('remove', item._id, tag); }}
-                        className="ml-1.5 text-red-500 hidden group-hover:inline cursor-pointer font-bold"
-                      >×</span>
+                      <span onClick={(e) => { e.stopPropagation(); onTagUpdate('remove', item._id, tag); }} className="ml-1.5 text-red-500 hidden group-hover:inline cursor-pointer font-bold">×</span>
                     </div>
                   ))}
                 </div>
               </div>
-
               <div className="mt-4 text-xs">
-                <input
-                  placeholder="+ Add Tag"
-                  className="px-2 py-1 w-full border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      onTagUpdate('add', item._id, e.target.value.trim());
-                      e.target.value = '';
-                    }
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                />
+                <input placeholder="+ Add Tag" className="px-2 py-1 w-full border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' && e.target.value.trim()) { onTagUpdate('add', item._id, e.target.value.trim()); e.target.value = ''; } }}
+                  onClick={(e) => e.stopPropagation()} />
               </div>
             </div>
           </div>
@@ -1231,10 +1236,9 @@ const InventoryGridView = ({ data, onTagUpdate, navigate }) => {
   );
 };
 
-const InventoryTableView = ({ data, currentPage, limit, navigate }) => {
-  if (!data || data.length === 0) {
-    return <div className="text-center py-10 text-gray-500 bg-white rounded-lg shadow-sm">No inventories found.</div>;
-  }
+const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, setSortConfig }) => {
+  // No need for a message here as the pagination component will show it.
+  if (!data || data.length === 0) return null;
 
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
@@ -1242,12 +1246,12 @@ const InventoryTableView = ({ data, currentPage, limit, navigate }) => {
         <thead className="text-xs text-gray-700 uppercase bg-gray-50">
           <tr>
             <th scope="col" className="px-6 py-3">#</th>
-            <th scope="col" className="px-6 py-3">Space Name</th>
-            <th scope="col" className="px-6 py-3">City</th>
-            <th scope="col" className="px-6 py-3">Category</th>
-            <th scope="col" className="px-6 py-3">Availability</th>
-            <th scope="col" className="px-6 py-3">Ownership </th>
-            <th scope="col" className="px-6 py-3">Inventory ID</th>
+            <SortableHeader title="Space Name" sortKey="spaceName" sortConfig={sortConfig} setSortConfig={setSortConfig} />
+            <SortableHeader title="City" sortKey="city" sortConfig={sortConfig} setSortConfig={setSortConfig} />
+            <SortableHeader title="Category" sortKey="spaceType" sortConfig={sortConfig} setSortConfig={setSortConfig} />
+            <SortableHeader title="Availability" sortKey="availability" sortConfig={sortConfig} setSortConfig={setSortConfig} />
+            <SortableHeader title="Ownership" sortKey="ownershipType" sortConfig={sortConfig} setSortConfig={setSortConfig} />
+            <SortableHeader title="Inventory ID" sortKey="inventoryId" sortConfig={sortConfig} setSortConfig={setSortConfig} />
           </tr>
         </thead>
         <tbody>
@@ -1265,12 +1269,8 @@ const InventoryTableView = ({ data, currentPage, limit, navigate }) => {
               </td>
               <td className="px-6 py-4">{item.city}</td>
               <td className="px-6 py-4">{item.spaceType}</td>
-              <td className="px-6 py-4">
-                <AvailabilityBadge availabilityStatus={item.availability} />
-              </td>
-              <td className="px-6 py-4">
-               {item.ownershipType}
-              </td>
+              <td className="px-6 py-4"><AvailabilityBadge availabilityStatus={item.availability} /></td>
+              <td className="px-6 py-4">{item.ownershipType}</td>
               <td className="px-6 py-4 font-mono text-xs text-gray-500">{item.inventoryId || item._id.slice(-8).toUpperCase()}</td>
             </tr>
           ))}
@@ -1280,55 +1280,17 @@ const InventoryTableView = ({ data, currentPage, limit, navigate }) => {
   );
 };
 
-const InventoryMapView = ({ data }) => {
-  const spacesWithCords = data
-    .map(space => {
-      const lat = parseFloat(space.latitude);
-      const lon = parseFloat(space.longitude);
-      if (!isNaN(lat) && !isNaN(lon)) {
-        return { ...space, latitude: lat, longitude: lon };
-      }
-      return null;
-    })
-    .filter(space => space !== null);
-
-  const DEFAULT_CENTER = [19.0760, 72.8777]; // Mumbai
-
-  const mapCenter = spacesWithCords.length > 0
-    ? [spacesWithCords[0].latitude, spacesWithCords[0].longitude]
-    : DEFAULT_CENTER;
-  
-  return (
-    <div className="h-[60vh] w-full rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <MapContainer center={mapCenter} zoom={10} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        
-        {spacesWithCords.map(item => (
-          <Marker key={item._id} position={[item.latitude, item.longitude]}>
-            <Popup><b>{item.spaceName}</b><br/>{item.address || 'No address available'}</Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
-  );
-}
 
 // --- MAIN DASHBOARD COMPONENT ---
 export default function InventoryDashboard() {
   const navigate = useNavigate();
-  const { isCollapsed } = useSidebar(); // 2. USE THE HOOK TO GET THE STATE
-
-  // State for data and pagination
+  const { isCollapsed } = useSidebar();
   const [spaces, setSpaces] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [viewMode, setViewMode] = useState('table');
   const limit = 10;
 
-  // State for filters
   const [search, setSearch] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
   const [availability, setAvailability] = useState('');
@@ -1337,48 +1299,43 @@ export default function InventoryDashboard() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // State for modals and popovers
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [showDateModal, setShowDateModal] = useState(false);
   
-  // State for the date range picker
-  const [dateRange, setDateRange] = useState([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
-  const [tempDateRange, setTempDateRange] = useState([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
+  const [dateRange, setDateRange] = useState([{ startDate: null, endDate: null, key: 'selection' }]);
+  const [tempDateRange, setTempDateRange] = useState([{ startDate: null, endDate: null, key: 'selection' }]);
+  
+  const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
 
-
-  // --- DATA FETCHING ---
-  const fetchSpaces = async () => {
+  const fetchSpaces = useCallback(async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const params = new URLSearchParams({ 
-        page: currentPage, 
-        limit, 
-        search, 
-        region: selectedRegion, 
-        availability, 
-        spaceType, 
-        ownershipType,
-        ...(startDate && endDate && { startDate, endDate }), 
-      });
+      const params = new URLSearchParams({ page: currentPage, limit, search, region: selectedRegion, availability, spaceType, ownershipType, ...(startDate && endDate && { startDate, endDate }), });
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/listInventory?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.status === 403) { localStorage.clear(); navigate('/login'); return; }
       const data = await res.json();
-      console.log(data)
       setSpaces(data.spaces);
       setTotalCount(data.totalCount);
     } catch (error) { toast.error("Failed to fetch inventories."); }
-  };
+  }, [currentPage, search, selectedRegion, availability, startDate, endDate, spaceType, ownershipType, navigate]);
 
-  // Re-fetch data when any filter changes
-  useEffect(() => { fetchSpaces(); }, [search, selectedRegion, availability, startDate, endDate, currentPage, spaceType, ownershipType]);
+  useEffect(() => { fetchSpaces(); }, [fetchSpaces]);
   
-  const handleCancelDateFilter = useCallback(() => {
-    setTempDateRange([{ startDate: null, endDate: null, key: 'selection' }]);
-    setShowDateModal(false);
-  }, []);
+  const sortedSpaces = useMemo(() => {
+    let sortableItems = [...spaces];
+    if (sortConfig.key) {
+      sortableItems.sort((a, b) => {
+        const aVal = a[sortConfig.key]?.toString().toLowerCase() || "";
+        const bVal = b[sortConfig.key]?.toString().toLowerCase() || "";
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [spaces, sortConfig]);
 
-  // --- HANDLER FUNCTIONS ---
   const handleTagUpdate = async (action, spaceId, tag) => {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}/${action}-tag`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tag }) });
@@ -1390,11 +1347,7 @@ export default function InventoryDashboard() {
   const handleDownloadExcel = () => {
     if (spaces.length === 0) { toast.error("No data to download."); return; }
     const excelData = spaces.map(item => ({
-      'Space Name': item.spaceName, 'Address': item.address, 'City': item.city,
-      'State': item.state, 'Zone': item.zone, 'Space Type': item.spaceType,
-      'Availability': item.availability, 'Units': item.unit,
-      'Occupied Units': item.occupiedUnits, 'Price': item.price,
-      'Inventory ID': item.inventoryId || item._id, 'Tags': (Array.isArray(item.tags) ? item.tags : String(item.tags || '').split(',')).join(', ')
+      'Space Name': item.spaceName, 'Address': item.address, 'City': item.city, 'State': item.state, 'Zone': item.zone, 'Space Type': item.spaceType, 'Availability': item.availability, 'Units': item.unit, 'Occupied Units': item.occupiedUnits, 'Price': item.price, 'Inventory ID': item.inventoryId || item._id, 'Tags': (Array.isArray(item.tags) ? item.tags : String(item.tags || '').split(',')).join(', ')
     }));
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
@@ -1408,65 +1361,44 @@ export default function InventoryDashboard() {
     if (!selectedFile) return;
     const formData = new FormData();
     formData.append('file', selectedFile);
-
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/upload-excel`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData,
-      });
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/upload-excel`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData, });
       const result = await response.json();
       if (response.ok) {
-        toast.success(`Successfully uploaded ${result.count} inventories`);
-        setShowUploadModal(false);
-        setSelectedFile(null);
-        fetchSpaces();
+        toast.success(`Successfully uploaded ${result.count} inventories`); setShowUploadModal(false); setSelectedFile(null); fetchSpaces();
       } else { toast.error(result.error || 'Upload failed'); }
     } catch (error) { toast.error('Something went wrong while uploading'); }
   };
 
   const resetFilters = () => {
-    setSearch(''); setSelectedRegion(''); setAvailability(''); setStartDate(''); setEndDate(''); setCurrentPage(1); setSpaceType(''); setOwnershipType('');
+    setSearch(''); setSelectedRegion(''); setAvailability(''); setStartDate(''); setEndDate(''); setCurrentPage(1); setSpaceType(''); setOwnershipType(''); setSortConfig({ key: '', direction: 'asc' });
     const initialRange = [{ startDate: null, endDate: null, key: 'selection' }];
     setDateRange(initialRange);
     setTempDateRange(initialRange);
   };
   
-  const formatDate = (date) => {
-    if (!date) return '';
-    const adjustedDate = new Date(date.getTime() + Math.abs(date.getTimezoneOffset() * 60000));
-    return adjustedDate.toISOString().split('T')[0];
-  };
+  const formatDate = (date) => date ? new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0] : '';
 
   const handleApplyDateFilter = () => {
-    setDateRange(tempDateRange);
-    setStartDate(formatDate(tempDateRange[0].startDate));
-    setEndDate(formatDate(tempDateRange[0].endDate));
-    setShowDateModal(false);
-  };
-  const handleShowDateModal = () => {
-    setShowDateModal(true);
-    setTempDateRange([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
+    const { startDate: start, endDate: end } = tempDateRange[0];
+    setDateRange(tempDateRange); setStartDate(formatDate(start)); setEndDate(formatDate(end)); setShowDateModal(false); setCurrentPage(1);
   };
 
- 
+  const handleCancelDateFilter = () => { setShowDateModal(false); };
+  const handleShowDateModal = () => { setTempDateRange(dateRange); setShowDateModal(true); };
   
   const totalPages = Math.ceil(totalCount / limit);
 
   return (
     <div className="min-h-screen bg-gray-50 w-screen text-black flex flex-col lg:flex-row">
       <Navbar />
-      {/* 3. MAKE THE MAIN ELEMENT'S CLASSNAME DYNAMIC */}
       <main className={`flex-1 h-screen overflow-y-auto px-4 md:px-6 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <h2 className="text-2xl font-sans font-normal">Inventories</h2>
-
+          <h2 className="text-2xl font-sans font-normal">Inventories ({totalCount})</h2>
           <div className="flex items-center gap-2 text-xs">
             <Button onClick={() => navigate('/add-space')}>+ Add Space</Button>
-            <input type="file" accept=".xlsx, .csv" id="excel-upload" onChange={(e) => {
-              if(e.target.files[0]) { setSelectedFile(e.target.files[0]); setShowUploadModal(true); }
-            }} className="hidden" />
+            <input type="file" accept=".xlsx, .csv" id="excel-upload" onChange={(e) => { if(e.target.files[0]) { setSelectedFile(e.target.files[0]); setShowUploadModal(true); } }} className="hidden" />
             <label htmlFor="excel-upload" className="cursor-pointer px-4 py-2 rounded-md bg-black text-white text-xs font-medium hover:bg-gray-800 transition">Upload Excel</label>
             <Button onClick={handleDownloadExcel}>Download Excel</Button>
           </div>
@@ -1474,13 +1406,7 @@ export default function InventoryDashboard() {
 
         <div className="mt-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <input
-              type="text"
-              placeholder="Search by name, address, city, tags..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full md:w-[50%] px-4 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <input type="text" placeholder="Search by name, address, city, tags..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="w-full md:w-[50%] px-4 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
             <div className="flex items-center gap-2 flex-shrink-0">
               <div className="flex items-center p-1 bg-gray-100 rounded-lg border">
                 {[
@@ -1496,63 +1422,42 @@ export default function InventoryDashboard() {
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-3 text-xs items-center">
-            <input className="px-3 py-2 border rounded-md w-full md:w-auto" value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} placeholder="City/State/Zone" />
-            <select className="px-3 py-2 border rounded-md w-full md:w-auto bg-white" value={spaceType} onChange={(e) => setSpaceType(e.target.value)}>
-              <option value="">All Space Types</option>
-              <option value="Billboard">Billboard</option>
-              <option value="DOOH">DOOH</option>
-              <option value="Pole Kiosk">Pole Kiosk</option>
-              <option value="Gantry">Gantry</option>
-              <option value="BQS">BQS</option>
-              <option value="Miscellaneous">Miscellaneous</option>
+            <input className="px-3 py-2 border rounded-md w-full md:w-auto" value={selectedRegion} onChange={(e) => { setSelectedRegion(e.target.value); setCurrentPage(1); }} placeholder="City/State/Zone" />
+            <select className="px-3 py-2 border rounded-md w-full md:w-auto bg-white" value={spaceType} onChange={(e) => { setSpaceType(e.target.value); setCurrentPage(1); }}>
+              <option value="">All Space Types</option><option value="Billboard">Billboard</option><option value="DOOH">DOOH</option><option value="Pole Kiosk">Pole Kiosk</option><option value="Gantry">Gantry</option><option value="BQS">BQS</option><option value="Miscellaneous">Miscellaneous</option>
             </select>
-
-            <select className="px-3 py-2 border rounded-md w-full md:w-auto bg-white" value={ownershipType} onChange={(e) => setOwnershipType(e.target.value)}>
-              <option value="">All Ownerships</option>
-              <option value="Owned">Owned</option>
-              <option value="Leased">Leased</option>
-              <option value="Traded">Traded</option>
+            <select className="px-3 py-2 border rounded-md w-full md:w-auto bg-white" value={ownershipType} onChange={(e) => { setOwnershipType(e.target.value); setCurrentPage(1); }}>
+              <option value="">All Ownerships</option><option value="Owned">Owned</option><option value="Leased">Leased</option><option value="Traded">Traded</option>
             </select>
-
-            <select className="px-3 py-2 border rounded-md w-full md:w-auto bg-white" value={availability} onChange={(e) => setAvailability(e.target.value)}>
-              <option value="">All Availabilities</option>
-              <option value="Completely available">Completely Available</option>
-              <option value="Partially available">Partially Available</option>
-              <option value="Completely booked">Completely Booked</option>
-              <option value="Overlapping booking">Overlapping Booking</option>
+            <select className="px-3 py-2 border rounded-md w-full md:w-auto bg-white" value={availability} onChange={(e) => { setAvailability(e.target.value); setCurrentPage(1); }}>
+              <option value="">All Availabilities</option><option value="Completely available">Completely Available</option><option value="Partially available">Partially Available</option><option value="Completely booked">Completely Booked</option><option value="Overlapping booking">Overlapping Booking</option>
             </select>
-            
             <div className="w-full md:w-auto">
               <button onClick={handleShowDateModal} className="px-4 py-2 border rounded-md hover:bg-gray-100 w-full text-left">
-                {startDate && endDate ? `${startDate} to ${endDate}` : "Date Filter"}
+                {dateRange[0].startDate && dateRange[0].endDate ? `${formatDate(dateRange[0].startDate)} to ${formatDate(dateRange[0].endDate)}` : "Date Filter"}
               </button>
             </div>
           </div>
         </div>
 
         <div className="mt-6">
-          {viewMode === 'table' && <InventoryTableView data={spaces} currentPage={currentPage} limit={limit} navigate={navigate} />}
+          {viewMode === 'table' && <InventoryTableView data={sortedSpaces} currentPage={currentPage} limit={limit} navigate={navigate} sortConfig={sortConfig} setSortConfig={setSortConfig} />}
           {viewMode === 'grid' && <InventoryGridView data={spaces} onTagUpdate={handleTagUpdate} navigate={navigate} />}
-          {viewMode === 'map' && <InventoryMapView data={spaces} />}
         </div>
-
-        {totalPages > 1 && viewMode !== 'map' && (
-          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-        )}
         
-        {/* --- MODALS --- */}
+        {/* MODIFIED: Pagination call now includes totalCount and itemsPerPage */}
+        <Pagination 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            onPageChange={setCurrentPage} 
+            totalCount={totalCount}
+            itemsPerPage={limit}
+        />
+        
         {showDateModal && (
           <div className="fixed inset-0 text-xs flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={handleCancelDateFilter}>
             <div className="bg-white rounded-xl shadow-lg p-2" onClick={(e) => e.stopPropagation()}>
-              <DateRange
-                editableDateInputs={true}
-                onChange={item => setTempDateRange([item.selection])}
-                moveRangeOnFirstSelection={false}
-                ranges={tempDateRange}
-                rangeColors={['#000000']}
-                months={1}
-                direction="horizontal"
-              />
+              <DateRange editableDateInputs={true} onChange={item => setTempDateRange([item.selection])} moveRangeOnFirstSelection={false} ranges={tempDateRange} rangeColors={['#000000']} months={1} direction="horizontal" />
               <div className="flex justify-end gap-2 p-2 border-t">
                 <button onClick={handleCancelDateFilter} className="px-4 py-1.5 rounded-md bg-gray-200 text-black hover:bg-gray-300 font-medium text-xs">Cancel</button>
                 <button onClick={handleApplyDateFilter} className="px-4 py-1.5 rounded-md bg-black text-white hover:bg-gray-800 font-medium text-xs">Apply</button>
@@ -1567,7 +1472,7 @@ export default function InventoryDashboard() {
               <h2 className="text-lg font-semibold mb-4">Upload Inventory Excel</h2>
               <p className="mb-4 text-sm">Selected File: <span className="font-medium">{selectedFile?.name}</span></p>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setShowUploadModal(false)} className="px-4 py-2 rounded-md bg-gray-200 text-black hover:bg-gray-300">Cancel</button>
+                <button onClick={() => { setShowUploadModal(false); setSelectedFile(null); }} className="px-4 py-2 rounded-md bg-gray-200 text-black hover:bg-gray-300">Cancel</button>
                 <button onClick={handleConfirmUpload} className="px-4 py-2 rounded-md bg-black text-white hover:bg-gray-900">Save & Upload</button>
               </div>
             </div>

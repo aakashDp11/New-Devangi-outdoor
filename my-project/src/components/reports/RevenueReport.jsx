@@ -2,12 +2,10 @@ import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import dayjs from "dayjs";
-import { LineChart } from "@mui/x-charts/LineChart";
-import { BarChart } from "@mui/x-charts";
-import { PieChart } from "@mui/x-charts";
+import { LineChart, BarChart, PieChart } from "@mui/x-charts";
 import { CircularProgress } from "@mui/material";
 
-// --- Mock UI Components - Replace with your actual components ---
+// --- UI HELPER COMPONENTS ---
 const Input = ({ ...props }) => (
   <input
     className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -45,30 +43,77 @@ const Select = ({ children, ...props }) => (
   </select>
 );
 
-const PaginationControls = ({ currentPage, totalPages, onPageChange }) => (
-  <div className="flex justify-end items-center mt-4 text-xs">
-    <span className="mr-4 text-gray-600">
-      Page {currentPage} of {totalPages}
-    </span>
-    <div className="flex">
-      <button
-        onClick={() => onPageChange((p) => Math.max(1, p - 1))}
-        disabled={currentPage === 1}
-        className="px-3 py-1 border rounded-l-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+/**
+ * MODIFIED: New SortableHeader that matches the BookingsDashboard style.
+ */
+const SortableHeader = ({ title, sortKey, sortConfig, onSort, disabled = false }) => {
+  const isSorting = sortConfig.key === sortKey;
+  const direction = isSorting ? sortConfig.direction : null;
+
+  const handleSort = () => {
+    if (disabled) return;
+    const newDirection = sortConfig.key === sortKey && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    onSort(sortKey, newDirection);
+  };
+
+  return (
+    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+      <div
+        onClick={handleSort}
+        className={`flex items-center gap-1.5 ${disabled ? 'cursor-default' : 'cursor-pointer select-none'}`}
       >
-        Previous
-      </button>
-      <button
-        onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
-        disabled={currentPage === totalPages}
-        className="px-3 py-1 border-t border-b border-r rounded-r-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Next
-      </button>
-    </div>
-  </div>
-);
-// --- End of Mock UI Components ---
+        {title}
+        {!disabled && (
+          <span className="text-gray-400">
+            {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '⇅'}
+          </span>
+        )}
+      </div>
+    </th>
+  );
+};
+
+
+const EnhancedPaginationControls = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
+    const [pageInput, setPageInput] = useState(currentPage.toString());
+
+    useEffect(() => {
+        setPageInput(currentPage.toString());
+    }, [currentPage]);
+
+    const handlePageSubmit = (e) => {
+        e.preventDefault();
+        const pageNum = parseInt(pageInput, 10);
+        if (pageNum && pageNum > 0 && pageNum <= totalPages) {
+            onPageChange(pageNum);
+        } else {
+            setPageInput(currentPage.toString());
+        }
+    };
+
+    if (totalCount === 0) return null;
+
+    return (
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-xs gap-4">
+            <span className="text-gray-600">
+                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)} - {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} results
+            </span>
+            {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                    <button onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)} disabled={currentPage === 1} className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50">Previous</button>
+                    <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
+                        <span className="text-gray-700">Page</span>
+                        <input type="text" value={pageInput} onChange={(e) => setPageInput(e.target.value)} className="w-10 h-7 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                        <span className="text-gray-700">of {totalPages}</span>
+                    </form>
+                    <button onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)} disabled={currentPage === totalPages} className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50">Next</button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- End of UI Helper Components ---
 
 const ITEMS_PER_PAGE = 10;
 
@@ -138,12 +183,13 @@ export default function RevenueReport({
   const [paymentData, setPaymentData] = useState([]);
   const [paymentCurrentPage, setPaymentCurrentPage] = useState(1);
   const [paymentTotalPages, setPaymentTotalPages] = useState(1);
+  const [paymentTotalCount, setPaymentTotalCount] = useState(0);
+  const [paymentSortConfig, setPaymentSortConfig] = useState({ key: 'paymentDate', direction: 'desc' });
   const [paymentFilters, setPaymentFilters] = useState({
     clientName: "",
     bookingName: "",
     startDate: "",
     endDate: "",
-    paymentDate: "",
   });
   
   const resetPaymentFilters = () => {
@@ -152,20 +198,26 @@ export default function RevenueReport({
       bookingName: "",
       startDate: "",
       endDate: "",
-      paymentDate: "",
     });
+    setPaymentCurrentPage(1);
+  };
+
+  const handlePaymentSort = (key, direction) => {
+    setPaymentSortConfig({ key, direction });
     setPaymentCurrentPage(1);
   };
 
   useEffect(() => {
     fetchPaymentReport();
-  }, [paymentFilters, paymentCurrentPage]);
+  }, [paymentFilters, paymentCurrentPage, paymentSortConfig]);
 
   const fetchPaymentReport = async () => {
     try {
       const params = new URLSearchParams({
         page: paymentCurrentPage,
-        limit: 10,
+        limit: ITEMS_PER_PAGE,
+        sortKey: paymentSortConfig.key,
+        sortDirection: paymentSortConfig.direction,
       });
 
       if (paymentFilters.clientName)
@@ -176,8 +228,6 @@ export default function RevenueReport({
         params.append("startDate", paymentFilters.startDate);
       if (paymentFilters.endDate)
         params.append("endDate", paymentFilters.endDate);
-      if (paymentFilters.paymentDate)
-        params.append("paymentDate", paymentFilters.paymentDate);
 
       const res = await fetch(
         `${
@@ -188,6 +238,7 @@ export default function RevenueReport({
       const data = await res.json();
       setPaymentData(data.payments || []);
       setPaymentTotalPages(data.pagination?.totalPages || 1);
+      setPaymentTotalCount(data.pagination?.totalCount || 0);
     } catch (error) {
       console.error("Error fetching payment report", error);
     }
@@ -204,12 +255,13 @@ export default function RevenueReport({
           const params = new URLSearchParams({
             page: currentPage,
             limit: 50,
+            sortKey: paymentSortConfig.key,
+            sortDirection: paymentSortConfig.direction,
           });
           if (paymentFilters.clientName) params.append("clientName", paymentFilters.clientName);
           if (paymentFilters.bookingName) params.append("bookingName", paymentFilters.bookingName);
           if (paymentFilters.startDate) params.append("startDate", paymentFilters.startDate);
           if (paymentFilters.endDate) params.append("endDate", paymentFilters.endDate);
-          if (paymentFilters.paymentDate) params.append("paymentDate", paymentFilters.paymentDate);
 
           const res = await fetch(
             `${import.meta.env.VITE_API_BASE_URL}/api/bookings/payment-report?${params.toString()}`
@@ -370,6 +422,8 @@ export default function RevenueReport({
   });
   const [tradeMarginCurrentPage, setTradeMarginCurrentPage] = useState(1);
   const [tradeMarginTotalPages, setTradeMarginTotalPages] = useState(1);
+  const [tradeMarginTotalCount, setTradeMarginTotalCount] = useState(0);
+  const [tradeMarginSortConfig, setTradeMarginSortConfig] = useState({ key: 'date', direction: 'desc' });
   const [tradeMarginTableLoading, setTradeMarginTableLoading] = useState(true);
   const [tradeMarginTableError, setTradeMarginTableError] = useState(null);
 
@@ -402,6 +456,11 @@ export default function RevenueReport({
     setTradeMarginFilters((prev) => ({ ...prev, [name]: value }));
     setTradeMarginCurrentPage(1);
   };
+  
+  const handleTradeMarginSort = (key, direction) => {
+    setTradeMarginSortConfig({ key, direction });
+    setTradeMarginCurrentPage(1);
+  };
 
   const resetTradeMarginGraphFilters = () => {
     setTradeMarginGraphFilters({
@@ -432,6 +491,8 @@ export default function RevenueReport({
       const params = new URLSearchParams({
         page: tradeMarginCurrentPage,
         limit: ITEMS_PER_PAGE,
+        sortKey: tradeMarginSortConfig.key,
+        sortDirection: tradeMarginSortConfig.direction,
       });
       if (tradeMarginFilters.bookingSearch) params.append('booking', tradeMarginFilters.bookingSearch);
       if (tradeMarginFilters.inventorySearch) params.append('inventory', tradeMarginFilters.inventorySearch);
@@ -445,6 +506,7 @@ export default function RevenueReport({
       const data = await res.json();
       setTradeMarginData(data.tradeMargins || []);
       setTradeMarginTotalPages(data.pagination?.totalPages || 1);
+      setTradeMarginTotalCount(data.pagination?.totalCount || 0);
     } catch (error) {
       setTradeMarginTableError(error.message);
     } finally {
@@ -484,7 +546,7 @@ export default function RevenueReport({
 
   useEffect(() => {
     fetchTradeMarginTable();
-  }, [tradeMarginFilters, tradeMarginCurrentPage]);
+  }, [tradeMarginFilters, tradeMarginCurrentPage, tradeMarginSortConfig]);
   
   useEffect(() => {
     fetchTradeMarginGraph();
@@ -523,7 +585,12 @@ export default function RevenueReport({
       let totalPages = 1;
 
       do {
-        const params = new URLSearchParams({ page: currentPage, limit: 50 });
+        const params = new URLSearchParams({ 
+            page: currentPage, 
+            limit: 50,
+            sortKey: tradeMarginSortConfig.key,
+            sortDirection: tradeMarginSortConfig.direction,
+        });
         if (tradeMarginFilters.bookingSearch) params.append('booking', tradeMarginFilters.bookingSearch);
         if (tradeMarginFilters.inventorySearch) params.append('inventory', tradeMarginFilters.inventorySearch);
         if (tradeMarginFilters.inventoryType) params.append('inventoryType', tradeMarginFilters.inventoryType);
@@ -579,20 +646,20 @@ export default function RevenueReport({
       {/* Payments Report Table */}
       <Card>
         <CardContent>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Payments Report</h3>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+            <h3 className="text-lg font-semibold text-gray-800">Payments Report ({paymentTotalCount})</h3>
             <Button onClick={downloadPaymentsExcel} disabled={paymentData.length === 0}>Download Full Report</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-center">
             <Input
               placeholder="Client Name"
               value={paymentFilters.clientName}
-              onChange={(e) => setPaymentFilters({ ...paymentFilters, clientName: e.target.value })}
+              onChange={(e) => {setPaymentFilters({ ...paymentFilters, clientName: e.target.value }); setPaymentCurrentPage(1);}}
             />
             <Input
               placeholder="Booking Name"
               value={paymentFilters.bookingName}
-              onChange={(e) => setPaymentFilters({ ...paymentFilters, bookingName: e.target.value })}
+              onChange={(e) => {setPaymentFilters({ ...paymentFilters, bookingName: e.target.value }); setPaymentCurrentPage(1);}}
             />
             <button
               onClick={() => handleShowDateModal("payments", paymentFilters, setPaymentFilters)}
@@ -602,17 +669,18 @@ export default function RevenueReport({
             </button>
             <Button onClick={resetPaymentFilters}>Reset Filters</Button>
           </div>
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          {/* MODIFIED: Table wrapper with consistent styling */}
+          <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
             <table className="w-full text-xs text-left text-gray-600">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3">Booking</th>
-                  <th scope="col" className="px-6 py-3">Client</th>
-                  <th scope="col" className="px-6 py-3">Amount</th>
-                  <th scope="col" className="px-6 py-3">Date</th>
-                  <th scope="col" className="px-6 py-3">Mode</th>
-                  <th scope="col" className="px-6 py-3">Reference</th>
-                  <th scope="col" className="px-6 py-3">Document</th>
+                  <SortableHeader title="Booking" sortKey="bookingName" sortConfig={paymentSortConfig} onSort={handlePaymentSort} />
+                  <SortableHeader title="Client" sortKey="clientName" sortConfig={paymentSortConfig} onSort={handlePaymentSort} />
+                  <SortableHeader title="Amount" sortKey="amount" sortConfig={paymentSortConfig} onSort={handlePaymentSort} />
+                  <SortableHeader title="Date" sortKey="paymentDate" sortConfig={paymentSortConfig} onSort={handlePaymentSort} />
+                  <SortableHeader title="Mode" sortKey="mode" sortConfig={paymentSortConfig} onSort={handlePaymentSort} />
+                  <SortableHeader title="Reference" sortKey="referenceNumber" sortConfig={paymentSortConfig} onSort={handlePaymentSort} />
+                  <SortableHeader title="Document" sortKey="documentUrl" sortConfig={paymentSortConfig} onSort={handlePaymentSort} disabled={true} />
                 </tr>
               </thead>
               <tbody>
@@ -636,7 +704,7 @@ export default function RevenueReport({
               </tbody>
             </table>
           </div>
-          <PaginationControls currentPage={paymentCurrentPage} totalPages={paymentTotalPages} onPageChange={setPaymentCurrentPage}/>
+          <EnhancedPaginationControls currentPage={paymentCurrentPage} totalPages={paymentTotalPages} onPageChange={setPaymentCurrentPage} totalCount={paymentTotalCount} itemsPerPage={ITEMS_PER_PAGE}/>
         </CardContent>
       </Card>
 
@@ -704,8 +772,8 @@ export default function RevenueReport({
       {/* Trade Margin Report Table */}
       <Card>
         <CardContent>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Trade Margin Report</h3>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+              <h3 className="text-lg font-semibold text-gray-800">Trade Margin Report ({tradeMarginTotalCount})</h3>
               <Button onClick={downloadTradeMarginExcel} disabled={tradeMarginData.length === 0}>Download Full Report</Button>
             </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 items-center">
@@ -722,9 +790,6 @@ export default function RevenueReport({
             </Select>
             <button
               onClick={() => {
-                console.log("--- TABLE DATE FILTER CLICKED ---");
-                console.log("Function received:", handleShowDateModal);
-                console.log("Arguments:", "tradeMarginTable", tradeMarginFilters, setTradeMarginFilters);
                 handleShowDateModal("tradeMarginTable", tradeMarginFilters, setTradeMarginFilters);
               }}
               className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
@@ -733,15 +798,16 @@ export default function RevenueReport({
             </button>
             <Button onClick={resetTradeMarginFilters}>Reset Filters</Button>
           </div>
-          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          {/* MODIFIED: Table wrapper with consistent styling */}
+          <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
             <table className="w-full text-xs text-left text-gray-600">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3">Inventory</th>
-                  <th scope="col" className="px-6 py-3">Inventory Type</th>
-                  <th scope="col" className="px-6 py-3">Booking</th>
-                  <th scope="col" className="px-6 py-3">Trade Margin</th>
-                  <th scope="col" className="px-6 py-3">Date</th>
+                  <SortableHeader title="Inventory" sortKey="inventory" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
+                  <SortableHeader title="Inventory Type" sortKey="inventoryType" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
+                  <SortableHeader title="Booking" sortKey="booking" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
+                  <SortableHeader title="Trade Margin" sortKey="tradeMargin" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
+                  <SortableHeader title="Date" sortKey="date" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
                 </tr>
               </thead>
               <tbody>
@@ -765,7 +831,7 @@ export default function RevenueReport({
               </tbody>
             </table>
           </div>
-          <PaginationControls currentPage={tradeMarginCurrentPage} totalPages={tradeMarginTotalPages} onPageChange={setTradeMarginCurrentPage} />
+          <EnhancedPaginationControls currentPage={tradeMarginCurrentPage} totalPages={tradeMarginTotalPages} onPageChange={setTradeMarginCurrentPage} totalCount={tradeMarginTotalCount} itemsPerPage={ITEMS_PER_PAGE} />
         </CardContent>
       </Card>
 
@@ -785,7 +851,7 @@ export default function RevenueReport({
             <Select name="inventoryType" value={tradeMarginGraphFilters.inventoryType} onChange={handleTradeMarginGraphFilterChange}>
                 <option value="">Filter by Inventory Type</option>
                 <option value="Billboard">Billboard</option>
-                <option value="DOOh">DOOh</option>
+                <option value="DOOh">DOOH</option>
                 <option value="Gantry">Gantry</option>
                 <option value="Pole kiosk">Pole kiosk</option>
                 <option value="BQS">BQS</option>
@@ -793,9 +859,6 @@ export default function RevenueReport({
             </Select>
             <button
               onClick={() => {
-                console.log("--- GRAPH DATE FILTER CLICKED ---");
-                console.log("Function received:", handleShowDateModal);
-                console.log("Arguments:", "tradeMarginGraph", tradeMarginGraphFilters, setTradeMarginGraphFilters);
                 handleShowDateModal("tradeMarginGraph", tradeMarginGraphFilters, setTradeMarginGraphFilters);
               }}
               className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
