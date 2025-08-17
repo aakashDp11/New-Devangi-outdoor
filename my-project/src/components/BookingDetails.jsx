@@ -29,12 +29,9 @@ export default function BookingDetails() {
   useEffect(() => {
     const fetchSpaces = async () => {
       const token = localStorage.getItem("accessToken");
-      
-      // --- START: THIS IS THE CORRECTED CODE ---
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/spaces/selectcampaignSpaces`, // Use the corrected, specific API route
+        `${import.meta.env.VITE_API_BASE_URL}/api/spaces/selectcampaignSpaces`,
         {
-      // --- END: THIS IS THE CORRECTED CODE ---
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -42,7 +39,7 @@ export default function BookingDetails() {
         }
       );
       const data = await res.json();
-      console.log("Data fetched from /selectcampaignSpaces:", data); // Confirming the correct endpoint was called
+      console.log("Data fetched from /selectcampaignSpaces:", data);
 
       const transformed = data.map((space) => ({
         id: space._id,
@@ -132,6 +129,8 @@ export default function BookingDetails() {
         endDate: "",
         selectedSpaces: [],
         searchQuery: "",
+        // --- CHANGE 1: Initialize the isFOC state for new draft campaigns ---
+        isFOC: false, 
       },
     ]);
   };
@@ -150,6 +149,8 @@ export default function BookingDetails() {
     const campaign = campaignDrafts[index];
     const payload = {
       ...campaign,
+      // --- CHANGE 2: Ensure the isFOC flag is included in the payload sent to the backend ---
+      isFOC: campaign.isFOC, 
       spaces: campaign.selectedSpaces.map((space) => ({
         id: space.id,
         selectedUnits: space.selectedUnits,
@@ -166,18 +167,23 @@ export default function BookingDetails() {
 
       if (res.status === 201) {
         toast.success("Campaign added successfully");
-        setCampaignDrafts([]);
-        const newCampaign = res.data;
-        setBooking((prev) => ({
-          ...prev,
-          campaigns: [...(prev.campaigns || []), newCampaign],
-        }));
+        setCampaignDrafts([]); // Clear drafts after saving
+        
+        // Use a functional update to correctly add the new campaign to the state
+        setBooking(prev => {
+            // The response from this endpoint is the campaign itself, not the whole booking
+            const newCampaignData = res.data.campaign; 
+            return {
+                ...prev,
+                campaigns: [...(prev.campaigns || []), newCampaignData],
+            };
+        });
       } else {
         toast.error("Failed to save campaign");
       }
     } catch (err) {
       console.error("Error saving campaign:", err);
-      toast.error("Error occurred while saving campaign");
+      toast.error(err.response?.data?.message || "Error occurred while saving campaign");
     }
   };
 
@@ -489,7 +495,8 @@ export default function BookingDetails() {
             </div>
           </div>
         )}
-
+        
+        {/* --- CHANGE 3: ADD THE FOC RADIO BUTTONS TO THE DRAFT CAMPAIGN FORM --- */}
         {campaignDrafts.map((campaign, index) => (
           <div
             key={index}
@@ -546,6 +553,50 @@ export default function BookingDetails() {
                   className="w-full border rounded p-2"
                 />
               </div>
+              
+              {/* This is the new block for the FOC selection */}
+              <div className="col-span-2">
+                <label className="text-xs font-medium block mb-2">
+                  Is this a FOC (Free of Cost) Campaign?
+                </label>
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id={`foc-yes-${index}`}
+                      name={`isFOC-${index}`}
+                      value="true"
+                      checked={campaign.isFOC === true}
+                      onChange={(e) => {
+                          const updated = { ...campaign, isFOC: e.target.value === 'true' };
+                          updateDraftCampaign(index, updated);
+                      }}
+                      className="h-4 w-4 accent-black"
+                    />
+                    <label htmlFor={`foc-yes-${index}`} className="ml-2 text-xs font-medium">
+                      Yes
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id={`foc-no-${index}`}
+                      name={`isFOC-${index}`}
+                      value="false"
+                      checked={campaign.isFOC === false}
+                      onChange={(e) => {
+                          const updated = { ...campaign, isFOC: e.target.value === 'true' };
+                          updateDraftCampaign(index, updated);
+                      }}
+                      className="h-4 w-4 accent-black"
+                    />
+                    <label htmlFor={`foc-no-${index}`} className="ml-2 text-xs font-medium">
+                      No
+                    </label>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
             <InventorySelector

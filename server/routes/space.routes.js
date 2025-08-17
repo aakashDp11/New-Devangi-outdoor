@@ -91,30 +91,25 @@ router.get('/available', async (req, res) => {
 });
 
 const ENUMS = {
-  spaceType: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk' , 'BQS', 'Miscellaneous'],
+  spaceType: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk' , 'BQS', 'Miscellaneous' , 'Transit'],
   category: ['Retail', 'Transit'],
   mediaType: ['Static', 'Digital'],
   audience: ['Youth', 'Working Professionals'], // Add specific audience enums if applicable
   demographics: ['Urban', 'Rural'],
-  // FIX: Renamed from 'illuminations' to 'illumination'
   illumination: ['Front Lit', 'Back Lit', 'Non Lit', 'Frontlit', 'Backlit', 'Nonlit'], 
   availability: ['Completely available', 'Partially available', 'Completely booked'],
   zone: ['East', 'West', 'North', 'South'],
-  ownershipType: ['Owned', 'Leased', 'Traded'], // Renamed from 'ownership' to 'ownershipType'
+  ownershipType: ['Owned', 'Leased', 'Traded'],
   tier: ['Tier 1', 'Tier 2'],
-  // FIX: Added 'facing' if it's an enum, otherwise it's just a string
-  // If facing has specific allowed values like 'North', 'South' etc., add them here.
-  // For now, assuming it's a general string based on model.
 };
 
-// FIX: Updated MODEL_KEYS to match the schema (organization, illumination, facing)
 const MODEL_KEYS = [
   'spaceName', 'landlord', 'organization', 'peerMediaOwner', 'spaceType', 'traded', 'category',
   'mediaType', 'price', 'footfall', 'audience', 'demographics', 'description',
   'illumination', 'unit', 'occupiedUnits', 'width', 'height', 'additionalTags',
   'previousBrands', 'tags', 'address', 'city', 'state', 'latitude', 'longitude',
   'landmark', 'zone', 'ownershipType', 'tier', 'facing', 'faciaTowards', 'overlappingBooking',
-  'availability', 'dates'
+  'availability', 'dates' , 'transitType', 'transitLine'
 ];
 
 const normalizedMap = {};
@@ -165,7 +160,7 @@ router.post('/upload-excel', excelUpload.single('file'), async (req, res) => {
             : [];
         } else if (modelKey === 'traded' || modelKey === 'overlappingBooking') {
           formattedRow[modelKey] = value?.toString().toLowerCase() === 'true';
-        } else if (ENUMS[modelKey]) { // This will now correctly check for 'illumination'
+        } else if (ENUMS[modelKey]) {
           formattedRow[modelKey] = enumFix(value, ENUMS[modelKey]);
         } else {
           formattedRow[modelKey] = value?.toString().trim();
@@ -434,7 +429,6 @@ router.put('/:id/remove-tag', async (req, res) => {
 });
 
 
-// --- FIX: This is the complete, corrected PUT route handler ---
 router.put('/:id', upload.fields([
     { name: 'mainPhoto', maxCount: 1 },
     { name: 'longShot', maxCount: 1 },
@@ -448,11 +442,11 @@ router.put('/:id', upload.fields([
         const allowedFields = [
             'spaceName', 'landlord', 'organization', 'peerMediaOwner', 
             'ownershipType', 'spaceType', 'category', 'specification', 
-            'mediaType', 'illumination', 'price', 'footfall', 'audience', 
+            'mediaType', 'illumination', 'price', 'buyingPrice' , 'sellingPrice' , 'footfall', 'audience', 
             'demographics', 'width', 'height', 'address', 'city', 'state', 
             'latitude', 'longitude', 'zone', 'tier', 'facing', 'faciaTowards',
             'tags', 'previousBrands', 'additionalTags', 'description', 
-            'unit', 'dates', 'occupiedUnits'
+            'unit', 'dates', 'occupiedUnits' , 'transitType', 'transitLine'
         ];
 
         for (const field of allowedFields) {
@@ -460,11 +454,11 @@ router.put('/:id', upload.fields([
                 // Special handling for dates if they come as a comma-separated string
                 if (field === 'dates' && typeof req.body[field] === 'string') {
                     updateData[field] = req.body[field].split(',').map(d => d.trim());
-                } else if (field === 'unit' || field === 'occupiedUnits' || field === 'price' || field === 'footfall' || field === 'width' || field === 'height') {
+                } else if (['unit', 'occupiedUnits', 'price', 'buyingPrice', 'sellingPrice', 'footfall', 'width', 'height'].includes(field)) {
                     // Convert numbers
-                    updateData[field] = parseFloat(req.body[field]);
-                    if (isNaN(updateData[field])) {
-                        delete updateData[field]; // Remove if not a valid number
+                    const num = parseFloat(req.body[field]);
+                    if (!isNaN(num)) {
+                       updateData[field] = num;
                     }
                 } else {
                     updateData[field] = req.body[field];
@@ -513,7 +507,6 @@ router.put('/:id', upload.fields([
         res.status(500).json({ error: 'Server error', details: error.message });
     }
 });
-// --- End of corrected PUT route handler ---
 
 
 router.put('/:id/printingStatus', async (req, res) => {

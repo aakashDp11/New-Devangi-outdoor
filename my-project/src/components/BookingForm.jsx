@@ -3,12 +3,12 @@ import Navbar from "./Navbar";
 import { useNavigate } from "react-router-dom";
 import { useBookingForm } from "../context/BookingFormContext";
 import { toast } from "sonner";
-import { useSidebar } from "../context/SidebarContext"; // 1. Import the useSidebar hook
+import { useSidebar } from "../context/SidebarContext";
 
 export default function CreateOrderBasicInfo() {
   const navigate = useNavigate();
   const { basicInfo, setBasicInfo, proposalId } = useBookingForm();
-  const { isCollapsed } = useSidebar(); // 2. Get the sidebar's collapsed state
+  const { isCollapsed } = useSidebar();
 
   // State for the stepper UI
   const [step, setStep] = useState("Basic");
@@ -109,7 +109,6 @@ export default function CreateOrderBasicInfo() {
   return (
     <div className="bg-white text-xs flex">
       <Navbar />
-      {/* 3. Apply dynamic margin to the main content area */}
       <main className={`flex-1 px-8 pb-24 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="flex justify-between items-center mb-8 pt-6">
           <h1 className="text-2xl font-semibold">
@@ -361,31 +360,11 @@ export default function CreateOrderBasicInfo() {
               />
             </div>
           ) : null}
-
-          {/* FOC Booking */}
-          <div className="col-span-2 mt-2 flex items-center">
-            <input
-              id="focBooking"
-              type="checkbox"
-              checked={basicInfo.isFOCBooking || false}
-              onChange={(e) =>
-                setBasicInfo({ ...basicInfo, isFOCBooking: e.target.checked })
-              }
-              className="mr-2 h-4 w-4 accent-black"
-            />
-            <label htmlFor="focBooking" className="text-xs font-normal">
-              FOC (Free of Cost) booking
-            </label>
-          </div>
         </div>
       </main>
 
-      {/* --- STANDARDIZED FIXED FOOTER --- */}
-      {/* 4. Adjust the left margin of the footer based on sidebar state */}
       <div className={`fixed bottom-0 right-0 bg-white z-10 left-0 transition-all duration-300 ${isCollapsed ? 'lg:left-24' : 'lg:left-64'}`}>
         <div className="flex justify-between items-center w-full px-6 py-3 max-w-screen-xl mx-auto">
-          {/* *** THIS IS THE FIX *** */}
-          {/* Changed the path to match the route for the dashboard defined in App.jsx */}
           <button
             type="button"
             className="border border-gray-300 bg-white text-gray-700 px-3 py-1 rounded-md text-sm font-medium hover:bg-gray-50"
@@ -394,7 +373,6 @@ export default function CreateOrderBasicInfo() {
             Cancel
           </button>
 
-          {/* Back and Next Buttons */}
           <div className="flex items-center space-x-3">
             <button
               type="button"

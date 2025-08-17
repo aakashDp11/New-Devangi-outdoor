@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useContext } from 'react';
-import { useParams, useLocation } from 'react-router-dom'; // --- NEW: Import useLocation
+import { useParams, useLocation } from 'react-router-dom';
 import {
   ReactFlow,
   useNodesState,
@@ -61,10 +61,11 @@ const NodeLabel = ({ title, timestamp }) => (
 );
 
 
-function CampaignPipelineInternal({ campaignId }) {
+// --- 1. RECEIVE isFOC PROP ---
+function CampaignPipelineInternal({ campaignId, isFOC }) {
   const { id } = useParams();
   const CampaignId = campaignId || id;
-  const location = useLocation(); // --- NEW: Get location object
+  const location = useLocation();
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -170,22 +171,27 @@ function CampaignPipelineInternal({ campaignId }) {
           data: { label: <NodeLabel title="Artwork" timestamp={formatTimestamp(pipelineData.artwork?.completedAt)} /> },
           position: { x: 450, y: 200 },
           style: getNodeStyle(isNodeCompleted('artwork')),
-        },
-        {
+        }
+      );
+      staticEdges.push(
+        { id: 'e-booking-po', source: 'booking', target: 'po', markerEnd: 'arrowclosed' },
+        { id: 'e-po-artwork', source: 'po', target: 'artwork', markerEnd: 'arrowclosed' }
+      );
+
+      // --- 2. CONDITIONALLY ADD INVOICE NODE ---
+      if (!isFOC) {
+        staticNodes.push({
           id: 'invoice',
           data: { label: <NodeLabel title="Invoice Details" timestamp={formatTimestamp(pipelineData.invoice?.[0]?.completedAt)} /> },
           position: { x: 250, y: 400 },
           style: getNodeStyle(isNodeCompleted('invoice')),
-        },
-      );
-      staticEdges.push(
-        { id: 'e-booking-po', source: 'booking', target: 'po', markerEnd: 'arrowclosed' },
-        { id: 'e-po-artwork', source: 'po', target: 'artwork', markerEnd: 'arrowclosed' },
-        { id: 'e-po-invoice', source: 'po', target: 'invoice', markerEnd: 'arrowclosed' },
-      );
+        });
+        staticEdges.push({ id: 'e-po-invoice', source: 'po', target: 'invoice', markerEnd: 'arrowclosed' });
+      }
     }
 
-    if (Array.isArray(pipelineData.invoice) && pipelineData.invoice.some(inv => inv.invoiceNumber)) {
+    // --- 3. CONDITIONALLY ADD PAYMENT NODE ---
+    if (!isFOC && Array.isArray(pipelineData.invoice) && pipelineData.invoice.some(inv => inv.invoiceNumber)) {
       staticNodes.push({
         id: 'payment',
         data: { label: <NodeLabel title="Payment Status" timestamp={formatTimestamp(pipelineData.payment?.payments?.[0]?.completedAt)} /> },
@@ -265,27 +271,23 @@ function CampaignPipelineInternal({ campaignId }) {
     setTimeout(() => {
       fitView({ padding: 0.2, duration: 500 });
     }, 0);
-  }, [pipelineData, spaces]);
+  }, [pipelineData, spaces, isFOC, fitView]); // <-- 4. ADD isFOC TO DEPENDENCY ARRAY
 
-  // --- NEW: Effect to handle opening a modal via URL query param ---
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const openNodeId = params.get('open');
 
-    // Wait until nodes are populated before trying to find one
     if (openNodeId && nodes.length > 0) {
       const nodeToOpen = nodes.find((node) => node.id === openNodeId);
 
-      // Check if the node is visible (e.g., invoice node requires PO confirmation)
       if (nodeToOpen) {
         setSelectedNode(nodeToOpen);
         
-        // Optional: Remove the query parameter from the URL without reloading the page
         const newUrl = `${window.location.pathname}`;
         window.history.replaceState({}, '', newUrl);
       }
     }
-  }, [location.search, nodes]); // Rerun when URL or nodes change
+  }, [location.search, nodes]); 
 
 
   if (!pipelineData) return <div>Loading Campaign Pipeline Data...</div>;
@@ -374,6 +376,7 @@ function CampaignPipelineInternal({ campaignId }) {
   );
 }
 
+// --- 5. PASS ALL PROPS DOWN IN WRAPPER ---
 export default function CampaignPipelineWrapper(props) {
   return (
     <ReactFlowProvider>

@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useSpaceForm } from '../context/SpaceFormContext';
 import { toast } from 'sonner';
-import { useSidebar } from '../context/SidebarContext'; // 1. Import the useSidebar hook
+import { useSidebar } from '../context/SidebarContext';
 
 export default function PreviewAddSpace() {
   const navigate = useNavigate();
   const { form, stepOrder, completedSteps } = useSpaceForm();
-  const { isCollapsed } = useSidebar(); // 2. Get the sidebar's collapsed state
+  const { isCollapsed } = useSidebar();
 
   console.log("basic details", form);
 
@@ -18,24 +18,47 @@ export default function PreviewAddSpace() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Update form.dates from form.startDate and form.endDate
-    form.dates = [form.startDate, form.endDate];
+    const loadingToast = toast.loading('Saving Space...');
+
+    // --- START: MODIFIED DATA PREPARATION LOGIC ---
+
+    // 1. Create a clean data object to avoid modifying the original form state directly.
+    const dataToSubmit = { ...form };
+    dataToSubmit.dates = [form.startDate, form.endDate];
+
+    // 2. Conditionally remove irrelevant price fields to prevent validation errors.
+    if (dataToSubmit.spaceType === 'BQS' || dataToSubmit.spaceType === 'Transit') {
+      delete dataToSubmit.price; // For BQS/Transit, we only want buyingPrice and sellingPrice.
+    } else {
+      delete dataToSubmit.buyingPrice; // For other types, we only want the single price field.
+      delete dataToSubmit.sellingPrice;
+    }
 
     const formData = new FormData();
 
-    for (const key in form) {
-      if (!['mainPhoto', 'longShot', 'closeShot', 'otherPhotos', 'dates'].includes(key)) {
-        formData.append(key, form[key]);
+    // 3. Loop over the clean data object to build the FormData payload.
+    for (const key in dataToSubmit) {
+      const value = dataToSubmit[key];
+      const fileKeys = ['mainPhoto', 'longShot', 'closeShot', 'otherPhotos'];
+
+      if (fileKeys.includes(key) || value === null || value === undefined || value === '') {
+        // Skip files (handled later) and any empty/null/undefined fields.
+        continue;
+      }
+
+      // 4. Correctly format arrays by appending each item separately.
+      if (Array.isArray(value)) {
+        value.forEach(item => {
+          // This will create multiple entries like 'audience=Youth', 'audience=Students'
+          formData.append(key, item);
+        });
+      } else {
+        // Append all other non-empty fields.
+        formData.append(key, value);
       }
     }
-    
-    // Special handling for dates
-    if (Array.isArray(form.dates)) {
-      form.dates.forEach(date => {
-        formData.append('dates', date);
-      });
-    }
-    
+
+    // 5. Append files if they exist.
     if (form.mainPhoto) formData.append('mainPhoto', form.mainPhoto);
     if (form.longShot) formData.append('longShot', form.longShot);
     if (form.closeShot) formData.append('closeShot', form.closeShot);
@@ -44,16 +67,21 @@ export default function PreviewAddSpace() {
         formData.append('otherPhotos', file);
       });
     }
-
-    const loadingToast = toast.loading('Saving Space...');
+    
+    // --- END: MODIFIED DATA PREPARATION LOGIC ---
 
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/create`, {
         method: 'POST',
-        body: formData,
+        body: formData, // The browser will automatically set the correct 'Content-Type' for FormData.
       });
 
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) {
+        // Try to get a more specific error message from the backend.
+        const errorData = await res.json().catch(() => ({ message: 'Upload failed. The server returned an invalid response.' }));
+        throw new Error(errorData.message || 'Upload failed');
+      }
+
       const data = await res.json();
 
       toast.success('Space created successfully!', { id: loadingToast });
@@ -62,15 +90,13 @@ export default function PreviewAddSpace() {
       }, 1500);
     } catch (error) {
       console.error(error);
-      toast.error('Something went wrong!', { id: loadingToast });
+      toast.error(error.message || 'Something went wrong!', { id: loadingToast });
     }
   };
 
   return (
-    // 3. Apply flex to the root container
     <div className="flex min-h-screen bg-white">
       <Navbar />
-      {/* 4. Apply dynamic margin to the main content area */}
       <main className={`flex-1 p-6 text-xs transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <form onSubmit={handleSubmit} className="max-w-screen-xl mx-auto space-y-8">
           <div className="text-2xl font-semibold">Create Spaces</div>
@@ -95,7 +121,7 @@ export default function PreviewAddSpace() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Image Box */}
             <div className="rounded flex justify-center p-4">
-              {form.mainPhoto ? (
+              {form.mainPhoto && typeof form.mainPhoto === 'object' ? (
                 <img
                   src={URL.createObjectURL(form.mainPhoto)}
                   alt="Main Preview"
@@ -119,25 +145,52 @@ export default function PreviewAddSpace() {
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <div>Advertising brands</div>
-                  <div className="text-gray-500">{form.previousBrands}</div>
+                  <strong>Advertising brands</strong>
+                  <div className="text-gray-500">{form.previousBrands || 'N/A'}</div>
                 </div>
                 <div>
-                  <div>Advertising tags</div>
-                  <div className="text-gray-500">{form.tags}</div>
+                  <strong>Advertising tags</strong>
+                  <div className="text-gray-500">{form.tags || 'N/A'}</div>
                 </div>
                 <div>
-                  <div>Demographics</div>
-                  <div className="text-gray-500">{form.demographics}</div>
+                  <strong>Demographics</strong>
+                  <div className="text-gray-500">{form.demographics || 'N/A'}</div>
                 </div>
                 <div>
-                  <div>Additional Tags</div>
-                  <div className="text-gray-500">{form.additionalTags}</div>
+                  <strong>Additional Tags</strong>
+                  <div className="text-gray-500">{form.additionalTags || 'N/A'}</div>
                 </div>
-                <div>
-                  <div>Price</div>
-                  <div className="text-gray-500">{form.price}</div>
-                </div>
+                
+                {form.spaceType === 'BQS' || form.spaceType === 'Transit' ? (
+                  <>
+                    <div>
+                      <strong>Buying Price</strong>
+                      <div className="text-gray-500">{form.buyingPrice || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <strong>Selling Price</strong>
+                      <div className="text-gray-500">{form.sellingPrice || 'N/A'}</div>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <strong>Price</strong>
+                    <div className="text-gray-500">{form.price || 'N/A'}</div>
+                  </div>
+                )}
+
+                {form.spaceType === 'Transit' && (
+                  <>
+                    <div>
+                      <strong>Transit Type</strong>
+                      <div className="text-gray-500">{form.transitType || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <strong>Transit Line</strong>
+                      <div className="text-gray-500">{form.transitLine || 'N/A'}</div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Specifications */}
@@ -145,10 +198,10 @@ export default function PreviewAddSpace() {
                 <div className="font-semibold">Specifications</div>
                 <div className="grid grid-cols-2 gap-4 text-sm border p-4 rounded">
                   { form.illumination && <div><strong>Illumination</strong><br />{form.illumination}</div> }
-                  <div><strong>Size (WxH)</strong><br />{form.width}ft x {form.height}ft</div>
-                  <div><strong>Unit</strong><br />{form.unit}</div> 
-                  {form.resolution && <div><strong>Resolution</strong><br />{form.resolution}</div> }
-                  <div><strong>Facing</strong><br />{form.facing}</div>
+                  { (form.width && form.height) && <div><strong>Size (WxH)</strong><br />{form.width}ft x {form.height}ft</div> }
+                  { form.unit && <div><strong>Unit</strong><br />{form.unit}</div> }
+                  { form.resolution && <div><strong>Resolution</strong><br />{form.resolution}</div> }
+                  { form.facing && <div><strong>Facing</strong><br />{form.facing}</div> }
                 </div>
               </div>
 
@@ -158,10 +211,10 @@ export default function PreviewAddSpace() {
                 <div className="grid grid-cols-2 gap-4 text-sm border p-4 rounded">
                   <div><strong>Address</strong><br />{form.address}</div>
                   <div><strong>City</strong><br />{form.city}</div>
-                  <div><strong>Pin Code</strong><br />{form.zip}</div>
+                  { form.zip && <div><strong>Pin Code</strong><br />{form.zip}</div> }
                   <div><strong>State</strong><br />{form.state}</div>
                   <div><strong>Tier</strong><br />{form.tier}</div>
-                  <div><strong>Facia Towards</strong><br />{form.faciaTowards}</div>
+                  <div><strong>Facia Towards</strong><br />{form.faciaTowards || 'N/A'}</div>
                 </div>
               </div>
             </div>

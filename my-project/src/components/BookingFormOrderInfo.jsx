@@ -5,8 +5,9 @@ import { useBookingForm } from '../context/BookingFormContext';
 import InventorySelector from './BookingFormAddSpaces';
 import Select from 'react-select';
 import { toast } from 'sonner';
-import { useSidebar } from '../context/SidebarContext'; // 1. Import the useSidebar hook
+import { useSidebar } from '../context/SidebarContext';
 
+// --- Stepper component remains the same ---
 function Stepper({ currentStep }) {
   const stepOrder = ['Basic', 'Order'];
   return (
@@ -36,6 +37,7 @@ function Stepper({ currentStep }) {
   );
 }
 
+// --- industryOptions remains the same ---
 const industryOptions = [
     { value: 'Tourism', label: 'Tourism' },
     { value: 'Retail', label: 'Retail' },
@@ -59,7 +61,7 @@ const industryOptions = [
 export default function BookingFormOrderInfo() {
   const navigate = useNavigate();
   const { orderInfo, setOrderInfo } = useBookingForm();
-  const { isCollapsed } = useSidebar(); // 2. Get the sidebar's collapsed state
+  const { isCollapsed } = useSidebar();
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +69,6 @@ export default function BookingFormOrderInfo() {
     const fetchSpaces = async () => {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/selectcampaignSpaces`);
       const data = await res.json();
-      console.log("Fetched spaces:", data);
       const transformed = data.filter(space => {
         if (typeof space.isInventoryEnabled === 'undefined') return true;
         return space.isInventoryEnabled === true;
@@ -125,14 +126,23 @@ export default function BookingFormOrderInfo() {
     setOrderInfo({ ...orderInfo, campaigns });
   };
 
+  // *** THIS IS THE FIX ***
+  // Modified to handle radio button string values and convert them to boolean
   const handleCampaignChange = (index, e) => {
     const { name, value } = e.target;
+    let finalValue = value;
+
+    // For the FOC radio buttons, convert the string value ("true" or "false") to a boolean
+    if (name === 'isFOC') {
+      finalValue = value === 'true';
+    }
+
     updateCampaign(index, {
       ...orderInfo.campaigns[index],
-      [name]: value,
+      [name]: finalValue,
     });
   };
-
+  
   const toggleSpaceSelection = (campaignIndex, spaceId) => {
     const campaign = orderInfo.campaigns[campaignIndex];
     const exists = campaign.selectedSpaces?.find((s) => s.id === spaceId);
@@ -171,6 +181,7 @@ export default function BookingFormOrderInfo() {
           selectedSpaces: [],
           searchQuery: '',
           isSaved: false,
+          isFOC: false, // Default to "No"
         },
       ],
     });
@@ -220,7 +231,6 @@ export default function BookingFormOrderInfo() {
   return (
     <div className="bg-white flex">
       <Navbar />
-      {/* 3. Apply dynamic margin and flex properties to the main content area */}
       <main className={`flex-1 p-6 min-h-screen pb-24 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <Stepper currentStep="Order" />
         <h2 className="text-2xl font-semibold mb-6">Create Order</h2>
@@ -237,6 +247,9 @@ export default function BookingFormOrderInfo() {
                       <h3 className="font-semibold">{campaign.campaignName}</h3>
                       <p className="text-xs">Industry: {campaign.industry}</p>
                       <p className="text-xs">From {campaign.startDate} to {campaign.endDate}</p>
+                      {campaign.isFOC && (
+                        <p className="text-xs font-bold text-green-600">This is a FOC Campaign</p>
+                      )}
                     </div>
                     <div className="space-x-2">
                       <button onClick={() => editCampaign(index)} className="text-xs border px-3 py-1 rounded">
@@ -286,6 +299,44 @@ export default function BookingFormOrderInfo() {
                           className="w-full border rounded p-2 mt-1 text-xs"
                         />
                       </div>
+                      
+                      {/* *** THIS IS THE FIX *** */}
+                      {/* Replaced the checkbox with Yes/No radio buttons */}
+                      <div className="col-span-2">
+                        <label className="text-xs font-medium block mb-2">
+                          Is this a FOC (Free of Cost) Campaign?
+                        </label>
+                        <div className="flex items-center gap-6">
+                          <div className="flex items-center">
+                            <input
+                              type="radio"
+                              id={`foc-yes-${index}`}
+                              name="isFOC"
+                              value="true"
+                              checked={campaign.isFOC === true}
+                              onChange={(e) => handleCampaignChange(index, e)}
+                              className="h-4 w-4 accent-black"
+                            />
+                            <label htmlFor={`foc-yes-${index}`} className="ml-2 text-xs font-medium">
+                              Yes
+                            </label>
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              type="radio"
+                              id={`foc-no-${index}`}
+                              name="isFOC"
+                              value="false"
+                              checked={campaign.isFOC === false}
+                              onChange={(e) => handleCampaignChange(index, e)}
+                              className="h-4 w-4 accent-black"
+                            />
+                            <label htmlFor={`foc-no-${index}`} className="ml-2 text-xs font-medium">
+                              No
+                            </label>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <InventorySelector
@@ -322,7 +373,7 @@ export default function BookingFormOrderInfo() {
         )}
       </main>
 
-      {/* 4. Adjust the left margin of the footer based on sidebar state */}
+      {/* --- Footer remains the same --- */}
       <div className={`fixed bottom-0 right-0 bg-white z-10 left-0 transition-all duration-300 ${isCollapsed ? 'lg:left-24' : 'lg:left-64'}`}>
         <div className="flex justify-between items-center w-full px-6 py-3 max-w-screen-xl mx-auto">
           <button
@@ -355,6 +406,7 @@ export default function BookingFormOrderInfo() {
   );
 }
 
+// --- Input and CustomSelect components remain the same ---
 function Input({ label, ...props }) {
   return (
     <div>
@@ -366,57 +418,22 @@ function Input({ label, ...props }) {
 
 export function CustomSelect({ label, value, onChange, name, options, mandatory }) {
   const selected = options.find((o) => o.value === value) || null;
-
   const customStyles = {
     control: (provided) => ({
-      ...provided,
-      minHeight: '42px',
-      height: '42px',
-      borderColor: 'hsl(0, 0%, 80%)',
-      boxShadow: 'none',
-      '&:hover': {
-        borderColor: 'hsl(0, 0%, 70%)',
-      },
+      ...provided, minHeight: '42px', height: '42px', borderColor: 'hsl(0, 0%, 80%)', boxShadow: 'none', '&:hover': { borderColor: 'hsl(0, 0%, 70%)' },
     }),
-    valueContainer: (provided) => ({
-      ...provided,
-      height: '42px',
-      padding: '0 8px',
-    }),
-    input: (provided) => ({
-      ...provided,
-      fontSize: '0.75rem',
-      margin: '0',
-      padding: '0',
-    }),
-    singleValue: (provided) => ({
-      ...provided,
-      fontSize: '0.75rem',
-    }),
-    indicatorsContainer: (provided) => ({
-      ...provided,
-      height: '42px',
-    }),
+    valueContainer: (provided) => ({ ...provided, height: '42px', padding: '0 8px' }),
+    input: (provided) => ({ ...provided, fontSize: '0.75rem', margin: '0', padding: '0' }),
+    singleValue: (provided) => ({ ...provided, fontSize: '0.75rem' }),
+    indicatorsContainer: (provided) => ({ ...provided, height: '42px' }),
   };
-
   return (
     <div>
       <label className="text-xs font-medium block mb-1">
         {label}
         {mandatory === 'true' && <span className="text-red-500 ml-1">*</span>}
       </label>
-      <Select
-        styles={customStyles}
-        className="w-full"
-        name={name}
-        options={options}
-        value={selected}
-        onChange={(option) =>
-          onChange({ target: { name, value: option?.value || '' } })
-        }
-        isSearchable
-        placeholder="Select..."
-      />
+      <Select styles={customStyles} className="w-full" name={name} options={options} value={selected} onChange={(option) => onChange({ target: { name, value: option?.value || '' } })} isSearchable placeholder="Select..."/>
     </div>
   );
 }

@@ -55,25 +55,31 @@ export default function BookingPreview() {
           formData.append(key, value);
         }
       });
-      formData.append(
-        "campaigns",
-        JSON.stringify(
-          orderInfo.campaigns.map((c) => ({
-            campaignName: c.campaignName,
-            industry: c.industry,
-            description: c.description,
-            startDate: c.startDate,
-            endDate: c.endDate,
-            selectedSpaces: c.selectedSpaces.map((s) => ({
-              id: s.id,
-              selectedUnits: s.selectedUnits,
-            })),
-          }))
-        )
-      );
+      
+      // --- START OF CHANGE ---
+      const campaignsPayload = orderInfo.campaigns.map((c) => ({
+        campaignName: c.campaignName,
+        industry: c.industry,
+        description: c.description,
+        startDate: c.startDate,
+        endDate: c.endDate,
+        isFOC: c.isFOC, // <-- This is the important part
+        selectedSpaces: c.selectedSpaces.map((s) => ({
+          id: s.id,
+          selectedUnits: s.selectedUnits,
+        })),
+      }));
+
+      // *** ADD THIS LOG TO VERIFY ***
+      console.log("FRONTEND IS SENDING THIS PAYLOAD:", JSON.stringify(campaignsPayload, null, 2));
+
+      formData.append("campaigns", JSON.stringify(campaignsPayload));
+      // --- END OF CHANGE ---
+      
       if (basicInfo.companyLogo && basicInfo.companyLogo.file) {
         formData.append("companyLogo", basicInfo.companyLogo.file);
       }
+
       const response = await fetch(
         `${import.meta.env.VITE_API_BASE_URL}/api/bookings`,
         {
@@ -81,6 +87,7 @@ export default function BookingPreview() {
           body: formData,
         }
       );
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to submit booking");
@@ -96,18 +103,11 @@ export default function BookingPreview() {
     }
   };
 
-  // =================================================================================
-  // ==================== THIS IS THE FULLY CORRECTED FUNCTION =======================
-  // =================================================================================
   const handleSaveProposal = async () => {
     setLoading(true);
     try {
-      // Safely get the first campaign object from your form's state.
       const firstCampaign = orderInfo.campaigns[0] || {};
-
-      // 1. Build the "flat" payload that your CURRENT backend expects.
       const payload = {
-        // --- All the basic info fields ---
         companyName: basicInfo.companyName,
         clientName: basicInfo.clientName,
         clientEmail: basicInfo.clientEmail,
@@ -117,15 +117,9 @@ export default function BookingPreview() {
         clientContactNumber: basicInfo.clientContact,
         clientPanNumber: basicInfo.clientPan,
         clientGstNumber: basicInfo.clientGst,
-
-        // --- "Lift" the campaign details to the top level of the payload ---
         industry: firstCampaign.industry,
         campaignName: firstCampaign.campaignName,
         description: firstCampaign.description,
-        
-        // --- As requested, campaignStartDate and campaignEndDate are NOT included. ---
-
-        // --- The backend still needs this array just to get the space IDs ---
         campaigns: orderInfo.campaigns.map((c) => ({
           selectedSpaces: c.selectedSpaces.map((s) => ({
             id: s.id,
@@ -136,7 +130,6 @@ export default function BookingPreview() {
       
       console.log("Saving Proposal with this FLAT payload (NO DATES):", JSON.stringify(payload, null, 2));
 
-      // 2. The rest of the function sends this payload to the backend.
       const url = proposalId
         ? `${import.meta.env.VITE_API_BASE_URL}/api/proposals/${proposalId}`
         : `${import.meta.env.VITE_API_BASE_URL}/api/proposals`;
@@ -168,9 +161,6 @@ export default function BookingPreview() {
       setLoading(false);
     }
   };
-  // =================================================================================
-  // ====================== END OF CORRECTED FUNCTION ================================
-  // =================================================================================
 
   const handleCancel = () => {
     if (window.confirm("Are you sure you want to cancel?")) {

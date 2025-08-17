@@ -10,7 +10,7 @@ export const getPipelineByCampaignId = async (req, res) => {
       .populate('spaces')
       .populate({
         path: 'campaign',
-        select: 'inventoryCosts',
+        select: 'inventoryCosts isFOC',
       });
     if (!pipeline) {
       return res.status(404).json({ error: 'Pipeline not found' });
@@ -175,14 +175,14 @@ const handleBillingUpload = async (req, res, docType) => {
         documentUrl = await uploadToS3(files[fileIndex].path, files[fileIndex].filename);
         fileIndex++;
       }
-      
+
       newEntries.push({
         ...entry,
         documentUrl: documentUrl,
         completedAt: entry.completedAt || new Date(), // Add timestamp if not present
       });
     }
-    
+
     // Replace the entire array on the pipeline document with the new set of entries
     pipeline[docType] = newEntries;
 

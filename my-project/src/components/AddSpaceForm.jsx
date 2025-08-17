@@ -92,6 +92,8 @@ export default function AddSpaceForm() {
   };
 
   const validateCurrentStep = () => {
+    const isSpecialType = form.spaceType === "BQS" || form.spaceType === "Transit";
+
     const mandatoryFieldsByStep = {
       Basic: [
         "spaceName", "landlord", "spaceType", "ownershipType", "startDate", "endDate",
@@ -102,6 +104,14 @@ export default function AddSpaceForm() {
           : ["illumination", "width", "height"],
       Location: ["address", "city", "state", "zip", "latitude", "longitude"],
     };
+
+    // If spaceType is BQS or Transit, modify the mandatory fields
+    if (isSpecialType) {
+      mandatoryFieldsByStep.Basic.push("buyingPrice", "sellingPrice");
+      mandatoryFieldsByStep.Specifications = ["illumination"]; // Only illumination is mandatory
+      const locationFields = mandatoryFieldsByStep.Location;
+      mandatoryFieldsByStep.Location = locationFields.filter(field => field !== 'zip');
+    }
     
     // If spaceType is Transit, add the new fields to the mandatory list
     if (form.spaceType === 'Transit') {
@@ -287,24 +297,26 @@ export default function AddSpaceForm() {
                   
                   {/* --- START: CONDITIONALLY RENDERED DROPDOWNS --- */}
                   {form.spaceType === 'Transit' && (
-                    <CustomSelect
-                      label="Transit Type"
-                      name="transitType"
-                      value={form.transitType}
-                      onChange={handleTransitTypeChange}
-                      options={transitTypeOptions.map(({ lines, ...rest }) => rest)} // Pass options without nested data
-                      mandatory="true"
-                    />
-                  )}
-                  {form.transitType && lineOptions.length > 0 && (
-                    <CustomSelect
-                      label="Transit Line"
-                      name="transitLine"
-                      value={form.transitLine}
-                      onChange={handleInputChange} // Uses the default handler
-                      options={lineOptions}
-                      mandatory="true"
-                    />
+                    <>
+                      <CustomSelect
+                        label="Transit Type"
+                        name="transitType"
+                        value={form.transitType}
+                        onChange={handleTransitTypeChange}
+                        options={transitTypeOptions.map(({ lines, ...rest }) => rest)} // Pass options without nested data
+                        mandatory="true"
+                      />
+                      {form.transitType && lineOptions.length > 0 && (
+                        <CustomSelect
+                          label="Transit Line"
+                          name="transitLine"
+                          value={form.transitLine}
+                          onChange={handleInputChange} // Uses the default handler
+                          options={lineOptions}
+                          mandatory="true"
+                        />
+                      )}
+                    </>
                   )}
                   {/* --- END: CONDITIONALLY RENDERED DROPDOWNS --- */}
 
@@ -312,8 +324,17 @@ export default function AddSpaceForm() {
                   <Input mandatory="true" label={`${form.ownershipType || ""} Start Date`} name="startDate" type="date" value={formatForInput(form.startDate)} onChange={handleInputChange} required />
                   <Input label={`${form.ownershipType || ""} End Date`} name="endDate" mandatory="true" type="date" value={formatForInput(form.endDate)} onChange={handleInputChange} required min={form.startDate ? formatForInput(form.startDate) : ""} />
                   <CustomSelect label="Category" name="category" value={form.category} onChange={handleInputChange} options={categoryOptions} mandatory="true" />
-                  <CustomSelect label="Specification" name="specification" value={form.specification} onChange={handleInputChange} options={specificationOptions} mandatory="true" />
-                  <Input label="Price" name="price" value={form.price} onChange={handleInputChange} />
+                  <CustomSelect label="Specification" name="specification" value={form.specification} onChange={handleInputChange} options={specificationOptions} mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'Transit' ? "true" : "false"} />
+                  
+                  {form.spaceType === 'BQS' || form.spaceType === 'Transit' ? (
+                    <>
+                      <Input label="Buying Price" name="buyingPrice" value={form.buyingPrice} onChange={handleInputChange} mandatory="true" />
+                      <Input label="Selling Price" name="sellingPrice" value={form.sellingPrice} onChange={handleInputChange} mandatory="true" />
+                    </>
+                  ) : (
+                    <Input label="Price" name="price" value={form.price} onChange={handleInputChange} />
+                  )}
+
                   <Input label="Footfall" name="footfall" value={form.footfall} onChange={handleInputChange} />
                   <MultiAudienceSelect label="Audience" name="audience" value={form.audience} onChange={handleInputChange} options={audienceOptions} mandatory="true" />
                   <Select1 label="Demographics" name="demographics" value={form.demographics} onChange={handleInputChange} required>
@@ -355,8 +376,8 @@ export default function AddSpaceForm() {
                     <Input label="Resolutions" mandatory="true" name="resolution" value={form.resolution} onChange={handleInputChange} />
                   </>
                 )}
-                <Input label="Width (in ft)" mandatory="true" name="width" value={form.width} onChange={handleInputChange} />
-                <Input label="Height (in ft)" mandatory="true" name="height" value={form.height} onChange={handleInputChange} />
+                <Input label="Width (in ft)" mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="width" value={form.width} onChange={handleInputChange} />
+                <Input label="Height (in ft)" mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="height" value={form.height} onChange={handleInputChange} />
               </div>
               <div className="space-y-4">
                 <Input label="Additional Tags" name="additionalTags" value={form.additionalTags} onChange={handleInputChange} />
@@ -371,7 +392,7 @@ export default function AddSpaceForm() {
               <Input label="Address" mandatory="true" name="address" value={form.address} onChange={handleInputChange} />
               <Input label="City" mandatory="true" name="city" value={form.city} onChange={handleInputChange} required />
               <CustomSelect label="State" name="state" value={form.state} onChange={handleInputChange} options={stateOptions} mandatory="true" />
-              <Input label="Pin-code" mandatory="true" name="zip" value={form.zip} onChange={handleInputChange} />
+              <Input label="Pin-code" mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="zip" value={form.zip} onChange={handleInputChange} />
               <Input label="Latitude" mandatory="true" name="latitude" value={form.latitude} onChange={handleInputChange} />
               <Input label="Longitude" mandatory="true" name="longitude" value={form.longitude} onChange={handleInputChange} />
               {form.latitude && form.longitude && !isNaN(parseFloat(form.latitude)) && !isNaN(parseFloat(form.longitude)) && (

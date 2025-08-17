@@ -145,9 +145,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
       if (bookingFilters.client) params.append("search", bookingFilters.client);
       if (bookingFilters.paymentStatus) params.append("paymentStatus", bookingFilters.paymentStatus);
       if (bookingFilters.poStatus) {
-        const poVal = bookingFilters.poStatus.toLowerCase();
-        if (poVal === "pending") params.append("poStatus", "false");
-        if (poVal === "completed") params.append("poStatus", "true");
+        params.append("poStatus", bookingFilters.poStatus);
       }
       if (bookingFilters.startDate) params.append("startDate", bookingFilters.startDate);
       if (bookingFilters.endDate) params.append("endDate", bookingFilters.endDate);
@@ -195,9 +193,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
             if (bookingFilters.client) params.append("search", bookingFilters.client);
             if (bookingFilters.paymentStatus) params.append("paymentStatus", bookingFilters.paymentStatus);
             if (bookingFilters.poStatus) {
-                const poVal = bookingFilters.poStatus.toLowerCase();
-                if (poVal === "pending") params.append("poStatus", "false");
-                if (poVal === "completed") params.append("poStatus", "true");
+              params.append("poStatus", bookingFilters.poStatus);
             }
             if (bookingFilters.startDate) params.append("startDate", bookingFilters.startDate);
             if (bookingFilters.endDate) params.append("endDate", bookingFilters.endDate);
@@ -224,14 +220,29 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
             let totalPaid = 0, totalDue = 0;
             b.campaigns?.forEach(c => {
                 totalPaid += c.paymentSummary?.totalPaid || 0;
-                totalDue += c.paymentSummary?.Due || 0;
+                totalDue += c.paymentSummary?.totalDue || 0;
             });
+            let paymentStatus = "Completed";
+            if (totalDue > 0 && totalPaid < totalDue) {
+              paymentStatus = totalPaid > 0 ? "Partial" : "Pending";
+            }
+            // --- START: NEW PO STATUS LOGIC ---
+            const poStatuses = b.campaigns?.map(c => c.poConfirmed === true) || [];
+            let poStatusText = "Pending"; // Default to Pending
+            if (poStatuses.length > 0) {
+                if (poStatuses.every(status => status === true)) {
+                    poStatusText = "Completed";
+                } else if (poStatuses.some(status => status === true)) {
+                    poStatusText = "Partial";
+                }
+            }
+            // --- END: NEW PO STATUS LOGIC ---
             return {
                 'Company Name': b.companyName,
                 'Client Name': b.clientName,
                 'Booking Date': dayjs(b.createdAt).format("DD/MM/YYYY"),
-                'Payment Status': (totalPaid < totalDue && totalDue > 0) ? "Pending" : "Completed",
-                'PO Status': b.campaigns?.some(c => !c.pipeline?.po?.confirmed) ? "Pending" : "Completed",
+                'Payment Status': paymentStatus, // Use the correct variable
+                'PO Status': poStatusText,      // Use the correct variable
             };
         });
 
@@ -469,15 +480,15 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
             <Input placeholder="Client Name" value={bookingFilters.client} onChange={(e) => {setBookingFilters({ ...bookingFilters, client: e.target.value }); setBookingCurrentPage(1);}} />
             <Select value={bookingFilters.paymentStatus} onChange={(e) => {setBookingFilters({ ...bookingFilters, paymentStatus: e.target.value }); setBookingCurrentPage(1);}}>
               <option value="">All Payment Status</option>
-              <option value="Paid">Paid</option>
-              <option value="Unpaid">Unpaid</option>
+              <option value="Paid">Completed</option>
+              <option value="Unpaid">Pending</option>
               <option value="Partial">Partial</option>
-              <option value="Not Applicable">N/A</option>
             </Select>
             <Select value={bookingFilters.poStatus} onChange={(e) => {setBookingFilters({ ...bookingFilters, poStatus: e.target.value }); setBookingCurrentPage(1);}}>
               <option value="">All PO Status</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
+              <option value="Completed">Completed</option>
+              <option value="Pending">Pending</option> {/* <-- ADD THIS LINE */}
+              <option value="Partial">Partial</option>
             </Select>
             <button onClick={() => handleShowDateModal("bookings", bookingFilters, setBookingFilters)} className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50">
               {bookingFilters.startDate && bookingFilters.endDate ? `${bookingFilters.startDate} to ${bookingFilters.endDate}` : "Filter by Booking Date"}
@@ -507,12 +518,25 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                       const p = c.paymentSummary;
                       if (p) {
                         totalPaid += p.totalPaid || 0;
-                        totalDue += p.Due || 0;
+                        totalDue += p.totalDue || 0;
                       }
                     });
-                    const paymentStatus = totalPaid < totalDue && totalDue > 0 ? "Pending" : "Completed";
-                    const poStatus = b.campaigns?.some((c) => !c.pipeline?.po?.confirmed) ? "Pending" : "Completed";
-                    return (
+                    let paymentStatus = "Completed"; // Default status
+                    if (totalDue > 0 && totalPaid < totalDue) {
+                      paymentStatus = totalPaid > 0 ? "Partial" : "Pending";
+                    }                    
+const poStatuses = b.campaigns?.map(c => c.poConfirmed === true) || [];
+let poStatus = "Pending"; // Default to Pending if no campaigns or no confirmed POs
+
+if (poStatuses.length > 0) {
+    if (poStatuses.every(status => status === true)) {
+        // If ALL statuses are true
+        poStatus = "Completed";
+    } else if (poStatuses.some(status => status === true)) {
+        // If SOME (but not all) statuses are true
+        poStatus = "Partial";
+    }
+}                    return (
                       <tr key={b._id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/booking-details/${b._id}`)}>
                         <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{b.companyName}</td>
                         <td className="px-6 py-4">{b.clientName}</td>

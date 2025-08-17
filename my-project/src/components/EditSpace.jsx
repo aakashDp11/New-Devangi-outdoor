@@ -9,7 +9,11 @@ import Select from "react-select";
 const toInputDate = (dateStr) => {
   if (!dateStr || dateStr.split('-').length !== 3) return "";
   const [day, month, year] = dateStr.split('-');
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  // Handle both DD-MM-YYYY and YYYY-MM-DD
+  if (year.length === 4) {
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  return `20${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 
 const toDisplayDate = (dateStr) => {
@@ -18,8 +22,8 @@ const toDisplayDate = (dateStr) => {
   return `${day}-${month}-${year}`;
 };
 
-// COPIED FROM AddSpaceForm.jsx and integrated here
-function MultiAudienceSelect({ label, name, value, onChange, options, mandatory }) {
+// Multi-select component for Audience
+function MultiAudienceSelect({ label, name, value, onChange, options }) {
   const valueAsArray = Array.isArray(value) ? value : [];
   const selectedValueObjects = options.filter(option => valueAsArray.includes(option.value));
   const selectedOptions = options.filter(option => valueAsArray.includes(option.value) && option.value !== "");
@@ -88,26 +92,27 @@ export default function EditSpace() {
   const ownershipOptions = ["Owned", "Leased", "Traded"];
   const illuminationOptions = ["Front Lit", "Back Lit", "Non Lit"];
   const specificationOptions = ["LHS", "RHS"];
-  const spaceTypeOptions = ["Billboard", "DOOH", "Pole Kiosk", "Gantry", "BQS", "Miscellaneous"];
+  const spaceTypeOptions = ["Billboard", "DOOH", "Pole Kiosk", "Gantry", "BQS", "Transit", "Miscellaneous"];
   const categoryOptions = ["Retail", "Transit"];
   const mediaTypeOptions = ["Static", "Digital"];
-  // MODIFIED: Changed to object array for MultiAudienceSelect
   const audienceOptions = [
     { value: "Youth", label: "Youth" }, { value: "Working Professionals", label: "Working Professionals" }, { value: "Business Professional", label: "Business Professional" }, { value: "College Students", label: "College Students" }, { value: "Elite", label: "Elite" }, { value: "Families", label: "Families" }, { value: "Fashion Enthusiast", label: "Fashion Enthusiast" }, { value: "Female focused", label: "Female focused" }, { value: "Government official", label: "Government official" }, { value: "Male focused", label: "Male focused" }, { value: "Middle class", label: "Middle class" }, { value: "Rural", label: "Rural" }, { value: "Students", label: "Students" }, { value: "Tourists", label: "Tourists" }, { value: "Working", label: "Working" },
   ];
   const demographicsOptions = ["Urban", "Rural"];
   const tierOptions = ["Tier 1", "Tier 2"];
   const facingOptions = ["Single facing", "Double facing"];
+  const transitTypeOptions = ["Normal Local", "AC Local"];
+  const transitLineOptions = ["Central Line", "Western Line", "Harbour line"];
 
   useEffect(() => {
     const fetchSpace = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${id}`);
         const data = await response.json();
-        const audienceAsArray = Array.isArray(data.audience) ? data.audience : (data.audience ? data.audience.split(',') : []);
+        const audienceAsArray = Array.isArray(data.audience) ? data.audience : (data.audience ? data.audience.toString().split(',') : []);
         const transformedData = {
           ...data,
-          audience: audienceAsArray,
+          audience: audienceAsArray.map(item => item.trim()).filter(Boolean),
           totalUnits: data.unit,
           availableFrom: toInputDate(data.dates?.[0]),
           availableTo: toInputDate(data.dates?.[1]),
@@ -151,10 +156,7 @@ export default function EditSpace() {
 
   const handleSave = async () => {
     try {
-      const {
-        availableFrom, availableTo, totalUnits, mainPhoto, longShot, closeShot, otherPhotos, _id, __v,
-        ...restOfSpace
-      } = space;
+      const { availableFrom, availableTo, totalUnits, _id, __v, createdAt, updatedAt, ...restOfSpace } = space;
 
       const payload = {
         ...restOfSpace,
@@ -169,15 +171,11 @@ export default function EditSpace() {
           const value = payload[key];
           
           if (Array.isArray(value)) {
-            if (key === 'audience') {
-              formData.append(key, value.join(','));
-            } else {
-              value.forEach(item => {
-                if (item !== null && item !== undefined) {
-                  formData.append(key, item);
-                }
-              });
-            }
+            value.forEach(item => {
+              if (item !== null && item !== undefined) {
+                formData.append(key, item);
+              }
+            });
           } else {
             formData.append(key, value);
           }
@@ -202,7 +200,7 @@ export default function EditSpace() {
       } else {
         const err = await response.json();
         console.error("Full Update Error Response:", err);
-        toast.error(`Failed to update space: ${err.message || 'Internal Server Error'}`);
+        toast.error(`Failed to update space: ${err.details || err.message || 'Internal Server Error'}`);
       }
     } catch (error) {
       console.error("Catch Block Error:", error);
@@ -227,22 +225,30 @@ export default function EditSpace() {
             <InputField label="Peer Media Owner" name="peerMediaOwner" value={space.peerMediaOwner || ""} onChange={handleChange} />
             <SelectField label="Ownership Type" name="ownershipType" value={space.ownershipType || ""} onChange={handleChange} options={ownershipOptions} />
             <SelectField label="Space Type" name="spaceType" value={space.spaceType || ""} onChange={handleChange} options={spaceTypeOptions} />
+            
+            {space.spaceType === 'Transit' && (
+              <>
+                <SelectField label="Transit Type" name="transitType" value={space.transitType || ""} onChange={handleChange} options={transitTypeOptions} />
+                <SelectField label="Transit Line" name="transitLine" value={space.transitLine || ""} onChange={handleChange} options={transitLineOptions} />
+              </>
+            )}
+
             <SelectField label="Category" name="category" value={space.category || ""} onChange={handleChange} options={categoryOptions} />
             <SelectField label="Specification" name="specification" value={space.specification || ""} onChange={handleChange} options={specificationOptions} />
             <SelectField label="Media Type" name="mediaType" value={space.mediaType || ""} onChange={handleChange} options={mediaTypeOptions} />
             <SelectField label="Illumination" name="illumination" value={space.illumination || ""} onChange={handleChange} options={illuminationOptions} />
-            <InputField label="Price" name="price" type="number" value={space.price || ""} onChange={handleChange} />
-            <InputField label="Footfall" name="footfall" type="number" value={space.footfall || ""} onChange={handleChange} />
             
-            {/* --- REPLACED MultiSelectField with MultiAudienceSelect --- */}
-            <MultiAudienceSelect
-              label="Audience"
-              name="audience"
-              value={space.audience || []}
-              onChange={handleChange}
-              options={audienceOptions}
-            />
+            {space.spaceType === 'BQS' || space.spaceType === 'Transit' ? (
+              <>
+                <InputField label="Buying Price" name="buyingPrice" type="number" value={space.buyingPrice || ""} onChange={handleChange} />
+                <InputField label="Selling Price" name="sellingPrice" type="number" value={space.sellingPrice || ""} onChange={handleChange} />
+              </>
+            ) : (
+              <InputField label="Price" name="price" type="number" value={space.price || ""} onChange={handleChange} />
+            )}
 
+            <InputField label="Footfall" name="footfall" type="number" value={space.footfall || ""} onChange={handleChange} />
+            <MultiAudienceSelect label="Audience" name="audience" value={space.audience || []} onChange={handleChange} options={audienceOptions} />
             <SelectField label="Demographics" name="demographics" value={space.demographics || ""} onChange={handleChange} options={demographicsOptions} />
             <InputField label="Width (ft)" name="width" type="number" value={space.width || ""} onChange={handleChange} />
             <InputField label="Height (ft)" name="height" type="number" value={space.height || ""} onChange={handleChange} />

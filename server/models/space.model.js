@@ -40,7 +40,10 @@ const spaceSchema = new Schema({
   landlord: { type: String },
   organization: { type: String },
   peerMediaOwner: { type: String },
-  spaceType: { type: String, enum: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk', 'BQS', 'Miscellaneous'] },
+  // --- MODIFICATION: Added 'Transit' to handle all space types from the form ---
+  spaceType: { type: String, enum: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk', 'BQS', 'Miscellaneous', 'Transit'] },
+  transitType: { type: String },
+  transitLine: { type: String },
   traded: { type: Boolean, default: false },
   category: { type: String, enum: ['Retail', 'Transit'] },
   industry: {
@@ -48,14 +51,22 @@ const spaceSchema = new Schema({
     ref: 'Industry'
   },
   mediaType: { type: String, enum: ['Static', 'Digital', ""], default: "" },
+  
+  // --- MODIFICATION: Added buyingPrice and sellingPrice for BQS spaces ---
   price: { type: Number },
+  buyingPrice: { type: Number },
+  sellingPrice: { type: Number },
+
   footfall: { type: Number },
-  audience: { type: String },
+  audience: { type: [String] },
   demographics: { type: String, enum: ['Urban', 'Rural'] },
   description: { type: String },
   illumination: { type: String, enum: ['Front Lit', 'Back Lit', 'Non Lit', 'Frontlit', 'Backlit', 'Nonlit'] },
   unit: { type: Number, default: 1 },
-  specification: { type: String, enum: ['LHS', 'RHS'], required: true },
+  
+  // --- MODIFICATION: Made 'specification' optional by removing required: true ---
+  specification: { type: String, enum: ['LHS', 'RHS'] },
+
   occupiedUnits: { type: Number, default: 0 },
   width: { type: Number },
   height: { type: Number },

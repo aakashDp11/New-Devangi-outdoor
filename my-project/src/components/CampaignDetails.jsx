@@ -17,10 +17,9 @@ import {
   FaSave,
   FaTimes,
   FaBoxes,
+  FaStar,
 } from "react-icons/fa";
 import EditCampaignModal from "./modals/EditCampaignModel";
-
-// --- FIX START: Moved components outside of the main component ---
 
 const KeyValueItem = ({
   label,
@@ -62,6 +61,7 @@ const CostInput = ({
   isEditable,
   updateCostField,
   isCurrency = false,
+  isDisabled,
 }) => (
   <div>
     <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -77,16 +77,15 @@ const CostInput = ({
         type="number"
         className={`border rounded-md w-full py-1 text-sm ${
           isCurrency ? "pl-7" : "px-2"
-        } ${!isEditable ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`}
+        } ${!isEditable || isDisabled ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`}
         value={value}
         onChange={(e) => updateCostField(spaceId, field, e.target.value === '' ? '' : Number(e.target.value))}
-        readOnly={!isEditable}
+        readOnly={!isEditable || isDisabled}
+        disabled={isDisabled}
       />
     </div>
   </div>
 );
-
-// --- FIX END ---
 
 export default function CampaignDetails() {
   const { id } = useParams();
@@ -245,8 +244,7 @@ export default function CampaignDetails() {
       toast.error("No changes to save");
       return;
     }
-    
-    // Convert empty strings back to 0 for saving
+
     const sanitizedCostToSave = { ...costToSave };
     for (const key in sanitizedCostToSave) {
       if (sanitizedCostToSave[key] === '') {
@@ -286,7 +284,7 @@ export default function CampaignDetails() {
       const updated = new Set(editableSpaces);
       updated.delete(spaceId);
       setEditableSpaces(updated);
-      
+
       setEditedCosts((prev) => {
         const newEditedCosts = { ...prev };
         delete newEditedCosts[spaceId];
@@ -334,14 +332,21 @@ export default function CampaignDetails() {
       >
         <div className="flex justify-between">
           <div>
-            <div className="mb-6">
+            <div className="mb-2">
               <h2 className="text-2xl ">Campaign : {campaignName}</h2>
-              {pipelineError && (
-                <p className="text-sm text-orange-600 mt-1">
-                  ⚠ Pipeline data not found - showing default values
-                </p>
+
+              {campaignData.isFOC && (
+                <div className="mt-2 inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 text-sm font-bold px-3 py-1 rounded-full">
+                  <FaStar />
+                  <span>This is a Free of Cost (FOC) Campaign</span>
+                </div>
               )}
             </div>
+            {pipelineError && (
+              <p className="text-sm text-orange-600 mt-1">
+                ⚠ Pipeline data not found - showing default values
+              </p>
+            )}
             <div className="flex space-x-4 mb-4">
               {["Details", "Pipeline"].map((tab) => (
                 <button
@@ -376,7 +381,10 @@ export default function CampaignDetails() {
         </div>
 
         {activeTab === "Pipeline" && (
-          <CampaignPipeline campaignId={campaignData._id} />
+          <CampaignPipeline
+            campaignId={campaignData._id}
+            isFOC={campaignData.isFOC}
+          />
         )}
 
         {activeTab === "Details" && (
@@ -519,14 +527,14 @@ export default function CampaignDetails() {
             </div>
 
             {spaceDetails.map((space, index) => {
-              const isEditable = editableSpaces.has(space._id);
+              const isFOC = campaignData.isFOC;
+              const isEditable = editableSpaces.has(space._id) && !isFOC;
               const originalCost = getCostItem(space._id);
               const currentCost = isEditable
                 ? editedCosts[space._id]
                 : originalCost;
 
               const computedArea = space.width * space.height;
-              // Use Number() to ensure we are working with numbers for calculation
               const displayCost = Number(currentCost?.displayCost || 0);
               const buyingPrice = Number(currentCost?.buyingPrice || 0);
               const sellingPrice = Number(currentCost?.sellingPrice || 0);
@@ -575,6 +583,7 @@ export default function CampaignDetails() {
                         isEditable={isEditable}
                         updateCostField={updateCostField}
                         spaceId={space._id}
+                        isDisabled={isFOC}
                       />
 
                       {space.ownershipType === "Traded" && (
@@ -587,6 +596,7 @@ export default function CampaignDetails() {
                             isEditable={isEditable}
                             updateCostField={updateCostField}
                             spaceId={space._id}
+                            isDisabled={isFOC}
                           />
                           <CostInput
                             label="Selling Price"
@@ -596,6 +606,7 @@ export default function CampaignDetails() {
                             isEditable={isEditable}
                             updateCostField={updateCostField}
                             spaceId={space._id}
+                            isDisabled={isFOC}
                           />
                         </div>
                       )}
@@ -610,6 +621,7 @@ export default function CampaignDetails() {
                             isEditable={isEditable}
                             updateCostField={updateCostField}
                             spaceId={space._id}
+                            isDisabled={isFOC}
                           />
                           <CostInput
                             label="Mounting/sq.ft"
@@ -619,6 +631,7 @@ export default function CampaignDetails() {
                             isEditable={isEditable}
                             updateCostField={updateCostField}
                             spaceId={space._id}
+                            isDisabled={isFOC}
                           />
                           <CostInput
                             label="Area (sq.ft)"
@@ -627,6 +640,7 @@ export default function CampaignDetails() {
                             isEditable={isEditable}
                             updateCostField={updateCostField}
                             spaceId={space._id}
+                            isDisabled={isFOC}
                           />
                         </div>
                       )}
@@ -635,7 +649,7 @@ export default function CampaignDetails() {
                         <p className="flex justify-between items-center text-sm font-bold">
                           <span>Total Cost:</span>
                           <span className="text-lg text-blue-600">
-                            ₹{totalCost.toFixed(2)}
+                            ₹{isFOC ? '0.00' : totalCost.toFixed(2)}
                           </span>
                         </p>
                       </div>
@@ -645,11 +659,12 @@ export default function CampaignDetails() {
                   <div className="flex w-full gap-2 mt-4 pt-4 border-t">
                     <button
                       onClick={() => handleEditToggle(space._id)}
+                      disabled={isFOC}
                       className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md font-semibold transition-all ${
                         isEditable
                           ? "bg-red-100 text-red-700 hover:bg-red-200"
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
+                      } ${isFOC ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
                       {isEditable ? <FaTimes /> : <FaEdit />}
                       {isEditable ? "Cancel" : "Edit"}

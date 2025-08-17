@@ -20,12 +20,10 @@ const CampaignCard = ({ campaign, navigate }) => (
     onClick={() => navigate(`/campaign-details/${campaign._id}`)}
   >
     <div className="flex justify-between items-center text-sm w-full">
-      {/* Campaign Name */}
       <div>
         <p className="text-xs text-gray-500 uppercase tracking-wider">Campaign Name</p>
         <p className="font-medium text-gray-800 break-words">{campaign.campaignName}</p>
       </div>
-      {/* Start and End Dates */}
       <div className="text-right">
         <p className="text-xs text-gray-500 uppercase tracking-wider">Start Date</p>
         <p className="font-medium text-gray-800">{campaign.startDate}</p>
@@ -45,7 +43,6 @@ export default function SpaceDetails() {
   const { isCollapsed } = useSidebar();
   const [space, setSpace] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  // --- MODIFIED: State for separated campaigns ---
   const [ongoingCampaigns, setOngoingCampaigns] = useState([]);
   const [upcomingCampaigns, setUpcomingCampaigns] = useState([]);
 
@@ -57,11 +54,9 @@ export default function SpaceDetails() {
         navigate('/');
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Failed to delete space' }));
-        console.error('Failed to delete space:', errorData.message);
         toast.error(errorData.message || 'Failed to delete space.');
       }
     } catch (error) {
-      console.error('An error occurred while deleting the space:', error);
       toast.error(error.message || 'An error occurred while deleting the space.');
     } finally {
       setShowModal(false);
@@ -78,7 +73,6 @@ export default function SpaceDetails() {
         const data = await response.json();
         setSpace(data);
       } catch (error) {
-        console.error('Error fetching space details:', error);
         toast.error(error.message || 'Could not load space details.');
       }
     };
@@ -87,14 +81,11 @@ export default function SpaceDetails() {
       if (!id) return;
       try {
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns/by-space/${id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch associated campaigns');
-        }
+        if (!response.ok) throw new Error('Failed to fetch associated campaigns');
         const campaigns = await response.json();
         
-        // --- MODIFIED: Logic to separate campaigns ---
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Normalize to the start of the day for accurate comparison
+        today.setHours(0, 0, 0, 0);
 
         const ongoing = [];
         const upcoming = [];
@@ -104,19 +95,16 @@ export default function SpaceDetails() {
           const endDate = new Date(campaign.endDate);
           
           if (endDate < today) {
-            // This is a past campaign, you can ignore it or create a separate list for it
+            // Past campaign
           } else if (startDate <= today && endDate >= today) {
             ongoing.push(campaign);
           } else if (startDate > today) {
             upcoming.push(campaign);
           }
         });
-
         setOngoingCampaigns(ongoing);
         setUpcomingCampaigns(upcoming);
-
       } catch (error) {
-        console.error(error);
         toast.error('Could not load associated campaigns.');
       }
     };
@@ -164,19 +152,11 @@ export default function SpaceDetails() {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
                         });
-
-                        if (!response.ok) {
-                            throw new Error('Failed to toggle inventory status.');
-                        }
-
+                        if (!response.ok) throw new Error('Failed to toggle inventory status.');
                         const updated = await response.json();
                         setSpace(prev => ({ ...prev, isInventoryEnabled: updated.isInventoryEnabled }));
-
-                        toast.success(
-                            updated.isInventoryEnabled ? 'Inventory enabled successfully.' : 'Inventory disabled successfully.'
-                        );
+                        toast.success(updated.isInventoryEnabled ? 'Inventory enabled successfully.' : 'Inventory disabled successfully.');
                         } catch (err) {
-                        console.error(err);
                         toast.error(err.message || 'Failed to toggle inventory status.');
                         }
                     }}
@@ -204,9 +184,25 @@ export default function SpaceDetails() {
               <DetailItem label="End Date" value={space.dates?.[1]} />
               <DetailItem label="Category" value={space.category} />
               <DetailItem label="Specification" value={space.specification} />
-              <DetailItem label="Price" value={space.price ? `₹${space.price.toLocaleString()}`: null} />
+              
+              {space.spaceType === 'BQS' || space.spaceType === 'Transit' ? (
+                <>
+                  <DetailItem label="Buying Price" value={space.buyingPrice ? `₹${space.buyingPrice.toLocaleString()}`: 'N/A'} />
+                  <DetailItem label="Selling Price" value={space.sellingPrice ? `₹${space.sellingPrice.toLocaleString()}`: 'N/A'} />
+                </>
+              ) : (
+                <DetailItem label="Price" value={space.price ? `₹${space.price.toLocaleString()}`: 'N/A'} />
+              )}
+
+              {space.spaceType === 'Transit' && (
+                  <>
+                    <DetailItem label="Transit Type" value={space.transitType} />
+                    <DetailItem label="Transit Line" value={space.transitLine} />
+                  </>
+              )}
+
               <DetailItem label="Footfall" value={space.footfall ? space.footfall.toLocaleString() : null} />
-              <DetailItem label="Audience" value={space.audience} />
+              <DetailItem label="Audience" value={Array.isArray(space.audience) ? space.audience.join(', ') : space.audience} />
               <DetailItem label="Demographics" value={space.demographics} />
               <DetailItem label="Illumination" value={space.illumination} />
               <DetailItem label="Space Type" value={space.spaceType} />
@@ -245,69 +241,26 @@ export default function SpaceDetails() {
               <div className="lg:col-span-2">
                 <h2 className="text-xl font-semibold text-gray-700 mb-6">Space Images</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {space.mainPhoto && (
-                      <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
-                      <img src={space.mainPhoto} alt="Main" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
-                      </div>
-                  )}
-                  {space.longShot && (
-                      <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
-                      <img src={space.longShot} alt="Long Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
-                      </div>
-                  )}
-                  {space.closeShot && (
-                      <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
-                      <img src={space.closeShot} alt="Close Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
-                      </div>
-                  )}
-                  {space.otherPhotos && space.otherPhotos.length > 0 &&
-                      space.otherPhotos.map((photo, index) => (
-                      <div key={index} className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
-                          <img src={photo} alt={`Other ${index + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/>
-                      </div>
-                      ))
-                  }
-                  {!space.mainPhoto && !space.longShot && !space.closeShot && (!space.otherPhotos || space.otherPhotos.length === 0) && (
-                      <div className="col-span-full aspect-video flex items-center justify-center text-gray-500 text-sm bg-gray-50 rounded-lg border border-dashed p-8">
-                          No images have been uploaded for this space.
-                      </div>
-                  )}
+                  {space.mainPhoto && ( <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border"> <img src={space.mainPhoto} alt="Main" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/> </div> )}
+                  {space.longShot && ( <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border"> <img src={space.longShot} alt="Long Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/> </div> )}
+                  {space.closeShot && ( <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border"> <img src={space.closeShot} alt="Close Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/> </div> )}
+                  {space.otherPhotos && space.otherPhotos.length > 0 && space.otherPhotos.map((photo, index) => ( <div key={index} className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border"> <img src={photo} alt={`Other ${index + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/> </div> ))}
+                  {!space.mainPhoto && !space.longShot && !space.closeShot && (!space.otherPhotos || space.otherPhotos.length === 0) && ( <div className="col-span-full aspect-video flex items-center justify-center text-gray-500 text-sm bg-gray-50 rounded-lg border border-dashed p-8"> No images have been uploaded for this space. </div> )}
                 </div>
               </div>
 
-              {/* --- MODIFIED: Associated Campaigns Section --- */}
               <div className="lg:col-span-1">
-                {/* --- Ongoing Campaigns --- */}
                 <div>
                   <h2 className="text-xl font-semibold text-gray-700 mb-4">Ongoing Campaigns</h2>
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                    {ongoingCampaigns.length > 0 ? (
-                      ongoingCampaigns.map((campaign) => (
-                        <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} />
-                      ))
-                    ) : (
-                      <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4">
-                        <p className="text-sm text-gray-500">No ongoing campaigns.</p>
-                      </div>
-                    )}
+                    {ongoingCampaigns.length > 0 ? ( ongoingCampaigns.map((campaign) => ( <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} /> )) ) : ( <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> <p className="text-sm text-gray-500">No ongoing campaigns.</p> </div> )}
                   </div>
                 </div>
-
                 <hr className="my-6 border-gray-200" />
-
-                {/* --- Upcoming Campaigns --- */}
                 <div>
                   <h2 className="text-xl font-semibold text-gray-700 mb-4">Upcoming Campaigns</h2>
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                    {upcomingCampaigns.length > 0 ? (
-                      upcomingCampaigns.map((campaign) => (
-                        <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} />
-                      ))
-                    ) : (
-                      <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4">
-                        <p className="text-sm text-gray-500">No upcoming campaigns for this space.</p>
-                      </div>
-                    )}
+                    {upcomingCampaigns.length > 0 ? ( upcomingCampaigns.map((campaign) => ( <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} /> )) ) : ( <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> <p className="text-sm text-gray-500">No upcoming campaigns for this space.</p> </div> )}
                   </div>
                 </div>
               </div>
@@ -330,18 +283,8 @@ export default function SpaceDetails() {
             <h2 className="text-xl font-semibold text-gray-800">Confirm Deletion</h2>
             <p className="text-sm text-gray-600">Are you sure you want to delete "{space.spaceName || 'this space'}"? This action cannot be undone.</p>
             <div className="flex justify-end gap-3 mt-2">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition duration-150"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-150"
-              >
-                Delete
-              </button>
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition duration-150"> Cancel </button>
+              <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-150"> Delete </button>
             </div>
           </div>
         </div>

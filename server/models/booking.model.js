@@ -35,6 +35,8 @@ const bookingSchema = new Schema({
     required: true  // optional: if every booking must have a user
   },
 
+  
+
 
   campaignImages: [String],
   campaigns: [{ type: Schema.Types.ObjectId, ref: 'Campaign' }],  // ✅ One booking → many campaigns
