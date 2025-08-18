@@ -342,25 +342,31 @@ export default function CampaignDetails() {
                 </div>
               )}
             </div>
-            {pipelineError && (
-              <p className="text-sm text-orange-600 mt-1">
-                ⚠ Pipeline data not found - showing default values
-              </p>
-            )}
-            <div className="flex space-x-4 mb-4">
-              {["Details", "Pipeline"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1 border rounded ${
-                    activeTab === tab
-                      ? "bg-black text-white"
-                      : "bg-white text-black border-gray-400"
-                  } transition duration-200`}
-                >
-                  {tab}
-                </button>
-              ))}
+                       {/* --- MODIFIED SECTION: Tabs and Warning Aligned --- */}
+            <div className="flex justify-between items-center mb-4">
+              {/* Tabs grouped on the left */}
+              <div className="flex space-x-4">
+                {["Details", "Pipeline"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-1 border rounded ${
+                      activeTab === tab
+                        ? "bg-black text-white"
+                        : "bg-white text-black border-gray-400"
+                    } transition duration-200`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
+              {/* Warning message aligned to the right */}
+              {pipelineError && (
+                <p className="text-sm text-orange-600">
+                  ⚠ Pipeline data not found - showing default values
+                </p>
+              )}
             </div>
           </div>
           <div className="my-6">

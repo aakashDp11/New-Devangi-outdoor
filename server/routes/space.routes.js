@@ -217,6 +217,8 @@ router.get('/selectcampaignSpaces', async (req, res) => {
       campaignDates: 1,
       width: 1,
       height: 1,
+      transitType: 1,
+      transitLine: 1,
     });
 
     res.json(spaces);
@@ -268,7 +270,8 @@ router.get('/listInventory', authenticate, async (req, res) => {
       spaceName: 1, address: 1, city: 1, state: 1, zone: 1, spaceType: 1, unit: 1,
       occupiedUnits: 1, availability: 1, footfall: 1, audience: 1, demographics: 1,
       dates: 1, tags: 1, mainPhoto: 1, overlappingBooking: 1, ownershipType: 1,
-      createdAt: 1, campaignDates: 1, specification: 1
+      createdAt: 1, campaignDates: 1, specification: 1 ,  latitude: 1,
+      longitude: 1,
     };
 
     const filters = {};
@@ -339,6 +342,66 @@ router.get('/listInventory', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
   }
 });
+
+// ================= START: ADD THE NEW ROUTE HERE =================
+router.get('/map-locations', authenticate, async (req, res) => {
+  try {
+    // Reuse the same filters from your listInventory route
+    const search = req.query.search || '';
+    const region = req.query.region || '';
+    const availability = req.query.availability || '';
+    const spaceType = req.query.spaceType || '';
+    const ownershipType = req.query.ownershipType || '';
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+
+    const filters = {};
+
+    // Base filter: Only get documents that have valid coordinates
+    filters.latitude = { $exists: true, $ne: null, $ne: '' };
+    filters.longitude = { $exists: true, $ne: null, $ne: '' };
+    
+    // Apply text search filters
+    if (search) {
+      filters.$or = [
+        { spaceName: { $regex: search, $options: 'i' } },
+        { address: { $regex: search, $options: 'i' } },
+        { city: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    if (region) {
+      filters.$and = filters.$and || [];
+      filters.$and.push({
+        $or: [
+          { city: { $regex: region, $options: 'i' } },
+          { state: { $regex: region, $options: 'i' } },
+          { zone: { $regex: region, $options: 'i' } },
+        ],
+      });
+    }
+
+    if (spaceType) filters.spaceType = spaceType;
+    if (ownershipType) filters.ownershipType = ownershipType;
+
+    // Minimal projection: Only get the fields needed for the map
+    const projection = {
+      spaceName: 1,
+      latitude: 1,
+      longitude: 1,
+    };
+
+    // Note: Complex availability and date filtering might require fetching more fields.
+    // This version is optimized for location plotting.
+    const mapSpaces = await Space.find(filters, projection);
+
+    res.json(mapSpaces);
+  } catch (error) {
+    console.error('Error fetching map locations:', error);
+    res.status(500).json({ error: 'Failed to fetch map data' });
+  }
+});
+// ================= END: ADD THE NEW ROUTE HERE =================
 
 router.get('/dashboard-stats', async (req, res) => {
   try {
@@ -451,26 +514,29 @@ router.put('/:id', upload.fields([
 
         for (const field of allowedFields) {
             if (req.body[field] !== undefined) {
-                // Special handling for dates if they come as a comma-separated string
-                if (field === 'dates' && typeof req.body[field] === 'string') {
-                    updateData[field] = req.body[field].split(',').map(d => d.trim());
-                } else if (['unit', 'occupiedUnits', 'price', 'buyingPrice', 'sellingPrice', 'footfall', 'width', 'height'].includes(field)) {
-                    // Convert numbers
-                    const num = parseFloat(req.body[field]);
+                const value = req.body[field];
+
+                // FIX: Correctly parse all numeric fields (including buyingPrice and sellingPrice)
+                if (['unit', 'occupiedUnits', 'price', 'buyingPrice', 'sellingPrice', 'footfall', 'width', 'height'].includes(field)) {
+                    const num = parseFloat(value);
                     if (!isNaN(num)) {
                        updateData[field] = num;
                     }
-                } else {
-                    updateData[field] = req.body[field];
+                } 
+                // FIX: Correctly parse array fields
+                else if (field === 'audience' || field === 'dates') {
+                    updateData[field] = Array.isArray(value) ? value : value.split(',').map(item => item.trim());
+                } 
+                // Handle all other fields
+                else {
+                    updateData[field] = value;
                 }
             }
         }
         
         const uploadAndReturnUrl = async (file) => {
             if (!file) return null;
-            const localPath = file.path;
-            const s3Key = `spaces/${id}/${file.filename}`; // Or a more structured path if needed
-            return await uploadToS3(localPath, s3Key);
+            return await uploadToS3(file.path, file.filename);
         };
 
         if (req.files['mainPhoto']) {
@@ -485,14 +551,13 @@ router.put('/:id', upload.fields([
         if (req.files['otherPhotos']?.length > 0) {
             const uploads = req.files['otherPhotos'].map(file => uploadAndReturnUrl(file));
             const newPhotoUrls = await Promise.all(uploads);
-            const existingSpace = await Space.findById(id).select('otherPhotos');
-            // Append new photos to existing ones
-            updateData.otherPhotos = [...(existingSpace.otherPhotos || []), ...newPhotoUrls];
+            // Use MongoDB's $push operator to add to the existing array
+            updateData.$push = { otherPhotos: { $each: newPhotoUrls } };
         }
 
         const updatedSpace = await Space.findByIdAndUpdate(
             id,
-            { $set: updateData },
+            updateData, // Use the processed data directly
             { new: true, runValidators: true }
         );
 

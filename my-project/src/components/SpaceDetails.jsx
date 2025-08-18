@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { toast } from 'sonner';
 import { useSidebar } from '../context/SidebarContext';
+import MapPreview from './MapPreview'; // Import the MapPreview component
 
 // Reusable component for Key-Value display.
 const DetailItem = ({ label, value, className = '' }) => (
@@ -234,6 +235,21 @@ export default function SpaceDetails() {
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{space.description}</p>
                 </div>
             )}
+            
+            {/* --- START: NEW MAP SECTION --- */}
+            {space.latitude && space.longitude && !isNaN(parseFloat(space.latitude)) && !isNaN(parseFloat(space.longitude)) && (
+              <div className="mt-2 mb-6">
+                <h2 className="text-xl font-semibold text-gray-700 mb-4">Map Location</h2>
+                <div className="h-64 md:h-80 w-full rounded-lg overflow-hidden border">
+                  <MapPreview 
+                    latitude={parseFloat(space.latitude)} 
+                    longitude={parseFloat(space.longitude)} 
+                    spaceName={space.spaceName}
+                  />
+                </div>
+              </div>
+            )}
+            {/* --- END: NEW MAP SECTION --- */}
 
             <hr className="my-6 border-gray-200" />
 

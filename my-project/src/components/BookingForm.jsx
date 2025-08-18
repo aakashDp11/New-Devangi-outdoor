@@ -236,22 +236,24 @@ export default function CreateOrderBasicInfo() {
                 className="w-full p-1 rounded mt-1"
               />
               {basicInfo.companyLogo && (
-                <div className="relative mt-2">
-                  <img
-                    src={basicInfo.companyLogo.preview}
-                    alt="logo"
-                    className="h-20 w-20 object-cover rounded border"
-                  />
-                  <button
-                    onClick={() =>
-                      setBasicInfo((prev) => ({ ...prev, companyLogo: null }))
-                    }
-                    className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full px-1"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
+  <div className="relative mt-2 w-20"> {/* Container to help with positioning */}
+    <img
+      src={basicInfo.companyLogo.preview}
+      alt="logo"
+      className="h-20 w-20 object-cover rounded border"
+    />
+    <button
+      type="button"
+      onClick={() =>
+        setBasicInfo((prev) => ({ ...prev, companyLogo: null }))
+      }
+      aria-label="Remove logo"
+      className="absolute -top-2 -right-2 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-gray-700 focus:outline-none"
+    >
+      ✕
+    </button>
+  </div>
+)}
             </div>
 
             <div className="flex-1 ml-[15%]">

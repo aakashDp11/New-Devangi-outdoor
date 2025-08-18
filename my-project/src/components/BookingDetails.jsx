@@ -67,6 +67,8 @@ export default function BookingDetails() {
             : space.occupiedUnits < space.unit
             ? "Partialy available"
             : "Completely booked",
+        transitType: space.transitType,
+        transitLine: space.transitLine,
       }));
       setSpaces(transformed);
     };

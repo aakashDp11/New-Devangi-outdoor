@@ -98,7 +98,11 @@ export default function BookingFormOrderInfo() {
           ? 'Completely available'
           : space.occupiedUnits < space.unit
           ? 'Partialy available'
-          : 'Completely booked'
+          : 'Completely booked',
+        // --- FIX: Add the missing transit fields to the transformed object ---
+        transitType: space.transitType,
+        transitLine: space.transitLine,
+        // --- END FIX ---
       }));
       setSpaces(transformed);
       setLoading(false);
@@ -126,13 +130,10 @@ export default function BookingFormOrderInfo() {
     setOrderInfo({ ...orderInfo, campaigns });
   };
 
-  // *** THIS IS THE FIX ***
-  // Modified to handle radio button string values and convert them to boolean
   const handleCampaignChange = (index, e) => {
     const { name, value } = e.target;
     let finalValue = value;
 
-    // For the FOC radio buttons, convert the string value ("true" or "false") to a boolean
     if (name === 'isFOC') {
       finalValue = value === 'true';
     }
@@ -181,7 +182,7 @@ export default function BookingFormOrderInfo() {
           selectedSpaces: [],
           searchQuery: '',
           isSaved: false,
-          isFOC: false, // Default to "No"
+          isFOC: false,
         },
       ],
     });
@@ -300,8 +301,6 @@ export default function BookingFormOrderInfo() {
                         />
                       </div>
                       
-                      {/* *** THIS IS THE FIX *** */}
-                      {/* Replaced the checkbox with Yes/No radio buttons */}
                       <div className="col-span-2">
                         <label className="text-xs font-medium block mb-2">
                           Is this a FOC (Free of Cost) Campaign?
@@ -373,7 +372,6 @@ export default function BookingFormOrderInfo() {
         )}
       </main>
 
-      {/* --- Footer remains the same --- */}
       <div className={`fixed bottom-0 right-0 bg-white z-10 left-0 transition-all duration-300 ${isCollapsed ? 'lg:left-24' : 'lg:left-64'}`}>
         <div className="flex justify-between items-center w-full px-6 py-3 max-w-screen-xl mx-auto">
           <button

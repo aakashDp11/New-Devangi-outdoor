@@ -944,10 +944,10 @@ return res.status(500).json({ error: error.message || 'Failed to fetch bookings'
 };
 export const getBookingDashboardStats = async (req, res) => {
 try {
-const bookings = await Booking.find({}, { createdAt: 1, campaigns: 1 })
+const bookings = await Booking.find({}, { createdAt: 1, campaigns: 1 , clientName: 1 , companyName: 1 })
 .populate({
 path: 'campaigns',
-select: 'pipeline spaces',
+select: 'pipeline spaces isFOC campaignName startDate endDate',
 populate: [
 {
 path: 'pipeline',
@@ -990,6 +990,14 @@ bookings.forEach((booking) => {
       invoiceReceived: isInvoiceReceived,
       printingStatus: 0,
       mountingStatus: 0,
+      isFOC: campaign.isFOC,
+      campaignName: campaign.campaignName,
+      clientName: booking.clientName,
+      startDate: campaign.startDate,
+      endDate: campaign.endDate,
+      bookingId: booking._id,
+      campaignId: campaign._id,
+      companyName: booking.companyName, 
     };
 
     spaces.forEach((space) => {
