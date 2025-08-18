@@ -23,10 +23,12 @@ const CampaignCard = ({ campaign, navigate }) => (
     <div className="flex justify-between items-center text-sm w-full">
       <div>
         <p className="text-xs text-gray-500 uppercase tracking-wider">Campaign Name</p>
+        {/* This will now display the REAL campaign name from the Campaign model */}
         <p className="font-medium text-gray-800 break-words">{campaign.campaignName}</p>
       </div>
       <div className="text-right">
         <p className="text-xs text-gray-500 uppercase tracking-wider">Start Date</p>
+        {/* Dates might be strings, so displaying them directly is fine. */}
         <p className="font-medium text-gray-800">{campaign.startDate}</p>
       </div>
       <div className="text-right">
@@ -64,6 +66,7 @@ export default function SpaceDetails() {
     }
   };
 
+  // This is the original, correct logic that works with your backend.
   useEffect(() => {
     const fetchSpace = async () => {
       try {
@@ -81,8 +84,11 @@ export default function SpaceDetails() {
     const fetchAssociatedCampaigns = async () => {
       if (!id) return;
       try {
+        // This API call hits the correct backend route you provided.
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns/by-space/${id}`);
         if (!response.ok) throw new Error('Failed to fetch associated campaigns');
+        
+        // The response will be an array of campaign objects, each with a campaignName.
         const campaigns = await response.json();
         
         const today = new Date();
@@ -92,6 +98,7 @@ export default function SpaceDetails() {
         const upcoming = [];
 
         campaigns.forEach(campaign => {
+          // Your dates are strings, so creating Date objects for comparison is needed.
           const startDate = new Date(campaign.startDate);
           const endDate = new Date(campaign.endDate);
           
@@ -236,7 +243,6 @@ export default function SpaceDetails() {
                 </div>
             )}
             
-            {/* --- START: NEW MAP SECTION --- */}
             {space.latitude && space.longitude && !isNaN(parseFloat(space.latitude)) && !isNaN(parseFloat(space.longitude)) && (
               <div className="mt-2 mb-6">
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">Map Location</h2>
@@ -249,7 +255,6 @@ export default function SpaceDetails() {
                 </div>
               </div>
             )}
-            {/* --- END: NEW MAP SECTION --- */}
 
             <hr className="my-6 border-gray-200" />
 
