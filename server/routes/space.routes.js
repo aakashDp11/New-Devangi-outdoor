@@ -252,156 +252,294 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// ===================================================================
+// =========== START: CORRECTED /listInventory ROUTE =================
+// ===================================================================
 router.get('/listInventory', authenticate, async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
-    const search = req.query.search || '';
-    const region = req.query.region || '';
-    const availability = req.query.availability || '';
-    const spaceType = req.query.spaceType || '';
-    const ownershipType = req.query.ownershipType || '';
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
+        const { search, region, availability, spaceType, ownershipType, startDate, endDate } = req.query;
 
-    const projection = {
-      spaceName: 1, address: 1, city: 1, state: 1, zone: 1, spaceType: 1, unit: 1,
-      occupiedUnits: 1, availability: 1, footfall: 1, audience: 1, demographics: 1,
-      dates: 1, tags: 1, mainPhoto: 1, overlappingBooking: 1, ownershipType: 1,
-      createdAt: 1, campaignDates: 1, specification: 1 ,  latitude: 1,
-      longitude: 1,
-    };
+        // ===== 1. BUILD THE BASE FILTER ('$match' stage) =====
+        const matchStage = {};
+        if (search) {
+            matchStage.$or = [
+                { spaceName: { $regex: search, $options: 'i' } },
+                { address: { $regex: search, $options: 'i' } },
+                { city: { $regex: search, $options: 'i' } },
+                { state: { $regex: search, $options: 'i' } },
+                { zone: { $regex: search, $options: 'i' } },
+                { tags: { $regex: search, $options: 'i' } },
+            ];
+        }
+        if (region) {
+          matchStage.$or = (matchStage.$or || []).concat([
+              { city: { $regex: region, $options: 'i' } },
+              { state: { $regex: region, $options: 'i' } },
+              { zone: { $regex: region, $options: 'i' } },
+          ]);
+      }
+        if (spaceType) matchStage.spaceType = spaceType;
+        if (ownershipType) matchStage.ownershipType = ownershipType;
+        
+        let pipeline = [
+            { $match: matchStage }
+        ];
 
-    const filters = {};
+        // ===== 2. DYNAMICALLY CALCULATE AVAILABILITY =====
+        if (startDate && endDate) {
+            // --- LOGIC FOR WHEN A DATE FILTER IS APPLIED ---
+            const userStartDate = new Date(startDate);
+            const userEndDate = new Date(endDate);
 
-    if (search) {
-      filters.$or = [
-        { spaceName: { $regex: search, $options: 'i' } },
-        { address: { $regex: search, $options: 'i' } },
-        { city: { $regex: search, $options: 'i' } },
-        { state: { $regex: search, $options: 'i' } },
-        { zone: { $regex: search, $options: 'i' } },
-        { tags: { $regex: search, $options: 'i' } },
-      ];
+            pipeline.push(
+                {
+                    $lookup: {
+                        from: 'campaigns',
+                        let: { spaceId: '$_id' },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $and: [
+                                            { $in: ['$$spaceId', '$spaces.id'] },
+                                            // VVV --- THIS IS THE FIX --- VVV
+                                            { $lte: [ { $toDate: '$startDate' }, userEndDate ] },
+                                            { $gte: [ { $toDate: '$endDate' }, userStartDate ] }
+                                            // ^^^ --- THIS IS THE FIX --- ^^^
+                                        ]
+                                    }
+                                }
+                            }
+                        ],
+                        as: 'conflictingCampaigns'
+                    }
+                },
+                { $addFields: { unitsBookedInPeriod: { $size: '$conflictingCampaigns' } } },
+                {
+                    $addFields: {
+                        availability: {
+                            $let: {
+                                vars: {
+                                    total: { $ifNull: ['$unit', 1] },
+                                    booked: '$unitsBookedInPeriod'
+                                },
+                                in: {
+                                    $switch: {
+                                        branches: [
+                                            { case: { $eq: ['$$booked', 0] }, then: 'Completely available' },
+                                            { case: { $gte: ['$$booked', '$$total'] }, then: 'Completely booked' },
+                                            { case: { $gt: ['$$booked', 0] }, then: 'Overlapping booking' }
+                                        ],
+                                        default: 'Completely available'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        } else {
+            // --- LOGIC FOR WHEN NO DATE FILTER IS APPLIED ---
+            pipeline.push({
+                $addFields: {
+                    availability: {
+                        $let: {
+                            vars: {
+                                total: { $ifNull: ['$unit', 1] },
+                                occupied: { $ifNull: ['$occupiedUnits', 0] }
+                            },
+                            in: {
+                                $switch: {
+                                    branches: [
+                                        { case: { $eq: ['$$occupied', 0] }, then: 'Completely available' },
+                                        { case: { $gte: ['$$occupied', '$$total'] }, then: 'Completely booked' },
+                                        { case: { $gt: ['$$occupied', 0] }, then: 'Partially available' }
+                                    ],
+                                    default: 'Completely available'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // ===== 3. FILTER BY THE COMPUTED AVAILABILITY STATUS (if provided) =====
+        if (availability) {
+            pipeline.push({
+                $match: { availability: availability }
+            });
+        }
+
+        // ===== 4. PAGINATION AND FINAL DATA SELECTION =====
+        const countPipeline = [...pipeline, { $count: 'totalCount' }];
+        const countResult = await Space.aggregate(countPipeline);
+        const totalCount = countResult.length > 0 ? countResult[0].totalCount : 0;
+        
+        pipeline.push(
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            { 
+                $project: {
+                    spaceName: 1, address: 1, city: 1, state: 1, zone: 1, spaceType: 1, unit: 1,
+                    occupiedUnits: 1, availability: 1, tags: 1, mainPhoto: 1, ownershipType: 1,
+                    inventoryId: 1, latitude: 1, longitude: 1
+                }
+            }
+        );
+        
+        const spaces = await Space.aggregate(pipeline);
+
+        res.json({ spaces, totalCount });
+
+    } catch (error) {
+        console.error('Failed to fetch spaces:', error);
+        res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
     }
+});
+// ===================================================================
+// ============= END: CORRECTED /listInventory ROUTE =================
+// ===================================================================
 
-    if (region) {
-      filters.$and = filters.$and || [];
-      filters.$and.push({
-        $or: [
-          { city: { $regex: region, $options: 'i' } },
-          { state: { $regex: region, $options: 'i' } },
-          { zone: { $regex: region, $options: 'i' } },
-        ],
-      });
-    }
 
-    if (spaceType) filters.spaceType = spaceType;
-    if (ownershipType) filters.ownershipType = ownershipType;
+// ===================================================================
+// =========== START: CORRECTED /map-locations ROUTE =================
+// ===================================================================
+router.get('/map-locations', authenticate, async (req, res) => {
+    try {
+        const { search, region, availability, spaceType, ownershipType, startDate, endDate } = req.query;
 
-    const rawData = await Space.find(filters, projection).sort({ createdAt: -1 });
-    const totalFiltered = rawData.length;
+        const matchStage = {
+            latitude: { $exists: true, $ne: null, $ne: '' },
+            longitude: { $exists: true, $ne: null, $ne: '' }
+        };
 
-    const filtered = rawData.filter((item) => {
-      const totalUnits = item.unit || 0;
-      const occupied = item.occupiedUnits || 0;
-      let computedAvailability = 'Completely available';
-      if (item.overlappingBooking) computedAvailability = 'Overlapping booking';
-      else if (totalUnits === occupied && occupied !== 0) computedAvailability = 'Completely booked';
-      else if (occupied > 0 && occupied < totalUnits) computedAvailability = 'Partially available';
+        if (search) {
+            matchStage.$or = [
+                { spaceName: { $regex: search, $options: 'i' } },
+                { address: { $regex: search, $options: 'i' } },
+                { city: { $regex: search, $options: 'i' } },
+            ];
+        }
 
-      if (availability && computedAvailability !== availability) return false;
+        if (region) {
+            matchStage.$or = (matchStage.$or || []).concat([
+              { city: { $regex: region, $options: 'i' } },
+              { state: { $regex: region, $options: 'i' } },
+              { zone: { $regex: region, $options: 'i' } },
+            ]);
+        }
 
-      if (startDate && endDate && item.dates?.length >= 2) {
-        const [d1, m1, y1] = item.dates[0].split('-');
-        const [d2, m2, y2] = item.dates[1].split('-');
-        const invStart = new Date(`${y1}-${m1}-${d1}`);
-        const invEnd = new Date(`${y2}-${m2}-${d2}`);
-        const selectedStart = new Date(startDate);
-        const selectedEnd = new Date(endDate);
+        if (spaceType) matchStage.spaceType = spaceType;
+        if (ownershipType) matchStage.ownershipType = ownershipType;
 
-        const inRange = selectedStart >= invStart && selectedEnd <= invEnd;
+        let pipeline = [{ $match: matchStage }];
 
-        const overlapWithCampaign = (item.campaignDates || []).some(c => {
-          const campStart = new Date(c.startDate);
-          const campEnd = new Date(c.endDate);
-          return selectedStart <= campEnd && selectedEnd >= campStart;
+        if (startDate && endDate) {
+            const userStartDate = new Date(startDate);
+            const userEndDate = new Date(endDate);
+            pipeline.push(
+                {
+                    $lookup: {
+                        from: 'campaigns',
+                        let: { spaceId: '$_id' },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $and: [
+                                            { $in: ['$$spaceId', '$spaces.id'] },
+                                            // VVV --- THIS IS THE FIX --- VVV
+                                            { $lte: [ { $toDate: '$startDate' }, userEndDate ] },
+                                            { $gte: [ { $toDate: '$endDate' }, userStartDate ] }
+                                            // ^^^ --- THIS IS THE FIX --- ^^^
+                                        ]
+                                    }
+                                }
+                            }
+                        ],
+                        as: 'conflictingCampaigns'
+                    }
+                },
+                { $addFields: { unitsBookedInPeriod: { $size: '$conflictingCampaigns' } } },
+                {
+                    $addFields: {
+                        availability: {
+                            $let: {
+                                vars: {
+                                    total: { $ifNull: ['$unit', 1] },
+                                    booked: '$unitsBookedInPeriod'
+                                },
+                                in: {
+                                    $switch: {
+                                        branches: [
+                                            { case: { $eq: ['$$booked', 0] }, then: 'Completely available' },
+                                            { case: { $gte: ['$$booked', '$$total'] }, then: 'Completely booked' },
+                                            { case: { $gt: ['$$booked', 0] }, then: 'Overlapping booking' }
+                                        ],
+                                        default: 'Completely available'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        } else {
+             pipeline.push({
+                $addFields: {
+                    availability: {
+                        $let: {
+                            vars: {
+                                total: { $ifNull: ['$unit', 1] },
+                                occupied: { $ifNull: ['$occupiedUnits', 0] }
+                            },
+                            in: {
+                                $switch: {
+                                    branches: [
+                                        { case: { $eq: ['$$occupied', 0] }, then: 'Completely available' },
+                                        { case: { $gte: ['$$occupied', '$$total'] }, then: 'Completely booked' },
+                                        { case: { $gt: ['$$occupied', 0] }, then: 'Partially available' }
+                                    ],
+                                    default: 'Completely available'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        if (availability) {
+            pipeline.push({ $match: { availability: availability } });
+        }
+
+        pipeline.push({
+            $project: {
+                spaceName: 1,
+                latitude: 1,
+                longitude: 1,
+                availability: 1
+            }
         });
 
-        if (!inRange || overlapWithCampaign) return false;
-      }
+        const mapSpaces = await Space.aggregate(pipeline);
+        res.json(mapSpaces);
 
-      return true;
-    });
-
-    const paginated = filtered.slice(skip, skip + limit);
-    res.json({ spaces: paginated, totalCount: filtered.length });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
-  }
-});
-
-// ================= START: ADD THE NEW ROUTE HERE =================
-router.get('/map-locations', authenticate, async (req, res) => {
-  try {
-    // Reuse the same filters from your listInventory route
-    const search = req.query.search || '';
-    const region = req.query.region || '';
-    const availability = req.query.availability || '';
-    const spaceType = req.query.spaceType || '';
-    const ownershipType = req.query.ownershipType || '';
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
-
-    const filters = {};
-
-    // Base filter: Only get documents that have valid coordinates
-    filters.latitude = { $exists: true, $ne: null, $ne: '' };
-    filters.longitude = { $exists: true, $ne: null, $ne: '' };
-    
-    // Apply text search filters
-    if (search) {
-      filters.$or = [
-        { spaceName: { $regex: search, $options: 'i' } },
-        { address: { $regex: search, $options: 'i' } },
-        { city: { $regex: search, $options: 'i' } },
-      ];
+    } catch (error) {
+        console.error('Error fetching map locations:', error);
+        res.status(500).json({ error: 'Failed to fetch map data' });
     }
-
-    if (region) {
-      filters.$and = filters.$and || [];
-      filters.$and.push({
-        $or: [
-          { city: { $regex: region, $options: 'i' } },
-          { state: { $regex: region, $options: 'i' } },
-          { zone: { $regex: region, $options: 'i' } },
-        ],
-      });
-    }
-
-    if (spaceType) filters.spaceType = spaceType;
-    if (ownershipType) filters.ownershipType = ownershipType;
-
-    // Minimal projection: Only get the fields needed for the map
-    const projection = {
-      spaceName: 1,
-      latitude: 1,
-      longitude: 1,
-    };
-
-    // Note: Complex availability and date filtering might require fetching more fields.
-    // This version is optimized for location plotting.
-    const mapSpaces = await Space.find(filters, projection);
-
-    res.json(mapSpaces);
-  } catch (error) {
-    console.error('Error fetching map locations:', error);
-    res.status(500).json({ error: 'Failed to fetch map data' });
-  }
 });
-// ================= END: ADD THE NEW ROUTE HERE =================
+// ===================================================================
+// ============= END: CORRECTED /map-locations ROUTE =================
+// ===================================================================
+
 
 router.get('/dashboard-stats', async (req, res) => {
   try {
@@ -516,18 +654,15 @@ router.put('/:id', upload.fields([
             if (req.body[field] !== undefined) {
                 const value = req.body[field];
 
-                // FIX: Correctly parse all numeric fields (including buyingPrice and sellingPrice)
                 if (['unit', 'occupiedUnits', 'price', 'buyingPrice', 'sellingPrice', 'footfall', 'width', 'height'].includes(field)) {
                     const num = parseFloat(value);
                     if (!isNaN(num)) {
                        updateData[field] = num;
                     }
                 } 
-                // FIX: Correctly parse array fields
                 else if (field === 'audience' || field === 'dates') {
                     updateData[field] = Array.isArray(value) ? value : value.split(',').map(item => item.trim());
                 } 
-                // Handle all other fields
                 else {
                     updateData[field] = value;
                 }
@@ -551,13 +686,12 @@ router.put('/:id', upload.fields([
         if (req.files['otherPhotos']?.length > 0) {
             const uploads = req.files['otherPhotos'].map(file => uploadAndReturnUrl(file));
             const newPhotoUrls = await Promise.all(uploads);
-            // Use MongoDB's $push operator to add to the existing array
             updateData.$push = { otherPhotos: { $each: newPhotoUrls } };
         }
 
         const updatedSpace = await Space.findByIdAndUpdate(
             id,
-            updateData, // Use the processed data directly
+            updateData,
             { new: true, runValidators: true }
         );
 

@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { LineChart, BarChart, PieChart } from "@mui/x-charts";
 import { CircularProgress } from "@mui/material";
 
-// --- UI HELPER COMPONENTS ---
+// --- UI HELPER COMPONENTS (Unchanged) ---
 const Input = ({ ...props }) => (
   <input
     className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -42,10 +42,6 @@ const Select = ({ children, ...props }) => (
     {children}
   </select>
 );
-
-/**
- * MODIFIED: New SortableHeader that matches the BookingsDashboard style.
- */
 const SortableHeader = ({ title, sortKey, sortConfig, onSort, disabled = false }) => {
   const isSorting = sortConfig.key === sortKey;
   const direction = isSorting ? sortConfig.direction : null;
@@ -72,7 +68,6 @@ const SortableHeader = ({ title, sortKey, sortConfig, onSort, disabled = false }
     </th>
   );
 };
-
 
 const EnhancedPaginationControls = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
     const [pageInput, setPageInput] = useState(currentPage.toString());
@@ -179,7 +174,7 @@ export default function RevenueReport({
     setRevenueChartData({ xLabels, yData });
   };
 
-  // --- STATE & LOGIC FOR PAYMENTS TABLE ---
+  // --- STATE & LOGIC FOR PAYMENTS TABLE (Unchanged) ---
   const [paymentData, setPaymentData] = useState([]);
   const [paymentCurrentPage, setPaymentCurrentPage] = useState(1);
   const [paymentTotalPages, setPaymentTotalPages] = useState(1);
@@ -411,7 +406,7 @@ export default function RevenueReport({
     }
   };
 
-  // --- STATE & LOGIC FOR TRADE MARGIN TABLE ---
+  // --- STATE & LOGIC FOR TRADE MARGIN TABLE (Unchanged) ---
   const [tradeMarginData, setTradeMarginData] = useState([]);
   const [tradeMarginFilters, setTradeMarginFilters] = useState({
     bookingSearch: "",
@@ -439,6 +434,9 @@ export default function RevenueReport({
   const [tradeMarginChartData, setTradeMarginChartData] = useState({ xLabels: [], yData: [] });
   const [tradeMarginGraphLoading, setTradeMarginGraphLoading] = useState(true);
   const [tradeMarginGraphError, setTradeMarginGraphError] = useState(null);
+  // --- CHANGE 1: ADD STATE FOR TOTAL TRADE MARGIN ---
+  const [totalTradeMargin, setTotalTradeMargin] = useState(0);
+
 
   const resetTradeMarginFilters = () => {
     setTradeMarginFilters({
@@ -552,14 +550,19 @@ export default function RevenueReport({
     fetchTradeMarginGraph();
   }, [tradeMarginGraphFilters, tradeMarginChartView]);
 
+  // --- CHANGE 2: UPDATE TRADE MARGIN DATA PROCESSING TO CALCULATE A TOTAL ---
   const processTradeMarginData = (data) => {
     const marginMap = new Map();
+    let calculatedTotal = 0; // Create a temporary total
     data.forEach(({ date, tradeMargin }) => {
       if (!date || typeof tradeMargin !== 'number') return;
+      calculatedTotal += tradeMargin; // Sum up the total margin
       const d = dayjs(date);
       const key = tradeMarginChartView === "monthly" ? d.format("MMM YYYY") : d.format("YYYY");
       marginMap.set(key, (marginMap.get(key) || 0) + tradeMargin);
     });
+
+    setTotalTradeMargin(calculatedTotal); // Set the total to state
 
     const sortedKeys = Array.from(marginMap.keys()).sort((a, b) => {
       const format = tradeMarginChartView === "monthly" ? "MMM YYYY" : "YYYY";
@@ -643,7 +646,7 @@ export default function RevenueReport({
 
   return (
     <div className="space-y-10">
-      {/* Payments Report Table */}
+      {/* Payments Report Table (Unchanged) */}
       <Card>
         <CardContent>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
@@ -669,7 +672,6 @@ export default function RevenueReport({
             </button>
             <Button onClick={resetPaymentFilters}>Reset Filters</Button>
           </div>
-          {/* MODIFIED: Table wrapper with consistent styling */}
           <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
             <table className="w-full text-xs text-left text-gray-600">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
@@ -722,12 +724,53 @@ export default function RevenueReport({
               </div>
               <p className="font-semibold text-sm w-full sm:w-auto text-right">Total Revenue: ₹{totalRevenue.toLocaleString()}</p>
             </div>
-            <div className="flex justify-center"><PieChart series={[{ data: agencyVsDirect.map((item, i) => ({ id: i, value: item.totalRevenue, label: item._id })), innerRadius: 40, outerRadius: 80 }]} width={200} height={200}/></div>
+            {/* --- CHANGE 3: UPDATE PIE CHART TO SHOW PERCENTAGES --- */}
+            <div className="flex justify-center">
+              <PieChart
+                series={[
+                  {
+                    data: agencyVsDirect.map((item, i) => ({
+                      id: i,
+                      value: item.totalRevenue,
+                      label: item._id,
+                    })),
+                    innerRadius: 40,
+                    outerRadius: 80,
+                    // This formatter adds the percentage to the pie slice label
+                    arcLabel: (item) => `${(item.value / totalRevenue * 100).toFixed(1)}%`,
+                    // This formatter adds more detail to the tooltip on hover
+                    valueFormatter: (item) => `₹${item.value.toLocaleString()} (${(item.value / totalRevenue * 100).toFixed(1)}%)`,
+                  },
+                ]}
+                width={400}
+                height={200}
+                slotProps={{
+                  legend: {
+                    labelStyle: { fontSize: 12 },
+                    direction: 'row',
+                    position: { vertical: 'bottom', horizontal: 'middle' },
+                    padding: 0,
+                  }
+                }}
+              />
+            </div>
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4 border-l-4 border-green-500 pl-3">Revenue by Agency Name</h3>
             <div className="rounded-lg border border-gray-100 shadow-sm p-4 bg-gray-50">
-              <BarChart xAxis={[{ scaleType: "band", data: revenueByAgency.map((d) => d._id) }]} series={[{ data: revenueByAgency.map((d) => d.totalRevenue), label: "Total Revenue", color: "#10B981" }]} height={200}/>
+              {/* --- CHANGE 4: UPDATE AGENCY BAR CHART TO SHOW PERCENTAGES IN TOOLTIP --- */}
+              <BarChart
+                xAxis={[{ scaleType: "band", data: revenueByAgency.map((d) => d._id) }]}
+                series={[
+                  {
+                    data: revenueByAgency.map((d) => d.totalRevenue),
+                    label: "Total Revenue",
+                    color: "#10B981",
+                    valueFormatter: (value) => `₹${value.toLocaleString()} (${totalRevenue > 0 ? ((value / totalRevenue) * 100).toFixed(1) : 0}%)`,
+                  },
+                ]}
+                height={200}
+              />
             </div>
           </div>
         </CardContent>
@@ -747,14 +790,26 @@ export default function RevenueReport({
               </div>
             </div>
             <div className="rounded-md border border-gray-100 shadow-sm p-3 bg-gray-50">
-              <BarChart xAxis={[{ scaleType: "band", data: industryRevenue.map((item) => item._id || "Others") }]} series={[{ data: industryRevenue.map((item) => item.totalRevenue), label: "Total Revenue", color: "#F59E0B" }]} height={250}/>
+              {/* --- CHANGE 5: UPDATE INDUSTRY BAR CHART TO SHOW PERCENTAGES IN TOOLTIP --- */}
+              <BarChart
+                xAxis={[{ scaleType: "band", data: industryRevenue.map((item) => item._id || "Others") }]}
+                series={[
+                  {
+                    data: industryRevenue.map((item) => item.totalRevenue),
+                    label: "Total Revenue",
+                    color: "#F59E0B",
+                    valueFormatter: (value) => `₹${value.toLocaleString()} (${industryTotal > 0 ? ((value / industryTotal) * 100).toFixed(1) : 0}%)`,
+                  },
+                ]}
+                height={250}
+              />
             </div>
             <p className="text-sm text-gray-600 mt-2 text-right">Total Revenue: ₹{industryTotal.toLocaleString()}</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Revenue Graph */}
+      {/* Revenue Graph (Unchanged) */}
       {loadingCharts ? <ShimmerCard /> : (
         <Card>
           <CardContent>
@@ -769,7 +824,7 @@ export default function RevenueReport({
         </Card>
       )}
 
-      {/* Trade Margin Report Table */}
+      {/* Trade Margin Report Table (Unchanged) */}
       <Card>
         <CardContent>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
@@ -798,7 +853,6 @@ export default function RevenueReport({
             </button>
             <Button onClick={resetTradeMarginFilters}>Reset Filters</Button>
           </div>
-          {/* MODIFIED: Table wrapper with consistent styling */}
           <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
             <table className="w-full text-xs text-left text-gray-600">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
@@ -872,10 +926,18 @@ export default function RevenueReport({
              <div className="h-80 flex items-center justify-center text-red-500">{tradeMarginGraphError}</div>
           ) : (
             <div className="flex flex-grow h-80">
+              {/* --- CHANGE 6: UPDATE TRADE MARGIN BAR CHART TO SHOW PERCENTAGES IN TOOLTIP --- */}
               <BarChart
                 xAxis={[{ scaleType: 'band', data: tradeMarginChartData.xLabels }]}
                 yAxis={[{ label: "Amount in Lakhs", valueFormatter: yAxisFormatter }]}
-                series={[{ data: tradeMarginChartData.yData, label: "Trade Margin", color: "#10B981", valueFormatter: tooltipFormatter }]}
+                series={[
+                  {
+                    data: tradeMarginChartData.yData,
+                    label: "Trade Margin",
+                    color: "#10B981",
+                    valueFormatter: (value) => `₹${value.toLocaleString()} (${totalTradeMargin > 0 ? ((value / totalTradeMargin) * 100).toFixed(1) : 0}%)`,
+                  },
+                ]}
               />
             </div>
           )}

@@ -61,7 +61,6 @@ const NodeLabel = ({ title, timestamp }) => (
 );
 
 
-// --- 1. RECEIVE isFOC PROP ---
 function CampaignPipelineInternal({ campaignId, isFOC }) {
   const { id } = useParams();
   const CampaignId = campaignId || id;
@@ -124,7 +123,7 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
       }
     };
     if (CampaignId) fetchOrCreatePipeline();
-  }, [CampaignId, refreshKey]);
+  }, [CampaignId, refreshKey, setPipelineData]);
 
   useEffect(() => {
     const fetchSpaces = async () => {
@@ -178,7 +177,6 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
         { id: 'e-po-artwork', source: 'po', target: 'artwork', markerEnd: 'arrowclosed' }
       );
 
-      // --- 2. CONDITIONALLY ADD INVOICE NODE ---
       if (!isFOC) {
         staticNodes.push({
           id: 'invoice',
@@ -190,7 +188,6 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
       }
     }
 
-    // --- 3. CONDITIONALLY ADD PAYMENT NODE ---
     if (!isFOC && Array.isArray(pipelineData.invoice) && pipelineData.invoice.some(inv => inv.invoiceNumber)) {
       staticNodes.push({
         id: 'payment',
@@ -271,7 +268,7 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
     setTimeout(() => {
       fitView({ padding: 0.2, duration: 500 });
     }, 0);
-  }, [pipelineData, spaces, isFOC, fitView]); // <-- 4. ADD isFOC TO DEPENDENCY ARRAY
+  }, [pipelineData, spaces, isFOC, fitView, setNodes, setEdges]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -291,6 +288,31 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
 
 
   if (!pipelineData) return <div>Loading Campaign Pipeline Data...</div>;
+
+  // MODIFICATION 1: ADD THIS HELPER FUNCTION TO FIND THE CORRECT DATA
+  const getExistingDataForSelectedNode = () => {
+    if (!selectedNode || !pipelineData) return null;
+
+    const { id } = selectedNode;
+    const spaceId = id.split('-')[1];
+
+    if (id === 'booking') return pipelineData.bookingStatus;
+    if (id === 'po') return pipelineData.po;
+    if (id === 'artwork') return pipelineData.artwork;
+    if (id === 'invoice') return pipelineData.invoice;
+    if (id === 'payment') return pipelineData.payment;
+
+    const space = pipelineData.spaces.find(s => s._id === spaceId);
+    if (!space) return null;
+
+    if (id.startsWith('print-')) return space.printingStatus;
+    if (id.startsWith('mount-')) return space.mountingStatus;
+    if (id.startsWith('digital-')) return space.digitalStatus;
+
+    return null;
+  };
+
+  const existingData = getExistingDataForSelectedNode();
 
   return (
     <div className="w-full bg-white h-[100vh] relative">
@@ -316,26 +338,19 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
       {selectedNode && (
         <div style={modalStyle}>
           <div style={modalContentStyle} className="bg-white shadow-lg rounded-lg p-6 border">
-            {selectedNode.id === 'booking' && <BookingStatusForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
-            {selectedNode.id === 'po' && <POForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
-            {selectedNode.id === 'artwork' && <ArtworkForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
-            {selectedNode.id === 'invoice' && <InvoiceForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
-            {selectedNode.id === 'payment' && <PaymentStatusForm campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
-            {selectedNode.id.startsWith('print-') && <PrintingStatus campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
-            {selectedNode.id.startsWith('mount-') && <MountingStatus campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {/* MODIFICATION 2: PASS THE `existingData` PROP TO ALL FORM COMPONENTS */}
+            {selectedNode.id === 'booking' && <BookingStatusForm existingData={existingData} campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {selectedNode.id === 'po' && <POForm existingData={existingData} campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {selectedNode.id === 'artwork' && <ArtworkForm existingData={existingData} campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {selectedNode.id === 'invoice' && <InvoiceForm existingData={existingData} campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {selectedNode.id === 'payment' && <PaymentStatusForm existingData={existingData} campaignId={CampaignId} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {selectedNode.id.startsWith('print-') && <PrintingStatus existingData={existingData} campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
+            {selectedNode.id.startsWith('mount-') && <MountingStatus existingData={existingData} campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
             {selectedNode.id.startsWith('digital-') && (
-              <DigitalStatusForm
-                campaignId={CampaignId}
-                spaceId={selectedNode.id.split('-')[1]}
-                onClose={() => setSelectedNode(null)}
-                onConfirm={() => { setSelectedNode(null); triggerRefresh(); }}
-              />
+              <DigitalStatusForm existingData={existingData} campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />
             )}
             {selectedNode.id.startsWith('live-') && (
-              <IsLiveStatusView
-                spaceId={selectedNode.id.split('-')[1]}
-                onClose={() => setSelectedNode(null)}
-              />
+              <IsLiveStatusView spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} />
             )}
           </div>
         </div>
@@ -376,7 +391,6 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
   );
 }
 
-// --- 5. PASS ALL PROPS DOWN IN WRAPPER ---
 export default function CampaignPipelineWrapper(props) {
   return (
     <ReactFlowProvider>

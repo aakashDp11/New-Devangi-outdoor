@@ -1243,7 +1243,7 @@ export default function InventoryDashboard() {
   const [mapSpaces, setMapSpaces] = useState([]); // <-- NEW: State for map data
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [viewMode, setViewMode] = useState('map'); // Set default to map
+  const [viewMode, setViewMode] = useState('table'); // Set default to map
   const limit = 10;
 
   const [search, setSearch] = useState('');

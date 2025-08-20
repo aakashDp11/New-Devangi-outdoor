@@ -1,12 +1,9 @@
-
-
-
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { PipelineContext } from '../../context/PipelineContext';
 
-const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
+const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => {
   const [payments, setPayments] = useState([]);
   const [gstValue, setGstValue] = useState('');
   const [costBreakdown, setCostBreakdown] = useState({
@@ -26,11 +23,12 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
   const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
   useEffect(() => {
+    // This component fetches its own data to get campaign costs, which is correct.
     const fetchPipelinePayment = async () => {
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}`);
-        const data = res.data?.payment || {};
-        console.log("Data recieved in Payment Status form is",res.data);
+        // We use `existingData` passed from the parent for consistency
+        const data = existingData || res.data?.payment || {};
 
         if (Array.isArray(data.payments)) {
           const enriched = data.payments.map(p => ({
@@ -39,7 +37,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
             modeOfPayment: p.modeOfPayment || 'cash',
             referenceNumber: p.referenceNumber || '',
             documentUrl: p.documentUrl || '',
-            locked: true,
+            locked: true, // All previously saved records are locked by default
           }));
           setPayments(enriched);
         }
@@ -60,7 +58,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
         const savedGst = data.gstValue || 0;
         setGstValue(savedGst);
 
-        const finalWithGST = totalBeforeGST + parseFloat(savedGst);
+        const finalWithGST = totalBeforeGST + parseFloat(savedGst || 0);
 
         setCostBreakdown({
           display: totalDisplay,
@@ -70,14 +68,13 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
           finalWithGST,
         });
 
-        setPaymentDue(finalWithGST - totalPaid);
       } catch (err) {
         console.error('Failed to fetch payment data:', err);
       }
     };
 
     fetchPipelinePayment();
-  }, [campaignId]);
+  }, [campaignId, existingData]);
 
   useEffect(() => {
     const newFinal = costBreakdown.totalBeforeGST + parseFloat(gstValue || 0);
@@ -86,7 +83,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
       finalWithGST: newFinal,
     }));
     setPaymentDue(newFinal - totalPaid);
-  }, [gstValue, payments]);
+  }, [gstValue, payments, costBreakdown.totalBeforeGST, totalPaid]);
 
   const handleAddPayment = () => {
     setPayments([...payments, {
@@ -95,7 +92,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
       modeOfPayment: 'cash',
       referenceNumber: '',
       documentUrl: '',
-      locked: false,
+      locked: false, // New records are unlocked for data entry
     }]);
   };
 
@@ -109,29 +106,17 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose }) => {
     updated[index][field] = value;
     setPayments(updated);
   };
- 
-
-//   const invoiceTotal = Array.isArray(pipelineData?.invoice)
-//   ? pipelineData.invoice.reduce((sum, inv) => sum + (inv.invoiceValue || 0), 0)
-//   : 0;
-
-// const mismatchWarning = Math.abs(invoiceTotal - costBreakdown.finalWithGST) > 1;
-
-const invoiceTotal = Array.isArray(pipelineData?.invoice)
-  ? pipelineData.invoice.reduce((sum, inv) => sum + (inv.invoiceValue || 0), 0)
-  : 0;
-
-const cashMemoTotal = Array.isArray(pipelineData?.cashMemo)
-  ? pipelineData.cashMemo.reduce((sum, memo) => sum + (memo.value || 0), 0)
-  : 0;
-
-const creditNoteTotal = Array.isArray(pipelineData?.creditNote)
-  ? pipelineData.creditNote.reduce((sum, note) => sum + (note.value || 0), 0)
-  : 0;
-
-const calculatedInvoiceValue = invoiceTotal + cashMemoTotal - creditNoteTotal;
-
-const mismatchWarning = Math.abs(calculatedInvoiceValue - costBreakdown.finalWithGST) > 1;
+  
+  // MODIFICATION 1: ADD THIS FUNCTION TO UNLOCK A SAVED RECORD FOR EDITING
+  const handleEditPayment = (index) => {
+    const updatedPayments = payments.map((payment, idx) => {
+      if (idx === index) {
+        return { ...payment, locked: false }; // Unlock the specific payment record
+      }
+      return payment;
+    });
+    setPayments(updatedPayments);
+  };
 
   const handleFileUpload = async (index, file) => {
     const formData = new FormData();
@@ -157,7 +142,7 @@ const mismatchWarning = Math.abs(calculatedInvoiceValue - costBreakdown.finalWit
   const handleSave = async () => {
     const previousPaymentStatus = { ...pipelineData?.payment };
 
-    if (totalPaid > costBreakdown.finalWithGST) {
+    if (totalPaid > costBreakdown.finalWithGST && costBreakdown.finalWithGST > 0) {
       toast.error('❌ Total paid exceeds the final amount (with GST)!');
       return;
     }
@@ -199,6 +184,12 @@ const mismatchWarning = Math.abs(calculatedInvoiceValue - costBreakdown.finalWit
       toast.error('Failed to save payment details.');
     }
   };
+  
+  const invoiceTotal = Array.isArray(pipelineData?.invoice) ? pipelineData.invoice.reduce((sum, inv) => sum + (inv.invoiceValue || 0), 0) : 0;
+  const cashMemoTotal = Array.isArray(pipelineData?.cashMemo) ? pipelineData.cashMemo.reduce((sum, memo) => sum + (memo.value || 0), 0) : 0;
+  const creditNoteTotal = Array.isArray(pipelineData?.creditNote) ? pipelineData.creditNote.reduce((sum, note) => sum + (note.value || 0), 0) : 0;
+  const calculatedInvoiceValue = invoiceTotal + cashMemoTotal - creditNoteTotal;
+  const mismatchWarning = Math.abs(calculatedInvoiceValue - costBreakdown.finalWithGST) > 1;
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white space-y-6">
@@ -211,14 +202,7 @@ const mismatchWarning = Math.abs(calculatedInvoiceValue - costBreakdown.finalWit
         <p><strong>Total Before GST:</strong> ₹{costBreakdown.totalBeforeGST.toFixed(2)}</p>
         <p>
           <strong>GST Value:</strong>
-          <input
-            type="number"
-            min="0"
-            className="ml-2 border px-2 py-1 rounded w-[100px]"
-            value={gstValue}
-            onChange={e => setGstValue(e.target.value)}
-            placeholder="Enter GST"
-          />
+          <input type="number" min="0" className="ml-2 border px-2 py-1 rounded w-[100px]" value={gstValue} onChange={e => setGstValue(e.target.value)} placeholder="Enter GST"/>
         </p>
         <p><strong>Final Amount with GST:</strong> ₹{costBreakdown.finalWithGST.toFixed(2)}</p>
       </div>
@@ -226,37 +210,19 @@ const mismatchWarning = Math.abs(calculatedInvoiceValue - costBreakdown.finalWit
       <div>
         <h3 className="font-semibold text-gray-700 mb-2">Payment Records</h3>
         {payments.map((payment, idx) => (
-          <div key={idx} className="border p-3 mb-3 rounded-md space-y-2 bg-gray-50">
+          <div key={idx} className="border p-3 mb-3 rounded-md space-y-2 bg-gray-50 relative">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <div className="w-full sm:w-[30%]">
-                {payment.locked && <label className="text-xs text-gray-500">Amount</label>}
-                <input
-                  type="number"
-                  placeholder="Amount (₹)"
-                  value={payment.amount}
-                  onChange={e => handlePaymentChange(idx, 'amount', e.target.value)}
-                  className="w-full border rounded-md px-3 py-2"
-                  readOnly={payment.locked}
-                />
+                <label className="text-xs text-gray-500">Amount</label>
+                <input type="number" placeholder="Amount (₹)" value={payment.amount} onChange={e => handlePaymentChange(idx, 'amount', e.target.value)} className="w-full border rounded-md px-3 py-2" readOnly={payment.locked} />
               </div>
               <div className="w-full sm:w-[30%]">
-                {payment.locked && <label className="text-xs text-gray-500">Date</label>}
-                <input
-                  type="date"
-                  value={payment.date ? new Date(payment.date).toISOString().split('T')[0] : ''}
-                  onChange={e => handlePaymentChange(idx, 'date', e.target.value)}
-                  className="w-full border rounded-md px-3 py-2"
-                  disabled={payment.locked}
-                />
+                <label className="text-xs text-gray-500">Date</label>
+                <input type="date" value={payment.date ? new Date(payment.date).toISOString().split('T')[0] : ''} onChange={e => handlePaymentChange(idx, 'date', e.target.value)} className="w-full border rounded-md px-3 py-2" disabled={payment.locked} />
               </div>
               <div className="w-full sm:w-[30%]">
-                {payment.locked && <label className="text-xs text-gray-500">Mode of Payment</label>}
-                <select
-                  value={payment.modeOfPayment}
-                  onChange={e => handlePaymentChange(idx, 'modeOfPayment', e.target.value)}
-                  className="w-full border rounded-md px-3 py-2"
-                  disabled={payment.locked}
-                >
+                <label className="text-xs text-gray-500">Mode of Payment</label>
+                <select value={payment.modeOfPayment} onChange={e => handlePaymentChange(idx, 'modeOfPayment', e.target.value)} className="w-full border rounded-md px-3 py-2" disabled={payment.locked}>
                   <option value="cash">Cash</option>
                   <option value="cheque">Cheque</option>
                   <option value="pdc">PDC</option>
@@ -266,37 +232,33 @@ const mismatchWarning = Math.abs(calculatedInvoiceValue - costBreakdown.finalWit
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-2">
               <div className="w-full sm:w-[30%]">
-                {payment.locked && <label className="text-xs text-gray-500">Reference Number</label>}
-                <input
-                  type="text"
-                  placeholder="Reference Number"
-                  value={payment.referenceNumber}
-                  onChange={e => handlePaymentChange(idx, 'referenceNumber', e.target.value)}
-                  className="w-full border rounded-md px-3 py-2"
-                  readOnly={payment.locked}
-                />
+                <label className="text-xs text-gray-500">Reference Number</label>
+                <input type="text" placeholder="Reference Number" value={payment.referenceNumber} onChange={e => handlePaymentChange(idx, 'referenceNumber', e.target.value)} className="w-full border rounded-md px-3 py-2" readOnly={payment.locked} />
               </div>
               <div className="w-full sm:w-[48%]">
-                {!payment.locked && (
-                  <input
-                    type="file"
-                    onChange={e => {
-                      if (e.target.files[0]) handleFileUpload(idx, e.target.files[0]);
-                    }}
-                    className="w-full text-sm"
-                  />
-                )}
-                {payment.documentUrl && (
+                {payment.documentUrl && payment.locked && (
                   <p className="text-xs text-blue-600 mt-1">
                     <a href={payment.documentUrl} target="_blank" rel="noopener noreferrer">View Uploaded File</a>
                   </p>
                 )}
+                {!payment.locked && (
+                  <input type="file" onChange={e => { if (e.target.files[0]) handleFileUpload(idx, e.target.files[0]); }} className="w-full text-sm" />
+                )}
               </div>
             </div>
 
-            {!payment.locked && (
+            {/* MODIFICATION 2: CONDITIONAL BUTTONS (EDIT or REMOVE) */}
+            {payment.locked ? (
+              <button
+                onClick={() => handleEditPayment(idx)}
+                className="absolute top-2 right-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+                title="Edit this payment"
+              >
+                Edit
+              </button>
+            ) : (
               <button
                 onClick={() => handleDeletePayment(idx)}
                 className="text-red-500 hover:text-red-700 text-xs"
@@ -316,46 +278,29 @@ const mismatchWarning = Math.abs(calculatedInvoiceValue - costBreakdown.finalWit
       </div>
 
       <div className="pt-4 border-t">
-        <p className="text-gray-800 font-semibold">Total Paid: ₹{totalPaid}</p>
+        <p className="text-gray-800 font-semibold">Total Paid: ₹{totalPaid.toFixed(2)}</p>
         <p className={`font-semibold ${paymentDue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
           Payment Due: ₹{paymentDue.toFixed(2)}
         </p>
       </div>
 
-      {totalPaid > costBreakdown.finalWithGST && (
+      {totalPaid > costBreakdown.finalWithGST && costBreakdown.finalWithGST > 0 && (
         <p className="text-red-600 text-xs font-medium">
           ⚠ Total payment exceeds the final amount with GST.
         </p>
       )}
 
-{/* {mismatchWarning && (
-  <div className="bg-yellow-100 text-yellow-800 text-xs font-medium p-3 rounded-md border border-yellow-300 mt-4">
-    ⚠ Invoice Value Mismatch:
-    <br />
-    • Total Invoice Value: ₹{invoiceTotal.toFixed(2)}  
-    <br />
-    • Final Amount with GST: ₹{costBreakdown.finalWithGST.toFixed(2)}
-    <br />
-    Please ensure the invoice totals match the final billed amount.
-  </div>
-)} */}
-{mismatchWarning && (
-  <div className="bg-yellow-100 text-yellow-800 text-xs font-medium p-3 rounded-md border border-yellow-300 mt-4">
-    ⚠ Invoice Mismatch:
-    <br />
-    {/* • Invoice Total = ₹{invoiceTotal.toFixed(2)}
-    <br />
-    • Cash Memo Total = ₹{cashMemoTotal.toFixed(2)}
-    <br />
-    • Credit Note Total = ₹{creditNoteTotal.toFixed(2)} */}
-    <br />
-    • Final Invoice Value = ₹{calculatedInvoiceValue.toFixed(2)}
-    <br />
-    • Final Amount with GST = ₹{costBreakdown.finalWithGST.toFixed(2)}
-    <br />
-    Please ensure totals match before proceeding.
-  </div>
-)}
+      {mismatchWarning && (
+        <div className="bg-yellow-100 text-yellow-800 text-xs font-medium p-3 rounded-md border border-yellow-300 mt-4">
+          ⚠ Invoice Mismatch:
+          <br />
+          • Final Invoice Value = ₹{calculatedInvoiceValue.toFixed(2)}
+          <br />
+          • Final Amount with GST = ₹{costBreakdown.finalWithGST.toFixed(2)}
+          <br />
+          Please ensure totals match before proceeding.
+        </div>
+      )}
 
 
       <div className="flex">
@@ -377,4 +322,3 @@ const mismatchWarning = Math.abs(calculatedInvoiceValue - costBreakdown.finalWit
 };
 
 export default PaymentStatusForm;
-

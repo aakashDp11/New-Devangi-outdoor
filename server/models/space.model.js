@@ -26,6 +26,7 @@ const MountingStatusSchema = new Schema({
 const DigitalStatusSchema = new Schema({
     confirmed: { type: Boolean, default: false },
     assignedAgency: { type: String, default: '' },
+    assignedPerson: { type: String }, // <-- ADD THIS LINE
     isLive: { type: Boolean, default: false },
     goLiveDate: { type: String, default: '' },
     note: { type: String },

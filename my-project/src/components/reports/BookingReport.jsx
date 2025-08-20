@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { BarChart } from "@mui/x-charts/BarChart";
 
-// --- UI HELPER COMPONENTS ---
+// --- UI HELPER COMPONENTS (Unchanged) ---
 const Input = ({ ...props }) => (
   <input
     className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -113,7 +113,7 @@ const clientTypeOptions = ["Corporate", "Agency", "Direct", "Government"];
 export default function BookingReport({ handleShowDateModal = () => {} }) {
   const navigate = useNavigate();
 
-  // --- SECTION 1: BOOKING REPORT STATE & LOGIC ---
+  // --- SECTION 1: BOOKING REPORT STATE & LOGIC (Unchanged) ---
   const [bookings, setBookings] = useState([]);
   const [bookingFilters, setBookingFilters] = useState({ client: "", paymentStatus: "", poStatus: "", startDate: "", endDate: "" });
   const [bookingCurrentPage, setBookingCurrentPage] = useState(1);
@@ -166,9 +166,6 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
     }
   };
 
-  /**
-   * FIXED: Implemented download logic for bookings.
-   */
   const downloadBookingExcel = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -226,7 +223,6 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
             if (totalDue > 0 && totalPaid < totalDue) {
               paymentStatus = totalPaid > 0 ? "Partial" : "Pending";
             }
-            // --- START: NEW PO STATUS LOGIC ---
             const poStatuses = b.campaigns?.map(c => c.poConfirmed === true) || [];
             let poStatusText = "Pending"; // Default to Pending
             if (poStatuses.length > 0) {
@@ -236,13 +232,12 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                     poStatusText = "Partial";
                 }
             }
-            // --- END: NEW PO STATUS LOGIC ---
             return {
                 'Company Name': b.companyName,
                 'Client Name': b.clientName,
                 'Booking Date': dayjs(b.createdAt).format("DD/MM/YYYY"),
-                'Payment Status': paymentStatus, // Use the correct variable
-                'PO Status': poStatusText,      // Use the correct variable
+                'Payment Status': paymentStatus,
+                'PO Status': poStatusText,
             };
         });
 
@@ -263,7 +258,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
   }, [bookingFilters, bookingCurrentPage, bookingSortConfig]);
   // --- END OF SECTION 1 ---
 
-  // --- SECTION 2: PROPOSAL REPORT TABLE STATE & LOGIC ---
+  // --- SECTION 2: PROPOSAL REPORT TABLE STATE & LOGIC (Unchanged) ---
   const [proposals, setProposals] = useState([]);
   const [proposalTableFilters, setProposalTableFilters] = useState({ startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "" });
   const [proposalCurrentPage, setProposalCurrentPage] = useState(1);
@@ -316,9 +311,6 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
     setProposalCurrentPage(1);
   };
   
-  /**
-   * FIXED: Implemented download logic for proposals.
-   */
   const downloadProposalExcel = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -388,6 +380,8 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
   // --- SECTION 3: PROPOSAL GRAPH STATE & LOGIC ---
   const [graphDimension, setGraphDimension] = useState("timeline");
   const [proposalChartData, setProposalChartData] = useState({ xLabels: [], yData: [] });
+  // --- CHANGE 1: ADD STATE FOR THE GRAPH TOTAL ---
+  const [totalProposalsForGraph, setTotalProposalsForGraph] = useState(0);
   const [proposalGraphFilters, setProposalGraphFilters] = useState({
     startDate: "", endDate: "", person: "", industry: "", inventoryType: "", clientType: "", bookingSource: "",
   });
@@ -460,7 +454,12 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
           xLabels = sortedEntries.map((entry) => entry[0]);
           yData = sortedEntries.map((entry) => entry[1]);
         }
+
+        // --- CHANGE 2: CALCULATE AND SET THE TOTAL ---
+        const total = yData.reduce((sum, val) => sum + val, 0);
+        setTotalProposalsForGraph(total);
         setProposalChartData({ xLabels, yData });
+
       } catch (err) {
         console.error("Failed to fetch and process proposal graph data:", err);
         setProposalChartData({ xLabels: [], yData: [] });
@@ -472,7 +471,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
 
   return (
     <div className="space-y-10">
-      {/* CARD 1: BOOKING REPORT TABLE */}
+      {/* CARD 1: BOOKING REPORT TABLE (Unchanged) */}
       <Card>
         <CardContent>
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Booking Report ({bookingTotalCount})</h3>
@@ -487,7 +486,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
             <Select value={bookingFilters.poStatus} onChange={(e) => {setBookingFilters({ ...bookingFilters, poStatus: e.target.value }); setBookingCurrentPage(1);}}>
               <option value="">All PO Status</option>
               <option value="Completed">Completed</option>
-              <option value="Pending">Pending</option> {/* <-- ADD THIS LINE */}
+              <option value="Pending">Pending</option>
               <option value="Partial">Partial</option>
             </Select>
             <button onClick={() => handleShowDateModal("bookings", bookingFilters, setBookingFilters)} className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50">
@@ -525,18 +524,17 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                     if (totalDue > 0 && totalPaid < totalDue) {
                       paymentStatus = totalPaid > 0 ? "Partial" : "Pending";
                     }                    
-const poStatuses = b.campaigns?.map(c => c.poConfirmed === true) || [];
-let poStatus = "Pending"; // Default to Pending if no campaigns or no confirmed POs
+                    const poStatuses = b.campaigns?.map(c => c.poConfirmed === true) || [];
+                    let poStatus = "Pending"; // Default to Pending if no campaigns or no confirmed POs
 
-if (poStatuses.length > 0) {
-    if (poStatuses.every(status => status === true)) {
-        // If ALL statuses are true
-        poStatus = "Completed";
-    } else if (poStatuses.some(status => status === true)) {
-        // If SOME (but not all) statuses are true
-        poStatus = "Partial";
-    }
-}                    return (
+                    if (poStatuses.length > 0) {
+                        if (poStatuses.every(status => status === true)) {
+                            poStatus = "Completed";
+                        } else if (poStatuses.some(status => status === true)) {
+                            poStatus = "Partial";
+                        }
+                    }                    
+                    return (
                       <tr key={b._id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/booking-details/${b._id}`)}>
                         <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{b.companyName}</td>
                         <td className="px-6 py-4">{b.clientName}</td>
@@ -556,7 +554,7 @@ if (poStatuses.length > 0) {
         </CardContent>
       </Card>
 
-      {/* CARD 2: PROPOSAL REPORT TABLE */}
+      {/* CARD 2: PROPOSAL REPORT TABLE (Unchanged) */}
       <Card>
         <CardContent>
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Proposal Report ({proposalTotalCount})</h3>
@@ -657,10 +655,18 @@ if (poStatuses.length > 0) {
             <Button onClick={resetProposalGraphFilters}>Reset Filters</Button>
           </div>
           <div className="flex flex-grow h-96 -ml-4 -mr-2">
+            {/* --- CHANGE 3: UPDATE BAR CHART TO SHOW PERCENTAGES IN TOOLTIP --- */}
             <BarChart
               xAxis={[{ data: proposalChartData.xLabels, scaleType: "band", tickLabelStyle: { angle: -45, textAnchor: "end", fontSize: 10 } }]}
               yAxis={[{ label: "Number of Proposals" }]}
-              series={[{ data: proposalChartData.yData, label: "Proposals", color: "#34d399" }]}
+              series={[
+                {
+                  data: proposalChartData.yData,
+                  label: "Proposals",
+                  color: "#34d399",
+                  valueFormatter: (value) => `${value} (${totalProposalsForGraph > 0 ? ((value / totalProposalsForGraph) * 100).toFixed(1) : 0}%)`,
+                },
+              ]}
               grid={{ vertical: false, horizontal: true }}
               margin={{ top: 40, right: 20, bottom: 70, left: 60 }}
               legend={{ direction: "row", position: { vertical: "top", horizontal: "middle" }, padding: 0 }}

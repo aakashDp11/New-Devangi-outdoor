@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { BarChart } from "@mui/x-charts/BarChart";
 
-// --- UI HELPER COMPONENTS ---
+// --- UI HELPER COMPONENTS (Unchanged) ---
 const Input = ({ ...props }) => (
     <div className="flex flex-col text-sm w-full gap-1">
         <label className=" text-gray-700 font-medium">
@@ -122,7 +122,7 @@ const industryOptions = [
 export default function InventoryReport({ handleShowDateModal = () => { } }) {
     const navigate = useNavigate();
 
-    // --- STATE FOR INVENTORY REPORT TABLE ---
+    // --- STATE FOR INVENTORY REPORT TABLE (Unchanged) ---
     const [inventories, setInventories] = useState([]);
     const defaultFilters = { name: "", type: "", agency: "", industry: "" };
     const [inventoryFilters, setInventoryFilters] = useState(defaultFilters);
@@ -131,10 +131,12 @@ export default function InventoryReport({ handleShowDateModal = () => { } }) {
     const [inventoryTotalCount, setInventoryTotalCount] = useState(0);
     const [inventorySortConfig, setInventorySortConfig] = useState({ key: 'revenue', direction: 'desc' });
 
-    // --- STATE FOR PERFORMANCE GRAPH (Unchanged) ---
+    // --- STATE FOR PERFORMANCE GRAPH ---
     const [performanceType, setPerformanceType] = useState("top");
     const [performanceMetric, setPerformanceMetric] = useState("totalRevenue");
     const [performanceData, setPerformanceData] = useState([]);
+    // --- CHANGE 1: ADD STATE FOR PERFORMANCE TOTAL ---
+    const [performanceTotal, setPerformanceTotal] = useState(0);
 
     const resetInventoryFilters = () => {
         setInventoryFilters(defaultFilters);
@@ -182,9 +184,6 @@ export default function InventoryReport({ handleShowDateModal = () => { } }) {
         fetchInventoryReport();
     }, [currentPage, inventoryFilters, inventorySortConfig]);
 
-    /**
-     * FIXED: Implemented download logic for inventory report.
-     */
     const downloadInventoryReport = async () => {
         const token = localStorage.getItem("accessToken");
         if (!token) {
@@ -257,7 +256,14 @@ export default function InventoryReport({ handleShowDateModal = () => { } }) {
             });
 
             const data = await res.json();
-            if (data.success) setPerformanceData(data.data);
+            if (data.success) {
+                const performanceItems = data.data || [];
+                setPerformanceData(performanceItems);
+                
+                // --- CHANGE 2: CALCULATE AND SET THE TOTAL ---
+                const total = performanceItems.reduce((sum, item) => sum + (item[performanceMetric] || 0), 0);
+                setPerformanceTotal(total);
+            }
         } catch (err) {
             console.error("Failed to fetch inventory performance:", err);
         }
@@ -269,7 +275,7 @@ export default function InventoryReport({ handleShowDateModal = () => { } }) {
 
     return (
         <div className="space-y-10">
-            {/* All Inventories Report Card */}
+            {/* All Inventories Report Card (Unchanged) */}
             <Card>
                 <CardContent>
                     <h3 className="text-lg font-semibold mb-4 text-gray-800">
@@ -359,7 +365,7 @@ export default function InventoryReport({ handleShowDateModal = () => { } }) {
                 </CardContent>
             </Card>
 
-            {/* Top/Bottom Performance Card (Unchanged) */}
+            {/* Top/Bottom Performance Card */}
             <Card>
                 <CardContent>
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
@@ -381,11 +387,17 @@ export default function InventoryReport({ handleShowDateModal = () => { } }) {
                         </div>
                     </div>
                     <div className="overflow-x-auto">
+                        {/* --- CHANGE 3: UPDATE BAR CHART TO SHOW PERCENTAGES IN TOOLTIP --- */}
                         <BarChart
                             height={400}
                             series={[{
                                 data: performanceData.map((d) => performanceMetric === "totalRevenue" ? d.totalRevenue : d.totalBookings),
                                 label: performanceMetric === "totalRevenue" ? "Revenue" : "Bookings",
+                                valueFormatter: (value) => {
+                                    const percentage = performanceTotal > 0 ? ((value / performanceTotal) * 100).toFixed(1) : 0;
+                                    const formattedValue = performanceMetric === "totalRevenue" ? `₹${value.toLocaleString()}` : value.toLocaleString();
+                                    return `${formattedValue} (${percentage}%)`;
+                                },
                             }]}
                             xAxis={[{ scaleType: "band", data: performanceData.map((d) => d.spaceName) }]}
                         />

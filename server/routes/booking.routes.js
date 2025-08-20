@@ -975,6 +975,9 @@ bookings.forEach((booking) => {
     const po = pipeline.po || {};
     const invoice = pipeline.invoice || {};
 
+    console.log('INSPECTING INVOICE OBJECT:', JSON.stringify(invoice, null, 2));
+
+
     const isInvoiceReceived = (invoice && (
     (Array.isArray(invoice) && invoice.length > 0) || 
     (typeof invoice === 'object' && !Array.isArray(invoice) && invoice.invoiceNumber)
@@ -988,6 +991,10 @@ bookings.forEach((booking) => {
       artworkReceived: !!artwork.confirmed,
       poReceived: !!po.documentUrl,
       invoiceReceived: isInvoiceReceived,
+      invoices: (Array.isArray(invoice) ? invoice : []).map(inv => ({
+        documentName: inv.invoiceNumber || 'Invoice Document', // Renames the key
+        fileUrl: inv.documentUrl                             // This key already matches
+      })),      
       printingStatus: 0,
       mountingStatus: 0,
       isFOC: campaign.isFOC,

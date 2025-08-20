@@ -22,6 +22,7 @@ import campaignRoutes from './routes/campaign.routes.js'
 import notificationRoutes from './routes/notification.routes.js';
 import { startCampaignReminderJob } from './cron/campaignReminderJob.js';
 import { startSpaceReminderJob } from './cron/spaceReminderJob.js';
+import { startAvailabilityUpdaterJob } from './cron/availabilityUpdater.js'; // <-- Updated pat
 import revenueRoutes from './routes/revenue.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
 import reportRoutes from './routes/reports.routes.js'; // ✅ 1. IMPORT YOUR NEW REPORTS ROUTE FILE
@@ -135,6 +136,7 @@ async function connectAndStart() {
     await createAdminIfNotExists();
     startCampaignReminderJob();
     startSpaceReminderJob();
+    startAvailabilityUpdaterJob();
     app.listen(port, () => {
       console.log(`Server running at http://localhost:${port}`);
     });

@@ -310,7 +310,7 @@ export default function BookingsDashboard1() {
               onClick={handleClearAllFilters}
               className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700 transition"
             >
-              Clear
+              Reset Filters
             </button>
           </div>
         </div>
