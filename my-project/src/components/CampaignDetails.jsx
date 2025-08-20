@@ -53,6 +53,7 @@ const DetailItem = ({ icon, label, value }) => (
   </div>
 );
 
+// --- MODIFIED COMPONENT: CostInput ---
 const CostInput = ({
   label,
   field,
@@ -62,6 +63,7 @@ const CostInput = ({
   updateCostField,
   isCurrency = false,
   isDisabled,
+  type = "number", // Added type prop, defaults to "number"
 }) => (
   <div>
     <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -74,18 +76,28 @@ const CostInput = ({
         </span>
       )}
       <input
-        type="number"
+        type={type} // Use the new type prop
         className={`border rounded-md w-full py-1 text-sm ${
           isCurrency ? "pl-7" : "px-2"
         } ${!isEditable || isDisabled ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`}
         value={value}
-        onChange={(e) => updateCostField(spaceId, field, e.target.value === '' ? '' : Number(e.target.value))}
+        // Handle both number and text inputs in the onChange handler
+        onChange={(e) =>
+          updateCostField(
+            spaceId,
+            field,
+            type === "number" && e.target.value !== ""
+              ? Number(e.target.value)
+              : e.target.value
+          )
+        }
         readOnly={!isEditable || isDisabled}
         disabled={isDisabled}
       />
     </div>
   </div>
 );
+
 
 export default function CampaignDetails() {
   const { id } = useParams();
@@ -222,6 +234,7 @@ export default function CampaignDetails() {
       const space = spaceDetails.find((s) => s._id === spaceId);
       const computedArea = (space?.width || 0) * (space?.height || 0);
 
+      // --- MODIFIED SECTION: handleEditToggle ---
       setEditedCosts((prev) => ({
         ...prev,
         [spaceId]: {
@@ -229,6 +242,7 @@ export default function CampaignDetails() {
           displayCost: costItem.displayCost || 0,
           buyingPrice: costItem.buyingPrice || 0,
           sellingPrice: costItem.sellingPrice || 0,
+          invoiceNo: costItem.invoiceNo || "", // Added invoiceNo to state
           printingcostpersquareFeet: costItem.printingcostpersquareFeet || 0,
           mountingcostpersquareFeet: costItem.mountingcostpersquareFeet || 0,
           area: costItem.area || computedArea,
@@ -248,7 +262,10 @@ export default function CampaignDetails() {
     const sanitizedCostToSave = { ...costToSave };
     for (const key in sanitizedCostToSave) {
       if (sanitizedCostToSave[key] === '') {
-        sanitizedCostToSave[key] = 0;
+        // Allow empty string for invoiceNo, but convert others to 0
+        if (key !== 'invoiceNo') {
+          sanitizedCostToSave[key] = 0;
+        }
       }
     }
 
@@ -259,7 +276,7 @@ export default function CampaignDetails() {
       let updatedCosts;
       if (index !== -1) {
         updatedCosts = inventoryCosts.map((c, i) =>
-          i === index ? sanitizedCostToSave : c
+          i === index ? { ...inventoryCosts[i], ...sanitizedCostToSave } : c
         );
       } else {
         updatedCosts = [...inventoryCosts, sanitizedCostToSave];
@@ -342,9 +359,7 @@ export default function CampaignDetails() {
                 </div>
               )}
             </div>
-                       {/* --- MODIFIED SECTION: Tabs and Warning Aligned --- */}
             <div className="flex justify-between items-center mb-4">
-              {/* Tabs grouped on the left */}
               <div className="flex space-x-4">
                 {["Details", "Pipeline"].map((tab) => (
                   <button
@@ -361,7 +376,6 @@ export default function CampaignDetails() {
                 ))}
               </div>
 
-              {/* Warning message aligned to the right */}
               {pipelineError && (
                 <p className="text-sm text-orange-600">
                   ⚠ Pipeline data not found - showing default values
@@ -542,8 +556,6 @@ export default function CampaignDetails() {
 
               const computedArea = space.width * space.height;
               const displayCost = Number(currentCost?.displayCost || 0);
-              const buyingPrice = Number(currentCost?.buyingPrice || 0);
-              const sellingPrice = Number(currentCost?.sellingPrice || 0);
               const printingCost = Number(currentCost?.printingcostpersquareFeet || 0);
               const mountingCost = Number(currentCost?.mountingcostpersquareFeet || 0);
               const area = Number(currentCost?.area || computedArea || 0);
@@ -580,6 +592,7 @@ export default function CampaignDetails() {
                       </div>
                     </div>
 
+                    {/* --- MODIFIED SECTION: Cost Inputs --- */}
                     <div className="md:col-span-3 space-y-3">
                       <CostInput
                         label="Display Cost"
@@ -593,7 +606,7 @@ export default function CampaignDetails() {
                       />
 
                       {space.ownershipType === "Traded" && (
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <CostInput
                             label="Buying Price"
                             field="buyingPrice"
@@ -614,6 +627,19 @@ export default function CampaignDetails() {
                             spaceId={space._id}
                             isDisabled={isFOC}
                           />
+                          {/* New Invoice No Input Field */}
+                          <div className="sm:col-span-2">
+                             <CostInput
+                                label="Invoice NO"
+                                field="invoiceNo"
+                                value={currentCost?.invoiceNo || ''}
+                                type="text"
+                                isEditable={isEditable}
+                                updateCostField={updateCostField}
+                                spaceId={space._id}
+                                isDisabled={isFOC}
+                              />
+                          </div>
                         </div>
                       )}
 

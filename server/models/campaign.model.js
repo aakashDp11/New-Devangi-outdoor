@@ -53,6 +53,7 @@ const campaignSchema = new Schema({
     displayCost: { type: Number, required: true },
     buyingPrice: { type: Number, default: 0 },
     sellingPrice: { type: Number, default: 0 },
+    invoiceNo: { type: String, default: '' }, // <-- ADD THIS LINE
     printingcostpersquareFeet: { type: Number, required: true },
     mountingcostpersquareFeet: { type: Number, required: true },
     area: { type: Number, required: true }

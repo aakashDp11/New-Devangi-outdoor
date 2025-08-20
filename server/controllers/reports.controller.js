@@ -37,6 +37,7 @@ export const getTradeMarginReport = async (req, res) => {
         inventoryType: 'spaceInfo.spaceType',
         booking: 'campaignName',
         tradeMargin: 'matchedCost.calculatedMargin',
+        invoiceNo: 'matchedCost.invoiceNo', // <-- ADD THIS LINE
         date: 'startDate',
     };
     const backendSortKey = sortKeyMap[frontendSortKey] || 'startDate';
@@ -146,6 +147,7 @@ export const getTradeMarginReport = async (req, res) => {
           agency: { $ifNull: ["$bookingInfo.companyName", "N/A"] },
           inventory: { $ifNull: ["$spaceInfo.spaceName", "N/A"] },
           inventoryType: { $ifNull: ["$spaceInfo.spaceType", "N/A"] },
+          invoiceNo: { $ifNull: ["$matchedCost.invoiceNo", "N/A"] }, // <-- ADD THIS LINE
           tradeMargin: "$matchedCost.calculatedMargin"
         }
     });

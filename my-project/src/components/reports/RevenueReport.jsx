@@ -617,6 +617,7 @@ export default function RevenueReport({
         'Inventory': item.inventory || "N/A",
         'Inventory Type': item.inventoryType || "N/A",
         'Booking': item.booking || "N/A",
+        'Invoice NO': item.invoiceNo || "N/A", // <-- ADD THIS LINE
         'Trade Margin': item.tradeMargin || 0,
         'Date': dayjs(item.date).format("DD MMM YYYY")
       }));
@@ -860,6 +861,7 @@ export default function RevenueReport({
                   <SortableHeader title="Inventory" sortKey="inventory" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
                   <SortableHeader title="Inventory Type" sortKey="inventoryType" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
                   <SortableHeader title="Booking" sortKey="booking" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
+                  <SortableHeader title="Invoice NO" sortKey="invoiceNo" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
                   <SortableHeader title="Trade Margin" sortKey="tradeMargin" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
                   <SortableHeader title="Date" sortKey="date" sortConfig={tradeMarginSortConfig} onSort={handleTradeMarginSort} />
                 </tr>
@@ -875,6 +877,7 @@ export default function RevenueReport({
                       <td className="px-6 py-4">{item.inventory || "N/A"}</td>
                       <td className="px-6 py-4">{item.inventoryType || "N/A"}</td>
                       <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{item.booking || "N/A"}</td>
+                      <td className="px-6 py-4">{item.invoiceNo || "N/A"}</td>
                       <td className="px-6 py-4 font-medium">₹{item.tradeMargin?.toLocaleString() || "0"}</td>
                       <td className="px-6 py-4">{dayjs(item.date).format("DD MMM YYYY")}</td>
                     </tr>
