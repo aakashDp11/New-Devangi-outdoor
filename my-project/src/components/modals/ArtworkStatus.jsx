@@ -3,11 +3,8 @@ import axios from 'axios';
 import { PipelineContext } from '../../context/PipelineContext';
 import { toast } from 'sonner';
 
-// MODIFICATION 1: The component now accepts the `existingData` prop
 export default function ArtworkForm({ campaignId, onConfirm, onClose, existingData }) {
-  // MODIFICATION 2: A 'view' state is added to control what is shown
   const [view, setView] = useState('form');
-
   const [artworkFile, setArtworkFile] = useState(null);
   const [receivedDate, setReceivedDate] = useState('');
   const [documentUrl, setDocumentUrl] = useState('');
@@ -17,16 +14,13 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose, existingDa
   const useremail = localStorage.getItem('userEmail');
   const userId = localStorage.getItem('userId');
   
-  // MODIFICATION 3: This useEffect now uses the prop to decide the initial view, removing the need for an internal fetch
   useEffect(() => {
     if (existingData && existingData.confirmed) {
       setView('summary');
-      // Pre-fill state with existing data for both summary and the edit form
       setReceivedDate(existingData.receivedDate ? new Date(existingData.receivedDate).toISOString().split('T')[0] : '');
       setDocumentUrl(existingData.documentUrl || '');
     } else {
       setView('form');
-      // Default to today's date for a new entry
       setReceivedDate(new Date().toISOString().split('T')[0]);
     }
   }, [existingData]);
@@ -51,7 +45,6 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose, existingDa
   };
 
   const handleSave = async () => {
-    // Validation now checks for a date AND either a new file or an existing URL
     if (!receivedDate || (!artworkFile && !documentUrl)) {
       toast.error('Please select a received date and upload the artwork file.');
       return;
@@ -59,7 +52,6 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose, existingDa
 
     try {
       let finalDocumentUrl = documentUrl;
-      // If a new file was selected, upload it first to get its URL
       if (artworkFile) {
         const formData = new FormData();
         formData.append('file', artworkFile);
@@ -75,7 +67,7 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose, existingDa
       const newArtworkStatus = {
         confirmed: true,
         receivedDate,
-        documentUrl: finalDocumentUrl, // Ensure the URL is included in the update
+        documentUrl: finalDocumentUrl,
       };
       
       const changeLogData = {
@@ -102,7 +94,6 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose, existingDa
     }
   };
 
-  // MODIFICATION 4: Conditional Rendering based on the 'view' state
   if (view === 'summary') {
     return (
       <div className="max-w-xl mx-auto mt-10 bg-white p-6 rounded-xl">
@@ -128,12 +119,12 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose, existingDa
               </div>
             </div>
           )}
-          <div className='flex justify-center gap-4 pt-8'>
-            <button onClick={onClose} className="w-[40%] text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400">
+          {/* ================================================================= */}
+          {/* MODIFICATION: "Edit" button removed, "Close" button centered    */}
+          {/* ================================================================= */}
+          <div className='flex justify-center pt-8'>
+            <button onClick={onClose} className="w-1/2 text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400">
               Close
-            </button>
-            <button onClick={() => setView('form')} className="w-[40%] text-xs bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700">
-              Edit
             </button>
           </div>
         </div>
@@ -141,7 +132,6 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose, existingDa
     );
   }
 
-  // This is the form view, for creating or editing artwork status.
   return (
     <div className="max-w-xl mx-auto mt-10 bg-white p-6 rounded-xl">
       <h2 className="text-2xl font-semibold mb-4 text-gray-800 text-center">

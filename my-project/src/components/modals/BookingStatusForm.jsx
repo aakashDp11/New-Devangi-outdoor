@@ -85,12 +85,12 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
             </a>
           ) : (<p className="text-xs text-gray-500 italic">No document uploaded</p>)}
         </div>
-        <div className="flex justify-center gap-4 mt-6">
-          <button onClick={onClose} className="w-[40%] text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400">
+        {/* ================================================================= */}
+        {/* MODIFICATION: "Edit" button removed, "Close" button centered    */}
+        {/* ================================================================= */}
+        <div className="flex justify-center mt-6">
+          <button onClick={onClose} className="w-1/2 text-xs bg-gray-300 text-black py-2 rounded-xl hover:bg-gray-400">
             Close
-          </button>
-          <button onClick={() => setView('form')} className="w-[40%] text-xs bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700">
-            Edit
           </button>
         </div>
       </div>
@@ -114,9 +114,6 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Upload Confirmation Document <span className="text-red-500">*</span></label>
           
-          {/* ================================================================= */}
-          {/* MODIFICATION: Added a link to view the currently uploaded file   */}
-          {/* ================================================================= */}
           {documentUrl && (
             <div className="mb-2 text-xs">
               <a 

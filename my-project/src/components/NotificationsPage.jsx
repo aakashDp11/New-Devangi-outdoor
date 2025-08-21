@@ -159,10 +159,15 @@ const NotificationsPage = () => {
     loadNotifications();
   }, []);
   
+  // --- UPDATED: ROBUST AND RELIABLE DATE FORMATTING ---
   const formatDate = (date) => {
     if (!date) return '';
-    const adjustedDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
-    return adjustedDate.toISOString().split('T')[0];
+    // These methods get the date parts from the user's local timezone.
+    const year = date.getFullYear();
+    // getMonth() is 0-indexed, so we add 1. padStart ensures '09' instead of '9'.
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // --- DATE FILTER LOGIC ---

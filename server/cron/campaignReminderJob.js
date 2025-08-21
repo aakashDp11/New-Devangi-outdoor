@@ -4,58 +4,90 @@ import Booking from '../models/booking.model.js';
 import Notification from '../models/notification.model.js';
 
 /**
- * Calculates the number of whole days from now until a target date.
- * @param {string | Date} dateValue The target date, either as a string or Date object.
+ * Parses a date string that could be in ISO format or DD-MM-YYYY format.
+ * This is a defensive measure to ensure date parsing is always robust.
+ * @param {string} dateString The date string to parse.
+ * @returns {Date | null} A valid Date object or null if parsing fails.
+ */
+function parseFlexibleDate(dateString) {
+  // First, try the standard ISO format which new Date() handles well.
+  let date = new Date(dateString);
+  if (!isNaN(date.getTime())) {
+    return date;
+  }
+
+  // If that fails, try parsing the "DD-MM-YYYY" format.
+  const parts = String(dateString).match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (parts) {
+    // parts are [full_match, DD, MM, YYYY]
+    return new Date(Date.UTC(parts[3], parts[2] - 1, parts[1]));
+  }
+
+  // If neither format works, return null.
+  return null;
+}
+
+/**
+ * Calculates the number of whole days from now (UTC) until a target date (UTC).
+ * This is the most reliable way to count days, avoiding timezone issues.
+ * @param {Date} targetDate A valid Date object.
  * @returns {number} The ceiling integer of days remaining.
  */
-function daysUntil(dateValue) {
-  const today = new Date();
-  // Ensure we start with a clean time (midnight) for today
-  today.setHours(0, 0, 0, 0);
+function daysUntilUTC(targetDate) {
+  const now = new Date();
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const targetUTC = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate()));
 
-  const target = new Date(dateValue);
-  // Ensure the target date is also at midnight for a consistent day count
-  target.setHours(0, 0, 0, 0);
-
-  const diffTime = target - today;
+  const diffTime = targetUTC - todayUTC;
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
 export const startCampaignReminderJob = () => {
-  // This schedule runs the job every day at midnight.
-  // We are temporarily changing the schedule to run every 30 seconds for testing
+  // This schedule runs the job every 30 seconds for testing.
   cron.schedule('*/30 * * * * *', async () => {
     console.log('--- ✅ Campaign Reminder Job Started ---'); // Log when the job begins
 
     const reminderDays = [15, 10, 7, 5, 3, 2, 1];
 
     try {
+      // --- EFFICIENT QUERY ---
+      const today = new Date();
+      const maxReminderDate = new Date();
+      // Set the outer date boundary to 15 days from now (the longest reminder period)
+      maxReminderDate.setUTCDate(today.getUTCDate() + Math.max(...reminderDays));
+
+      // Fetch only the campaigns that could possibly need a reminder.
       const campaigns = await Campaign.find({
-        endDate: { $exists: true, $ne: null } // Optimization: Only fetch campaigns with an end date
+        endDate: {
+            $exists: true,
+            $ne: null,
+            // Only get campaigns ending between the start of today and 15 days from now
+            $gte: today.toISOString().split('T')[0],
+            $lte: maxReminderDate.toISOString()
+        }
       });
 
-      console.log(`[INFO] Found ${campaigns.length} campaigns with an end date to check.`);
+      console.log(`[INFO] Found ${campaigns.length} relevant campaigns to check.`);
 
       if (campaigns.length === 0) {
-        console.log('[INFO] No relevant campaigns to process. Job finished.');
+        console.log('[INFO] No campaigns require a reminder check at this time. Job finished.');
         return;
       }
 
       for (const campaign of campaigns) {
         console.log(`\n[PROCESS] Checking campaign: "${campaign.campaignName}" (ID: ${campaign._id})`);
 
-        // --- IMPROVEMENT: Convert to a Date object immediately ---
-        const endDate = new Date(campaign.endDate);
+        // --- CORRECT PARSING ---
+        const endDate = parseFlexibleDate(campaign.endDate);
 
-        // --- IMPROVEMENT: Add a check for invalid date formats ---
-        if (isNaN(endDate.getTime())) {
-          console.log(` -> [SKIP] ❌ Campaign has an invalid date format for 'endDate': "${campaign.endDate}"`);
+        if (!endDate) {
+          console.log(` -> [SKIP] ❌ Campaign has an invalid or unparseable date format for 'endDate': "${campaign.endDate}"`);
           continue;
         }
 
-        const daysLeft = daysUntil(endDate);
-        
-        // --- This is now safe to call .toISOString() ---
+        // --- RELIABLE TIMEZONE LOGIC ---
+        const daysLeft = daysUntilUTC(endDate);
+
         console.log(` -> [CALC] Days until expiry: ${daysLeft}. (End date: ${endDate.toISOString()})`);
 
         // --- Condition 1: Check if it's a reminder day ---
@@ -83,7 +115,6 @@ export const startCampaignReminderJob = () => {
           continue;
         }
         console.log(' -> [PASS] ✅ No duplicate notification found.');
-
 
         // --- All checks passed, create the notification ---
         console.log(' -> [CREATE] ✅ All conditions met. Creating notification...');

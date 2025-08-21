@@ -560,9 +560,23 @@ export default function CampaignDetails() {
               const mountingCost = Number(currentCost?.mountingcostpersquareFeet || 0);
               const area = Number(currentCost?.area || computedArea || 0);
 
+              // --- MODIFIED SECTION: Total Cost Calculation Logic ---
               let totalCost = displayCost;
-              if (space.spaceType !== "DOOH") {
-                totalCost += printingCost * area + mountingCost * area;
+              switch (space.spaceType) {
+                case "BQS":
+                case "Transit":
+                  // For BQS and Transit, treat printing/mounting as flat costs
+                  totalCost += printingCost + mountingCost;
+                  break;
+                
+                case "DOOH":
+                  // For DOOH, total cost is just the display cost. No other cost is added.
+                  break;
+                  
+                default:
+                  // For all other types (Billboard, etc.), calculate based on area
+                  totalCost += (printingCost * area) + (mountingCost * area);
+                  break;
               }
 
               return (
@@ -592,7 +606,7 @@ export default function CampaignDetails() {
                       </div>
                     </div>
 
-                    {/* --- MODIFIED SECTION: Cost Inputs --- */}
+                    {/* --- Cost Inputs Section (Unchanged) --- */}
                     <div className="md:col-span-3 space-y-3">
                       <CostInput
                         label="Display Cost"
@@ -643,10 +657,11 @@ export default function CampaignDetails() {
                         </div>
                       )}
 
+                      {/* Show Printing and Mounting only for non-DOOH types */}
                       {space.spaceType !== "DOOH" && (
                         <div className="grid grid-cols-2 gap-3">
                           <CostInput
-                            label="Printing/sq.ft"
+                            label="Printing Cost"
                             field="printingcostpersquareFeet"
                             value={currentCost?.printingcostpersquareFeet || 0}
                             isCurrency
@@ -656,7 +671,7 @@ export default function CampaignDetails() {
                             isDisabled={isFOC}
                           />
                           <CostInput
-                            label="Mounting/sq.ft"
+                            label="Mounting Cost"
                             field="mountingcostpersquareFeet"
                             value={currentCost?.mountingcostpersquareFeet || 0}
                             isCurrency
@@ -665,6 +680,12 @@ export default function CampaignDetails() {
                             spaceId={space._id}
                             isDisabled={isFOC}
                           />
+                        </div>
+                      )}
+                      
+                      {/* Show Area field for all types EXCEPT BQS and Transit */}
+                      {space.spaceType !== "BQS" && space.spaceType !== "Transit" && (
+                        <div>
                           <CostInput
                             label="Area (sq.ft)"
                             field="area"

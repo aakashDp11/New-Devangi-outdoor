@@ -23,12 +23,10 @@ const CampaignCard = ({ campaign, navigate }) => (
     <div className="flex justify-between items-center text-sm w-full">
       <div>
         <p className="text-xs text-gray-500 uppercase tracking-wider">Campaign Name</p>
-        {/* This will now display the REAL campaign name from the Campaign model */}
         <p className="font-medium text-gray-800 break-words">{campaign.campaignName}</p>
       </div>
       <div className="text-right">
         <p className="text-xs text-gray-500 uppercase tracking-wider">Start Date</p>
-        {/* Dates might be strings, so displaying them directly is fine. */}
         <p className="font-medium text-gray-800">{campaign.startDate}</p>
       </div>
       <div className="text-right">
@@ -48,6 +46,8 @@ export default function SpaceDetails() {
   const [showModal, setShowModal] = useState(false);
   const [ongoingCampaigns, setOngoingCampaigns] = useState([]);
   const [upcomingCampaigns, setUpcomingCampaigns] = useState([]);
+  // --- NEW: State for previously ended campaigns ---
+  const [previouslyEndedCampaigns, setPreviouslyEndedCampaigns] = useState([]);
 
   const handleDelete = async () => {
     try {
@@ -66,7 +66,6 @@ export default function SpaceDetails() {
     }
   };
 
-  // This is the original, correct logic that works with your backend.
   useEffect(() => {
     const fetchSpace = async () => {
       try {
@@ -84,11 +83,9 @@ export default function SpaceDetails() {
     const fetchAssociatedCampaigns = async () => {
       if (!id) return;
       try {
-        // This API call hits the correct backend route you provided.
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns/by-space/${id}`);
         if (!response.ok) throw new Error('Failed to fetch associated campaigns');
         
-        // The response will be an array of campaign objects, each with a campaignName.
         const campaigns = await response.json();
         
         const today = new Date();
@@ -96,22 +93,27 @@ export default function SpaceDetails() {
 
         const ongoing = [];
         const upcoming = [];
+        // --- NEW: Array to hold ended campaigns ---
+        const ended = [];
 
         campaigns.forEach(campaign => {
-          // Your dates are strings, so creating Date objects for comparison is needed.
           const startDate = new Date(campaign.startDate);
           const endDate = new Date(campaign.endDate);
           
+          // --- MODIFIED: Logic to sort campaigns into three categories ---
           if (endDate < today) {
-            // Past campaign
+            ended.push(campaign); // Campaign has already ended
           } else if (startDate <= today && endDate >= today) {
-            ongoing.push(campaign);
+            ongoing.push(campaign); // Campaign is currently active
           } else if (startDate > today) {
-            upcoming.push(campaign);
+            upcoming.push(campaign); // Campaign is in the future
           }
         });
+
         setOngoingCampaigns(ongoing);
         setUpcomingCampaigns(upcoming);
+        // --- NEW: Set the state for ended campaigns ---
+        setPreviouslyEndedCampaigns(ended);
       } catch (error) {
         toast.error('Could not load associated campaigns.');
       }
@@ -284,6 +286,24 @@ export default function SpaceDetails() {
                     {upcomingCampaigns.length > 0 ? ( upcomingCampaigns.map((campaign) => ( <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} /> )) ) : ( <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> <p className="text-sm text-gray-500">No upcoming campaigns for this space.</p> </div> )}
                   </div>
                 </div>
+
+                {/* --- NEW: Previously Ended Campaigns Section --- */}
+                <hr className="my-6 border-gray-200" />
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-700 mb-4">Previously Ended Campaigns</h2>
+                  <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                    {previouslyEndedCampaigns.length > 0 ? ( 
+                        previouslyEndedCampaigns.map((campaign) => ( 
+                            <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} /> 
+                        )) 
+                    ) : ( 
+                        <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> 
+                            <p className="text-sm text-gray-500">No previously ended campaigns for this space.</p> 
+                        </div> 
+                    )}
+                  </div>
+                </div>
+                {/* --- End of New Section --- */}
               </div>
             </div>
         </div>

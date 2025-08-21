@@ -68,28 +68,20 @@ export default function DigitalStatusForm({ campaignId, spaceId, onConfirm, onCl
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-left bg-gray-50 p-4 rounded-lg">
             {goLiveDate && <p><span className="font-medium">Go Live Date:</span> {goLiveDate}</p>}
-            
-            {/* ================================================================= */}
-            {/* THIS IS THE CORRECTED LINE TO DISPLAY THE "ASSIGNED PERSON"       */}
-            {/* ================================================================= */}
             {assignedPerson && <p><span className="font-medium">Assigned Person:</span> {assignedPerson}</p>}
-            
             {assignedAgency && <p><span className="font-medium">Assigned Agency:</span> {assignedAgency}</p>}
             {note && <p className="md:col-span-2"><span className="font-medium">Note:</span> {note}</p>}
           </div>
 
-          <div className="flex justify-center gap-4 mt-6">
+          {/* ================================================================= */}
+          {/* MODIFICATION: "Edit" button removed, "Close" button centered    */}
+          {/* ================================================================= */}
+          <div className="flex justify-center mt-6">
             <button
               onClick={onClose}
-              className="w-1/3 text-sm bg-gray-300 text-black py-2 rounded-lg hover:bg-gray-400 transition"
+              className="w-1/2 text-sm bg-gray-300 text-black py-2 rounded-lg hover:bg-gray-400 transition"
             >
               Close
-            </button>
-            <button
-              onClick={() => setView('form')}
-              className="w-1/3 text-sm bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-            >
-              Edit
             </button>
           </div>
         </div>

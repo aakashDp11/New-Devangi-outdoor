@@ -23,11 +23,9 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
   const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
   useEffect(() => {
-    // This component fetches its own data to get campaign costs, which is correct.
     const fetchPipelinePayment = async () => {
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}`);
-        // We use `existingData` passed from the parent for consistency
         const data = existingData || res.data?.payment || {};
 
         if (Array.isArray(data.payments)) {
@@ -107,16 +105,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
     setPayments(updated);
   };
   
-  // MODIFICATION 1: ADD THIS FUNCTION TO UNLOCK A SAVED RECORD FOR EDITING
-  const handleEditPayment = (index) => {
-    const updatedPayments = payments.map((payment, idx) => {
-      if (idx === index) {
-        return { ...payment, locked: false }; // Unlock the specific payment record
-      }
-      return payment;
-    });
-    setPayments(updatedPayments);
-  };
+  // MODIFICATION 1: The `handleEditPayment` function has been removed.
 
   const handleFileUpload = async (index, file) => {
     const formData = new FormData();
@@ -249,19 +238,11 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
               </div>
             </div>
 
-            {/* MODIFICATION 2: CONDITIONAL BUTTONS (EDIT or REMOVE) */}
-            {payment.locked ? (
-              <button
-                onClick={() => handleEditPayment(idx)}
-                className="absolute top-2 right-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
-                title="Edit this payment"
-              >
-                Edit
-              </button>
-            ) : (
+            {/* MODIFICATION 2: The "Edit" button is removed. Only new, unsaved records can be deleted. */}
+            {!payment.locked && (
               <button
                 onClick={() => handleDeletePayment(idx)}
-                className="text-red-500 hover:text-red-700 text-xs"
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs"
                 title="Delete Payment"
               >
                 🗑️ Remove
@@ -301,7 +282,6 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
           Please ensure totals match before proceeding.
         </div>
       )}
-
 
       <div className="flex">
         <button

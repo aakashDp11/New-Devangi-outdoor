@@ -2,11 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-// MODIFICATION 1: The component now accepts the `existingData` prop
 export default function MountingStatus({ campaignId, spaceId, onConfirm, onClose, existingData }) {
-  // MODIFICATION 2: A 'view' state is added to control what is shown
   const [view, setView] = useState('form');
-
   const [mountingDate, setMountingDate] = useState('');
   const [assignedPerson, setAssignedPerson] = useState('');
   const [assignedAgency, setAssignedAgency] = useState('');
@@ -16,18 +13,14 @@ export default function MountingStatus({ campaignId, spaceId, onConfirm, onClose
   const useremail = localStorage.getItem('userEmail');
   const userId = localStorage.getItem('userId');
 
-  // MODIFICATION 3: This useEffect now uses the prop to decide the initial view
   useEffect(() => {
-    // If data already exists and is confirmed, show the summary view first.
     if (existingData && existingData.confirmed) {
       setView('summary');
-      // Pre-fill the state with existing data for both the summary and the edit form
       setMountingDate(existingData.mountingDate ? new Date(existingData.mountingDate).toISOString().split('T')[0] : '');
       setAssignedAgency(existingData.assignedAgency || '');
       setAssignedPerson(existingData.assignedPerson || '');
       setNote(existingData.note || '');
     } else {
-      // Otherwise, show the form for a new entry.
       setView('form');
     }
   }, [existingData]);
@@ -52,7 +45,7 @@ export default function MountingStatus({ campaignId, spaceId, onConfirm, onClose
       changeType: 'Mounting Status Update',
       userName: username,
       userEmail: useremail,
-      previousValue: existingData, // Use the prop for previous value
+      previousValue: existingData,
       newValue: newMountingStatus,
     };
 
@@ -70,7 +63,6 @@ export default function MountingStatus({ campaignId, spaceId, onConfirm, onClose
 
   const RedAsterisk = () => <span className="text-red-500 ml-1">*</span>;
 
-  // MODIFICATION 4: Conditional Rendering based on the 'view' state
   if (view === 'summary') {
     return (
       <div className="max-w-4xl w-full mx-auto p-6 bg-white rounded-lg">
@@ -82,18 +74,15 @@ export default function MountingStatus({ campaignId, spaceId, onConfirm, onClose
             {assignedAgency && <p><span className="font-medium">Assigned Agency:</span> {assignedAgency}</p>}
             {note && <p className="md:col-span-2"><span className="font-medium">Note:</span> {note}</p>}
           </div>
-          <div className="flex justify-center gap-4 mt-6">
+          {/* ================================================================= */}
+          {/* MODIFICATION: "Edit" button removed, "Close" button centered    */}
+          {/* ================================================================= */}
+          <div className="flex justify-center mt-6">
             <button
               onClick={onClose}
-              className="w-1/3 text-sm bg-gray-300 text-black py-2 rounded-lg hover:bg-gray-400 transition"
+              className="w-1/2 text-sm bg-gray-300 text-black py-2 rounded-lg hover:bg-gray-400 transition"
             >
               Close
-            </button>
-            <button
-              onClick={() => setView('form')}
-              className="w-1/3 text-sm bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-            >
-              Edit
             </button>
           </div>
         </div>
