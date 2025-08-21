@@ -46,7 +46,6 @@ export default function SpaceDetails() {
   const [showModal, setShowModal] = useState(false);
   const [ongoingCampaigns, setOngoingCampaigns] = useState([]);
   const [upcomingCampaigns, setUpcomingCampaigns] = useState([]);
-  // --- NEW: State for previously ended campaigns ---
   const [previouslyEndedCampaigns, setPreviouslyEndedCampaigns] = useState([]);
 
   const handleDelete = async () => {
@@ -63,6 +62,22 @@ export default function SpaceDetails() {
       toast.error(error.message || 'An error occurred while deleting the space.');
     } finally {
       setShowModal(false);
+    }
+  };
+
+  const handleToggleMaintenance = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${id}/toggle-maintenance`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error('Failed to update maintenance status.');
+
+      const updatedSpace = await response.json();
+      setSpace(prev => ({ ...prev, isUnderMaintenance: updatedSpace.isUnderMaintenance }));
+      toast.success('Inventory updated successfully.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update maintenance status.');
     }
   };
 
@@ -93,26 +108,23 @@ export default function SpaceDetails() {
 
         const ongoing = [];
         const upcoming = [];
-        // --- NEW: Array to hold ended campaigns ---
         const ended = [];
 
         campaigns.forEach(campaign => {
           const startDate = new Date(campaign.startDate);
           const endDate = new Date(campaign.endDate);
           
-          // --- MODIFIED: Logic to sort campaigns into three categories ---
           if (endDate < today) {
-            ended.push(campaign); // Campaign has already ended
+            ended.push(campaign);
           } else if (startDate <= today && endDate >= today) {
-            ongoing.push(campaign); // Campaign is currently active
+            ongoing.push(campaign);
           } else if (startDate > today) {
-            upcoming.push(campaign); // Campaign is in the future
+            upcoming.push(campaign);
           }
         });
 
         setOngoingCampaigns(ongoing);
         setUpcomingCampaigns(upcoming);
-        // --- NEW: Set the state for ended campaigns ---
         setPreviouslyEndedCampaigns(ended);
       } catch (error) {
         toast.error('Could not load associated campaigns.');
@@ -155,34 +167,45 @@ export default function SpaceDetails() {
                 >
                 Edit Space
                 </button>
-                <button
-                    onClick={async () => {
-                        try {
-                        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${id}/toggle-inventory`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                        });
-                        if (!response.ok) throw new Error('Failed to toggle inventory status.');
-                        const updated = await response.json();
-                        setSpace(prev => ({ ...prev, isInventoryEnabled: updated.isInventoryEnabled }));
-                        toast.success(updated.isInventoryEnabled ? 'Inventory enabled successfully.' : 'Inventory disabled successfully.');
-                        } catch (err) {
-                        toast.error(err.message || 'Failed to toggle inventory status.');
-                        }
-                    }}
-                    className="text-xs text-white bg-gray-600 px-4 py-2 rounded-md hover:bg-gray-700"
-                    >
-                    {space.isInventoryEnabled ? 'Disable Inventory' : 'Enable Inventory'}
-                </button>
             </div>
         </div>
 
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg">
             <div className="mb-6 pb-4 border-b border-gray-200">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{space.spaceName ?? 'Unnamed Space'}</h1>
-                <p className="text-sm text-gray-500 mt-1">
-                    {space.address ?? 'N/A Address'}, {space.city ?? 'N/A City'}, {space.state ?? 'N/A State'}, {space.zip ?? ''}
-                </p>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{space.spaceName ?? 'Unnamed Space'}</h1>
+                        <p className="text-sm text-gray-500 mt-1">
+                            {space.address ?? 'N/A Address'}, {space.city ?? 'N/A City'}, {space.state ?? 'N/A State'}, {space.zip ?? ''}
+                        </p>
+                    </div>
+                    {/* --- FINAL CORRECTED TOGGLE SWITCH --- */}
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-gray-700">
+                            Under Maintenance
+                        </span>
+                        <button
+                            onClick={handleToggleMaintenance}
+                            className={`relative p-0.5 inline-flex items-center h-6 rounded-full w-12 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                                space.isUnderMaintenance ? 'bg-blue-600' : 'bg-gray-300'
+                            }`}
+                        >
+                            <span
+                                className={`inline-block h-6 w-6 transform bg-white rounded-full transition-transform duration-200 ${
+                                    space.isUnderMaintenance ? 'translate-x-5' : 'translate-x-0'
+                                }`}
+                            />
+                        </button>
+                    </div>
+                    {/* --- END OF FINAL TOGGLE --- */}
+                </div>
+                {space.isUnderMaintenance && (
+                    <div className="mt-4 inline-block">
+                        <span className="px-3 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">
+                            Under Maintenance
+                        </span>
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2 mb-6">
@@ -286,8 +309,6 @@ export default function SpaceDetails() {
                     {upcomingCampaigns.length > 0 ? ( upcomingCampaigns.map((campaign) => ( <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} /> )) ) : ( <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> <p className="text-sm text-gray-500">No upcoming campaigns for this space.</p> </div> )}
                   </div>
                 </div>
-
-                {/* --- NEW: Previously Ended Campaigns Section --- */}
                 <hr className="my-6 border-gray-200" />
                 <div>
                   <h2 className="text-xl font-semibold text-gray-700 mb-4">Previously Ended Campaigns</h2>
@@ -303,7 +324,6 @@ export default function SpaceDetails() {
                     )}
                   </div>
                 </div>
-                {/* --- End of New Section --- */}
               </div>
             </div>
         </div>

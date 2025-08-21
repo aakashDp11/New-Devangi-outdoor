@@ -243,6 +243,44 @@ res.status(500).json({ message: 'Server error' });
 }
 });
 
+router.patch('/:id/toggle-inventory', async (req, res) => {
+    try {
+        const space = await Space.findById(req.params.id);
+        if (!space) return res.status(404).json({ message: 'Space not found' });
+
+        space.isInventoryEnabled = !space.isInventoryEnabled;
+        await space.save();
+
+        res.json({ isInventoryEnabled: space.isInventoryEnabled });
+    } catch (err) {
+        console.error('Error toggling inventory:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// --- ADD THIS NEW ROUTE HANDLER BELOW ---
+router.patch('/:id/toggle-maintenance', async (req, res) => {
+    try {
+        const space = await Space.findById(req.params.id);
+        if (!space) {
+            return res.status(404).json({ message: 'Space not found' });
+        }
+
+        // Toggle the maintenance status
+        space.isUnderMaintenance = !space.isUnderMaintenance;
+
+        // Save the change to the database
+        const updatedSpace = await space.save();
+
+        // Send back the updated space data
+        res.status(200).json(updatedSpace);
+    } catch (err) {
+        console.error('Error toggling maintenance status:', err);
+        res.status(500).json({ message: 'Server error while updating maintenance status' });
+    }
+});
+// --- END OF NEW CODE ---
+
 router.get('/', authenticate, async (req, res) => {
   try {
     const spaces = await Space.find();

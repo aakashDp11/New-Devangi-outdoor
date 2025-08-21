@@ -94,6 +94,7 @@ const spaceSchema = new Schema({
   totalBookingValue: { type: Number, default: 0 },
   otherPhotos: [String],
   isInventoryEnabled: { type: Boolean, default: true },
+  isUnderMaintenance: { type: Boolean, default: false },
   availability: {
     type: String,
     default: 'Completely available',
