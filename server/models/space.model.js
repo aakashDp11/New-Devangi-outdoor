@@ -42,7 +42,7 @@ const spaceSchema = new Schema({
   organization: { type: String },
   peerMediaOwner: { type: String },
   // --- MODIFICATION: Added 'Transit' to handle all space types from the form ---
-  spaceType: { type: String, enum: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk', 'BQS', 'Miscellaneous', 'Transit'] },
+  spaceType: { type: String, enum: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk', 'BQS','DigitalBQS','Miscellaneous', 'Transit'] },
   transitType: { type: String },
   transitLine: { type: String },
   traded: { type: Boolean, default: false },
@@ -56,7 +56,7 @@ const spaceSchema = new Schema({
   // --- MODIFICATION: Added buyingPrice and sellingPrice for BQS spaces ---
   price: { type: Number },
   buyingPrice: { type: Number },
-  sellingPrice: { type: Number },
+  
 
   footfall: { type: Number },
   audience: { type: [String] },

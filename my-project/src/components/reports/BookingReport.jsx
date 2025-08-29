@@ -107,7 +107,7 @@ const ITEMS_PER_PAGE = 10;
 const API_MAX_LIMIT = 50; // Use a larger limit for download fetching
 
 const industryOptions = ["Tourism", "Retail", "Real Estate", "Other", "Movie", "Media and Entertainment", "FMCG", "Finance", "Financial Services", "Healthcare", "Hospitality", "IT Industry", "Automobile", "Clothing & Apparel", "Ecommerce", "Edtech", "Entertainment"];
-const inventoryTypeOptions = ["Billboard", "DOOH", "Gantry", "Pole Kiosk", "BQS", "Miscellaneous"];
+const inventoryTypeOptions = ["Billboard", "DOOH", "Gantry", "Pole Kiosk", "BQS","DigitalBQS","Miscellaneous"];
 const clientTypeOptions = ["Corporate", "Agency", "Direct", "Government"];
 
 export default function BookingReport({ handleShowDateModal = () => {} }) {

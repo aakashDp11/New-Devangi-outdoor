@@ -92,7 +92,7 @@ export default function AddSpaceForm() {
   };
 
   const validateCurrentStep = () => {
-    const isSpecialType = form.spaceType === "BQS" || form.spaceType === "Transit";
+    const isSpecialType = form.spaceType === "BQS"  || form.spaceType === "DigitalBQS" || form.spaceType === "Transit";
 
     const mandatoryFieldsByStep = {
       Basic: [
@@ -100,17 +100,21 @@ export default function AddSpaceForm() {
       ],
       Specifications:
         form.spaceType === "DOOH"
-          ? ["illumination", "unit", "resolution", "width", "height"]
+          ? [ "unit", "resolution", "width", "height"]
           : ["illumination", "width", "height"],
-      Location: ["address", "city", "state", "zip", "latitude", "longitude"],
+      Location: ["address", "city", "state",  "latitude", "longitude"],
     };
 
     // If spaceType is BQS or Transit, modify the mandatory fields
+        // If spaceType is BQS or Transit, modify the mandatory fields
     if (isSpecialType) {
-      mandatoryFieldsByStep.Basic.push("buyingPrice", "sellingPrice");
+      mandatoryFieldsByStep.Basic.push("buyingPrice");
       mandatoryFieldsByStep.Specifications = ["illumination"]; // Only illumination is mandatory
       const locationFields = mandatoryFieldsByStep.Location;
-      mandatoryFieldsByStep.Location = locationFields.filter(field => field !== 'zip');
+      // MODIFICATION: Filter out latitude and longitude for BQS/Transit spaces
+      mandatoryFieldsByStep.Location = locationFields.filter(
+        field => !['zip', 'latitude', 'longitude'].includes(field)
+      );
     }
     
     // If spaceType is Transit, add the new fields to the mandatory list
@@ -195,6 +199,10 @@ export default function AddSpaceForm() {
     handleInputChange({ target: { name: 'transitType', value: '' } });
     handleInputChange({ target: { name: 'transitLine', value: '' } });
 
+     if (value === 'DOOH') {
+      handleInputChange({ target: { name: 'illumination', value: '' } });
+    }
+
     if (value === 'Transit') {
       const transitData = spaceOptions.find(opt => opt.value === 'Transit');
       if (transitData && transitData.transitTypes) {
@@ -233,7 +241,7 @@ export default function AddSpaceForm() {
   ];
   
   const spaceOptions = [
-    { value: "", label: "Select Space..." }, { value: "Billboard", label: "Billboard" }, { value: "DOOH", label: "DOOH" }, { value: "Pole Kiosk", label: "Pole Kiosk" }, { value: "Gantry", label: "Gantry" }, { value: "BQS", label: "BQS" },
+    { value: "", label: "Select Space..." }, { value: "Billboard", label: "Billboard" }, { value: "DOOH", label: "DOOH" }, { value: "Pole Kiosk", label: "Pole Kiosk" }, { value: "Gantry", label: "Gantry" }, { value: "BQS", label: "BQS" }, { value: "DigitalBQS", label: "DigitalBQS" },
     {
       value: "Transit",
       label: "Transit",
@@ -323,13 +331,12 @@ export default function AddSpaceForm() {
                   <CustomSelect label="Ownership Type" name="ownershipType" value={form.ownershipType} onChange={handleInputChange} options={ownershipOptions} mandatory="true" />
                   <Input mandatory="true" label={`${form.ownershipType || ""} Start Date`} name="startDate" type="date" value={formatForInput(form.startDate)} onChange={handleInputChange} required />
                   <Input label={`${form.ownershipType || ""} End Date`} name="endDate" mandatory="true" type="date" value={formatForInput(form.endDate)} onChange={handleInputChange} required min={form.startDate ? formatForInput(form.startDate) : ""} />
-                  <CustomSelect label="Category" name="category" value={form.category} onChange={handleInputChange} options={categoryOptions} mandatory="true" />
-                  <CustomSelect label="Specification" name="specification" value={form.specification} onChange={handleInputChange} options={specificationOptions} mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'Transit' ? "true" : "false"} />
+                  <CustomSelect label="Category" name="category" value={form.category} onChange={handleInputChange} options={categoryOptions} mandatory="false" />
+                  <CustomSelect label="Specification" name="specification" value={form.specification} onChange={handleInputChange} options={specificationOptions} mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} />
                   
-                  {form.spaceType === 'BQS' || form.spaceType === 'Transit' ? (
+                  {form.spaceType === 'BQS' || form.spaceType === 'DigitalBQS' || form.spaceType === 'Transit' ? (
                     <>
                       <Input label="Buying Price" name="buyingPrice" value={form.buyingPrice} onChange={handleInputChange} mandatory="true" />
-                      <Input label="Selling Price" name="sellingPrice" value={form.sellingPrice} onChange={handleInputChange} mandatory="true" />
                     </>
                   ) : (
                     <Input label="Price" name="price" value={form.price} onChange={handleInputChange} />
@@ -369,15 +376,16 @@ export default function AddSpaceForm() {
           {step === "Specifications" && (
             <div className="space-y-6 w-full text-xs">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <CustomSelect label="Illumination" name="illumination" value={form.illumination} onChange={handleInputChange} options={illuminationOptions} mandatory="true" />
-                {form.spaceType === "DOOH" && (
+{form.spaceType !== "DOOH" && (
+  <CustomSelect label="Illumination" name="illumination" value={form.illumination} onChange={handleInputChange} options={illuminationOptions} mandatory="true" />
+)}                {form.spaceType === "DOOH" && (
                   <>
-                    <Input label="Unit" name="unit" mandatory="true" value={form.unit} onChange={(e) => { const { value } = e.target; const maxMap = { Billboard: 2, DOOH: 10, "Pole kiosk": 10, Gantry: 1, BQS: 1, Miscellaneous: 1, }; const max = maxMap[form.spaceType]; if (value === "" || Number(value) <= max) { handleInputChange(e); } else { toast.error(`Max units allowed for ${form.spaceType || "this type"} is ${max}`); } }} required />
+                    <Input label="Slots" name="unit" mandatory="true" value={form.unit} onChange={(e) => { const { value } = e.target; const maxMap = { Billboard: 1, DOOH: 10, "Pole kiosk": 1, Gantry: 1, BQS: 1, DigitalBQS: 1 , Miscellaneous: 1, }; const max = maxMap[form.spaceType]; if (value === "" || Number(value) <= max) { handleInputChange(e); } else { toast.error(`Max units allowed for ${form.spaceType || "this type"} is ${max}`); } }} required />
                     <Input label="Resolutions" mandatory="true" name="resolution" value={form.resolution} onChange={handleInputChange} />
                   </>
                 )}
-                <Input label="Width (in ft)" mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="width" value={form.width} onChange={handleInputChange} />
-                <Input label="Height (in ft)" mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="height" value={form.height} onChange={handleInputChange} />
+                <Input label="Width (in ft)" mandatory={form.spaceType !== 'BQS'  &&  form.spaceType !== 'DigitalBQS'&& form.spaceType !== 'Transit' ? "true" : "false"} name="width" value={form.width} onChange={handleInputChange} />
+                <Input label="Height (in ft)" mandatory={form.spaceType !== 'BQS' &&  form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="height" value={form.height} onChange={handleInputChange} />
               </div>
               <div className="space-y-4">
                 <Input label="Additional Tags" name="additionalTags" value={form.additionalTags} onChange={handleInputChange} />
@@ -392,16 +400,18 @@ export default function AddSpaceForm() {
               <Input label="Address" mandatory="true" name="address" value={form.address} onChange={handleInputChange} />
               <Input label="City" mandatory="true" name="city" value={form.city} onChange={handleInputChange} required />
               <CustomSelect label="State" name="state" value={form.state} onChange={handleInputChange} options={stateOptions} mandatory="true" />
-              <Input label="Pin-code" mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="zip" value={form.zip} onChange={handleInputChange} />
-              <Input label="Latitude" mandatory="true" name="latitude" value={form.latitude} onChange={handleInputChange} />
-              <Input label="Longitude" mandatory="true" name="longitude" value={form.longitude} onChange={handleInputChange} />
-              {form.latitude && form.longitude && !isNaN(parseFloat(form.latitude)) && !isNaN(parseFloat(form.longitude)) && (
-                <div className="md:col-span-2">
-                  <label className="text-sm font-semibold mb-1 block">Map Preview</label>
-                  <MapPreview latitude={parseFloat(form.latitude)} longitude={parseFloat(form.longitude)} />
-                  <p className="mt-1 text-xs text-gray-500">Real-time map preview from OpenStreetMap.</p>
-                </div>
-              )}
+              <Input label="Pin-code" mandatory="false" name="zip" value={form.zip} onChange={handleInputChange} />
+              {/* MODIFICATION: Added Latitude input and made both Latitude/Longitude conditional */}
+              <Input label="Latitude" mandatory={form.spaceType !== 'BQS'  && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="latitude" value={form.latitude} onChange={handleInputChange} />
+              <Input label="Longitude" mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="longitude" value={form.longitude} onChange={handleInputChange} />              {form.latitude && form.longitude && !isNaN(parseFloat(form.latitude)) && !isNaN(parseFloat(form.longitude)) && (
+                <div className="md:col-span-2"> {/* Outer wrapper for the whole section */}
+    <label className="text-sm font-semibold mb-1 block">Map Preview</label>
+    <div className="h-80"> {/* Container with fixed height for the map ONLY */}
+      <MapPreview latitude={parseFloat(form.latitude)} longitude={parseFloat(form.longitude)} />
+    </div>
+    <p className="mt-1 text-xs text-gray-500">Real-time map preview from OpenStreetMap.</p>
+  </div>
+)}
               <Input label="Landmark" name="landmark" value={form.landmark} onChange={handleInputChange} />
               <CustomSelect label="Zone" name="zone" value={form.zone} onChange={handleInputChange} options={zoneOptions} />
               <CustomSelect label="Tier" name="tier" value={form.tier} onChange={handleInputChange} options={tierOptions} mandatory="true" />

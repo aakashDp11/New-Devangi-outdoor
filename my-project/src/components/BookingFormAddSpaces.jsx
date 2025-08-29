@@ -232,9 +232,11 @@ export default function InventorySelector({
         </div>
       </div>
 
-      <div className="overflow-x-auto border rounded">
+      {/* --- MODIFICATION IS HERE --- */}
+      <div className="overflow-x-auto overflow-y-auto max-h-[60vh] border rounded">
+      {/* --- END MODIFICATION --- */}
         <table className="min-w-full text-xs whitespace-nowrap">
-          <thead className="bg-gray-100">
+          <thead className="bg-gray-100 sticky top-0 z-10"> {/* Added sticky positioning for header */}
             <tr className="text-center">
               <th className="px-3 py-2">#</th>
               <th className="px-3 py-2">Space Name</th>
@@ -261,7 +263,7 @@ export default function InventorySelector({
           <tbody className="divide-y divide-gray-200">
             {selectedTableSpaces.map(space => renderTableRow(space, true))}
             {selectedTableSpaces.length > 0 && unselectedTableSpaces.length > 0 && (
-              <tr className="bg-gray-200 font-semibold">
+              <tr className="bg-gray-200 font-semibold sticky top-0 z-10"> {/* Also make separator sticky */}
                 <td colSpan={spaceTypeFilter === 'Transit' ? 16 : 14} className="py-2 text-center text-gray-600">
                   Not Selected
                 </td>

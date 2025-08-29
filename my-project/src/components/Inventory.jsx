@@ -1239,11 +1239,12 @@ const InventoryMapView = ({ spaces, navigate }) => {
 export default function InventoryDashboard() {
   const navigate = useNavigate();
   const { isCollapsed } = useSidebar();
+  const datePickerRef = useRef(null); // Ref for the date picker popover
   const [spaces, setSpaces] = useState([]);
-  const [mapSpaces, setMapSpaces] = useState([]); // <-- NEW: State for map data
+  const [mapSpaces, setMapSpaces] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [viewMode, setViewMode] = useState('table'); // Set default to map
+  const [viewMode, setViewMode] = useState('table');
   const limit = 10;
 
   const [search, setSearch] = useState('');
@@ -1273,31 +1274,44 @@ export default function InventoryDashboard() {
     } catch (error) { toast.error("Failed to fetch inventories."); }
   }, [currentPage, search, selectedRegion, availability, startDate, endDate, spaceType, ownershipType, navigate]);
 
-  // <-- NEW: Fetch all location data for the map view
+  // Fetch all location data for the map view
   const fetchMapLocations = useCallback(async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      // Note: No 'page' or 'limit' params needed
       const params = new URLSearchParams({ search, region: selectedRegion, availability, spaceType, ownershipType, ...(startDate && endDate && { startDate, endDate }), });
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/map-locations?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.status === 403) { localStorage.clear(); navigate('/login'); return; }
       const data = await res.json();
       setMapSpaces(data);
-       // Also update the total count to reflect all items
       setTotalCount(data.length);
     } catch (error) { toast.error("Failed to fetch map locations."); }
   }, [search, selectedRegion, availability, startDate, endDate, spaceType, ownershipType, navigate]);
 
 
-  // <-- MODIFIED: useEffect to call the correct fetch function based on viewMode
+  // Effect to call the correct fetch function based on viewMode and when filters change
   useEffect(() => { 
     if (viewMode === 'map') {
       fetchMapLocations();
     } else {
       fetchSpaces();
     }
-  }, [viewMode, fetchSpaces, fetchMapLocations]);
+  }, [viewMode, fetchSpaces, fetchMapLocations, startDate, endDate]);
   
+  // Effect to handle clicks outside the date picker popover to close it
+  useEffect(() => {
+    function handleClickOutside(event) {
+        if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+            setShowDateModal(false);
+        }
+    }
+    if (showDateModal) {
+        document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showDateModal]);
+
   const sortedSpaces = useMemo(() => {
     let sortableItems = [...spaces];
     if (sortConfig.key) {
@@ -1360,8 +1374,10 @@ const handleConfirmUpload = async () => {
     const { startDate: start, endDate: end } = tempDateRange[0];
     setDateRange(tempDateRange); setStartDate(formatDate(start)); setEndDate(formatDate(end)); setShowDateModal(false); setCurrentPage(1);
   };  
-  const handleCancelDateFilter = () => { setShowDateModal(false); };
-  const handleShowDateModal = () => { setTempDateRange(dateRange); setShowDateModal(true); };
+  const handleCancelDateFilter = () => { 
+    setShowDateModal(false); 
+    setTempDateRange(dateRange); // Reset temp range to the last applied range
+  };
 
   const totalPages = Math.ceil(totalCount / limit);
 
@@ -1408,10 +1424,27 @@ const handleConfirmUpload = async () => {
             <select className="px-3 py-2 border rounded-md w-full md:w-auto bg-white" value={availability} onChange={(e) => { setAvailability(e.target.value); setCurrentPage(1); }}>
               <option value="">All Availabilities</option><option value="Completely available">Completely Available</option><option value="Partially available">Partially Available</option><option value="Completely booked">Completely Booked</option><option value="Overlapping booking">Overlapping Booking</option>
             </select>
-            <div className="w-full md:w-auto">
-              <button onClick={handleShowDateModal} className="px-4 py-2 border rounded-md hover:bg-gray-100 w-full text-left">
-                {dateRange[0].startDate && dateRange[0].endDate ? `${formatDate(dateRange[0].startDate)} to ${formatDate(dateRange[0].endDate)}` : "Date Filter"}
-              </button>
+            <div ref={datePickerRef} className="relative w-full md:w-auto">
+                <button onClick={() => { setTempDateRange(dateRange); setShowDateModal(prev => !prev); }} className="px-4 py-2 border rounded-md hover:bg-gray-100 w-full text-left">
+                    {dateRange[0].startDate && dateRange[0].endDate ? `${formatDate(dateRange[0].startDate)} to ${formatDate(dateRange[0].endDate)}` : "Date Filter"}
+                </button>
+                {showDateModal && (
+                    <div className="absolute top-full mt-2 left-0 bg-white rounded-xl shadow-lg p-2 border z-50 text-xs" onClick={(e) => e.stopPropagation()}>
+                        <DateRange
+                            editableDateInputs={true}
+                            onChange={item => setTempDateRange([item.selection])}
+                            moveRangeOnFirstSelection={false}
+                            ranges={tempDateRange}
+                            rangeColors={['#000000']}
+                            months={1}
+                            direction="horizontal"
+                        />
+                        <div className="flex justify-end gap-2 p-2 border-t">
+                            <button onClick={handleCancelDateFilter} className="px-4 py-1.5 rounded-md bg-gray-200 text-black hover:bg-gray-300">Cancel</button>
+                            <button onClick={handleApplyDateFilter} className="px-4 py-1.5 rounded-md bg-black text-white hover:bg-gray-800">Apply</button>
+                        </div>
+                    </div>
+                )}
             </div>
           </div>
         </div>
@@ -1419,7 +1452,6 @@ const handleConfirmUpload = async () => {
         <div className="mt-6">
           {viewMode === 'table' && <InventoryTableView data={sortedSpaces} currentPage={currentPage} limit={limit} navigate={navigate} sortConfig={sortConfig} setSortConfig={setSortConfig} />}
           {viewMode === 'grid' && <InventoryGridView data={spaces} onTagUpdate={handleTagUpdate} navigate={navigate} />}
-          {/* <-- MODIFIED: Pass the correct state to the map view */}
           {viewMode === 'map' && <InventoryMapView spaces={mapSpaces} navigate={navigate} />}
         </div>
         
@@ -1431,18 +1463,6 @@ const handleConfirmUpload = async () => {
                 totalCount={totalCount}
                 itemsPerPage={limit}
             />
-        )}
-        
-        {showDateModal && (
-          <div className="fixed inset-0 text-xs flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={handleCancelDateFilter}>
-            <div className="bg-white rounded-xl shadow-lg p-2" onClick={(e) => e.stopPropagation()}>
-              <DateRange editableDateInputs={true} onChange={item => setTempDateRange([item.selection])} moveRangeOnFirstSelection={false} ranges={tempDateRange} rangeColors={['#000000']} months={1} direction="horizontal" />
-              <div className="flex justify-end gap-2 p-2 border-t">
-                <button onClick={handleCancelDateFilter} className="px-4 py-1.5 rounded-md bg-gray-200 text-black hover:bg-gray-300">Cancel</button>
-                <button onClick={handleApplyDateFilter} className="px-4 py-1.5 rounded-md bg-black text-white hover:bg-gray-800">Apply</button>
-              </div>
-            </div>
-          </div>
         )}
 
         {showUploadModal && (

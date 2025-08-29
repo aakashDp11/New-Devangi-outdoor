@@ -8,6 +8,7 @@ import { useSidebar } from "../context/SidebarContext";
 import { FaArrowLeft } from "react-icons/fa";
 import axios from "axios";
 
+// A component for displaying key-value information
 const InfoDetail = ({ label, value }) => (
   <div className="mb-3">
     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -27,6 +28,7 @@ export default function BookingDetails() {
   const { isCollapsed } = useSidebar();
 
   useEffect(() => {
+    // Fetches spaces for campaign drafts
     const fetchSpaces = async () => {
       const token = localStorage.getItem("accessToken");
       const res = await fetch(
@@ -39,8 +41,6 @@ export default function BookingDetails() {
         }
       );
       const data = await res.json();
-      console.log("Data fetched from /selectcampaignSpaces:", data);
-
       const transformed = data.map((space) => ({
         id: space._id,
         name: space.spaceName,
@@ -65,7 +65,7 @@ export default function BookingDetails() {
           space.occupiedUnits === 0
             ? "Completely available"
             : space.occupiedUnits < space.unit
-            ? "Partialy available"
+            ? "Partially available"
             : "Completely booked",
         transitType: space.transitType,
         transitLine: space.transitLine,
@@ -76,6 +76,7 @@ export default function BookingDetails() {
   }, []);
 
   useEffect(() => {
+    // Fetches the main booking details
     const fetchBooking = async () => {
       try {
         const res = await fetch(
@@ -100,6 +101,7 @@ export default function BookingDetails() {
     fetchBooking();
   }, [id]);
 
+  // Industry options for campaign drafts
   const industryOptions = [
     { value: "Tourism", label: "Tourism" },
     { value: "Retail", label: "Retail" },
@@ -120,6 +122,7 @@ export default function BookingDetails() {
     { value: "Entertainment", label: "Entertainment" },
   ];
 
+  // Functions to manage campaign drafts
   const addDraftCampaign = () => {
     setCampaignDrafts([
       ...campaignDrafts,
@@ -131,8 +134,7 @@ export default function BookingDetails() {
         endDate: "",
         selectedSpaces: [],
         searchQuery: "",
-        // --- CHANGE 1: Initialize the isFOC state for new draft campaigns ---
-        isFOC: false, 
+        isFOC: false,
       },
     ]);
   };
@@ -147,18 +149,17 @@ export default function BookingDetails() {
     setCampaignDrafts(campaignDrafts.filter((_, i) => i !== index));
   };
 
+  // Saves a new campaign draft to the current booking
   const saveDraftCampaign = async (index) => {
     const campaign = campaignDrafts[index];
     const payload = {
       ...campaign,
-      // --- CHANGE 2: Ensure the isFOC flag is included in the payload sent to the backend ---
-      isFOC: campaign.isFOC, 
+      isFOC: campaign.isFOC,
       spaces: campaign.selectedSpaces.map((space) => ({
         id: space.id,
         selectedUnits: space.selectedUnits,
       })),
     };
-
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/bookings/${
@@ -166,29 +167,64 @@ export default function BookingDetails() {
         }/campaigns`,
         payload
       );
-
       if (res.status === 201) {
         toast.success("Campaign added successfully");
-        setCampaignDrafts([]); // Clear drafts after saving
-        
-        // Use a functional update to correctly add the new campaign to the state
-        setBooking(prev => {
-            // The response from this endpoint is the campaign itself, not the whole booking
-            const newCampaignData = res.data.campaign; 
-            return {
-                ...prev,
-                campaigns: [...(prev.campaigns || []), newCampaignData],
-            };
-        });
+        setCampaignDrafts([]);
+        setBooking((prev) => ({
+          ...prev,
+          campaigns: [...(prev.campaigns || []), res.data.campaign],
+        }));
       } else {
         toast.error("Failed to save campaign");
       }
     } catch (err) {
       console.error("Error saving campaign:", err);
-      toast.error(err.response?.data?.message || "Error occurred while saving campaign");
+      toast.error(
+        err.response?.data?.message || "Error occurred while saving campaign"
+      );
     }
   };
 
+  // Deletes a campaign from the current booking
+  const handleDeleteCampaign = async (campaignId) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this campaign? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      toast.error("Authentication error. Please log in again.");
+      return;
+    }
+    try {
+      const res = await axios.delete(
+        `${
+          import.meta.env.VITE_API_BASE_URL
+        }/api/campaigns/${campaignId}/booking/${booking._id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.status === 200) {
+        toast.success("Campaign deleted successfully!");
+        setBooking((prev) => ({
+          ...prev,
+          campaigns: prev.campaigns.filter((c) => c._id !== campaignId),
+        }));
+      } else {
+        toast.error("Failed to delete campaign.");
+      }
+    } catch (err) {
+      console.error("Error deleting campaign:", err);
+      toast.error(
+        err.response?.data?.error ||
+          "An error occurred while deleting the campaign."
+      );
+    }
+  };
+
+  // Deletes the entire booking
   const handleDelete = async () => {
     try {
       const res = await fetch(
@@ -212,6 +248,7 @@ export default function BookingDetails() {
     }
   };
 
+  // Loading state
   if (!booking)
     return (
       <div className="flex flex-col min-h-screen bg-[#fafafb]">
@@ -239,7 +276,6 @@ export default function BookingDetails() {
       0
     ) || 0;
   const grandTotal = totalPaid + totalDue;
-
   const clientInfoData = [
     { key: "companyName", label: "Company Name", value: booking.companyName },
     { key: "clientName", label: "Client Name", value: booking.clientName },
@@ -299,8 +335,7 @@ export default function BookingDetails() {
               onClick={() => navigate("/booking-dashboard")}
               className="flex items-center gap-2 text-sm mt-1 "
             >
-              <FaArrowLeft className="inline" />
-              Back
+              <FaArrowLeft className="inline" /> Back
             </button>
           </div>
           <button
@@ -337,7 +372,6 @@ export default function BookingDetails() {
               })}
             </div>
           </div>
-
           <div className="card bg-white shadow-xl p-6 rounded-lg flex-grow lg:w-1/3 lg:max-w-md">
             <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-3">
               Payment Overview
@@ -435,61 +469,92 @@ export default function BookingDetails() {
                 return (
                   <div
                     key={campaign._id || idx}
-                    className="card bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-shadow duration-200 cursor-pointer flex flex-col sm:flex-row gap-4 items-start"
-                    onClick={() =>
-                      navigate(`/campaign-details/${campaign._id}`)
-                    }
+                    className="card relative bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-shadow duration-200 flex flex-col justify-between"
                   >
-                    <div className="flex-shrink-0 w-full sm:w-32 h-32">
-                      {artworkUrl ? (
-                        <img
-                          src={artworkUrl}
-                          alt={`${campaign.campaignName || "Campaign"} artwork`}
-                          className="w-full h-full object-cover rounded-md bg-gray-200"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md text-gray-400 text-xs text-center p-2">
-                          No Artwork Uploaded
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevents navigation when clicking clone
+                        navigate(
+                          `/clone-campaign/${campaign._id}/from-booking/${booking._id}`
+                        );
+                      }}
+                      className="absolute top-4 right-4 z-10 text-xs bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded-md transition-colors"
+                      title="Clone this campaign"
+                    >
+                      Clone
+                    </button>
+
+                    <div
+                      className="cursor-pointer"
+                      onClick={() =>
+                        navigate(`/campaign-details/${campaign._id}`)
+                      }
+                    >
+                      <div className="flex flex-col sm:flex-row gap-4 items-start">
+                        <div className="flex-shrink-0 w-full sm:w-32 h-32">
+                          {artworkUrl ? (
+                            <img
+                              src={artworkUrl}
+                              alt={`${
+                                campaign.campaignName || "Campaign"
+                              } artwork`}
+                              className="w-full h-full object-cover rounded-md bg-gray-200"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md text-gray-400 text-xs text-center p-2">
+                              No Artwork Uploaded
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="flex-grow">
-                      <h3
-                        className="text-lg font-semibold text-blue-600 mb-3 truncate"
-                        title={campaign.campaignName}
-                      >
-                        {campaign.campaignName || "Unnamed Campaign"}
-                      </h3>
-                      <div className="flex items-start gap-4 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                            Start Date
-                          </p>
-                          <p className="text-sm text-gray-800">
-                            {campaign.startDate
-                              ? new Date(campaign.startDate).toLocaleDateString(
-                                  "en-GB"
-                                )
-                              : "N/A"}
-                          </p>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                            End Date
-                          </p>
-                          <p className="text-sm text-gray-800">
-                            {campaign.endDate
-                              ? new Date(campaign.endDate).toLocaleDateString(
-                                  "en-GB"
-                                )
-                              : "N/A"}
-                          </p>
+                        <div className="flex-grow">
+                          <h3
+                            className="text-lg font-semibold text-blue-600 mb-3 truncate"
+                            title={campaign.campaignName}
+                          >
+                            {campaign.campaignName || "Unnamed Campaign"}
+                          </h3>
+                          <div className="flex items-start gap-4 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                Start Date
+                              </p>
+                              <p className="text-sm text-gray-800">
+                                {campaign.startDate
+                                  ? new Date(
+                                      campaign.startDate
+                                    ).toLocaleDateString("en-GB")
+                                  : "N/A"}
+                              </p>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                End Date
+                              </p>
+                              <p className="text-sm text-gray-800">
+                                {campaign.endDate
+                                  ? new Date(
+                                      campaign.endDate
+                                    ).toLocaleDateString("en-GB")
+                                  : "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                          <InfoDetail
+                            label="Description"
+                            value={campaign.description}
+                          />
                         </div>
                       </div>
-                      <InfoDetail
-                        label="Description"
-                        value={campaign.description}
-                      />
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-end">
+                      <button
+                        onClick={() => handleDeleteCampaign(campaign._id)}
+                        className="text-xs bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-md transition-colors"
+                        title="Delete this campaign"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 );
@@ -497,8 +562,7 @@ export default function BookingDetails() {
             </div>
           </div>
         )}
-        
-        {/* --- CHANGE 3: ADD THE FOC RADIO BUTTONS TO THE DRAFT CAMPAIGN FORM --- */}
+
         {campaignDrafts.map((campaign, index) => (
           <div
             key={index}
@@ -509,7 +573,10 @@ export default function BookingDetails() {
                 label="Campaign Name"
                 value={campaign.campaignName}
                 onChange={(e) => {
-                  const updated = { ...campaign, campaignName: e.target.value };
+                  const updated = {
+                    ...campaign,
+                    campaignName: e.target.value,
+                  };
                   updateDraftCampaign(index, updated);
                 }}
               />
@@ -555,8 +622,6 @@ export default function BookingDetails() {
                   className="w-full border rounded p-2"
                 />
               </div>
-              
-              {/* This is the new block for the FOC selection */}
               <div className="col-span-2">
                 <label className="text-xs font-medium block mb-2">
                   Is this a FOC (Free of Cost) Campaign?
@@ -570,12 +635,18 @@ export default function BookingDetails() {
                       value="true"
                       checked={campaign.isFOC === true}
                       onChange={(e) => {
-                          const updated = { ...campaign, isFOC: e.target.value === 'true' };
-                          updateDraftCampaign(index, updated);
+                        const updated = {
+                          ...campaign,
+                          isFOC: e.target.value === "true",
+                        };
+                        updateDraftCampaign(index, updated);
                       }}
                       className="h-4 w-4 accent-black"
                     />
-                    <label htmlFor={`foc-yes-${index}`} className="ml-2 text-xs font-medium">
+                    <label
+                      htmlFor={`foc-yes-${index}`}
+                      className="ml-2 text-xs font-medium"
+                    >
                       Yes
                     </label>
                   </div>
@@ -587,20 +658,24 @@ export default function BookingDetails() {
                       value="false"
                       checked={campaign.isFOC === false}
                       onChange={(e) => {
-                          const updated = { ...campaign, isFOC: e.target.value === 'true' };
-                          updateDraftCampaign(index, updated);
+                        const updated = {
+                          ...campaign,
+                          isFOC: e.target.value === "true",
+                        };
+                        updateDraftCampaign(index, updated);
                       }}
                       className="h-4 w-4 accent-black"
                     />
-                    <label htmlFor={`foc-no-${index}`} className="ml-2 text-xs font-medium">
+                    <label
+                      htmlFor={`foc-no-${index}`}
+                      className="ml-2 text-xs font-medium"
+                    >
                       No
                     </label>
                   </div>
                 </div>
               </div>
-
             </div>
-
             <InventorySelector
               campaignIndex={index}
               campaign={campaign}
@@ -615,7 +690,10 @@ export default function BookingDetails() {
                   ? updated.selectedSpaces.filter((s) => s.id !== id)
                   : [
                       ...(updated.selectedSpaces || []),
-                      { ...spaces.find((s) => s.id === id), selectedUnits: 1 },
+                      {
+                        ...spaces.find((s) => s.id === id),
+                        selectedUnits: 1,
+                      },
                     ];
                 updateDraftCampaign(index, updated);
               }}
@@ -631,7 +709,6 @@ export default function BookingDetails() {
                 updateDraftCampaign(index, updated);
               }}
             />
-
             <div className="flex mt-4">
               <button
                 onClick={() => removeDraftCampaign(index)}
@@ -687,6 +764,7 @@ export default function BookingDetails() {
   );
 }
 
+// A simple reusable input component
 function Input({ label, ...props }) {
   return (
     <div>
@@ -696,6 +774,7 @@ function Input({ label, ...props }) {
   );
 }
 
+// A simple reusable select component
 function CustomSelect({ label, name, value, onChange, options }) {
   return (
     <div className="flex flex-col text-sm w-full">

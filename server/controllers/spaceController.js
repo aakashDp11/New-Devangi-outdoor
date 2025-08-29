@@ -28,9 +28,10 @@ export const createSpace = async (req, res) => {
     const maxUnitMap = {
       Billboard: 1,
       DOOH: 10,
-      'Pole kiosk': 10,
+      'Pole kiosk': 1,
       Gantry: 1,
       BQS: 1,
+      DigitalBQS:1,
       Transit: 1, // Add Transit with a unit limit
       Miscellaneous: 1,
     };

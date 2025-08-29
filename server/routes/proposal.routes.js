@@ -108,23 +108,38 @@ export const getProposalReport = async (req, res) => {
       }
     });
 
-    // --- Execute Aggregation ---
-    const result = await Proposal.aggregate(pipeline);
+    // In Proposal.routes.js, inside the getProposalReport function
+
+// --- Execute Aggregation ---
+const result = await Proposal.aggregate(pipeline);
     
-    // --- Safe Data Handling ---
-    const proposals = result[0]?.data || [];
-    const totalCount = result[0]?.metadata[0]?.total || 0;
-    const totalPages = Math.ceil(totalCount / parseInt(limit));
+// --- Safe Data Handling ---
+const proposalsData = result[0]?.data || []; // Use a different variable name to avoid confusion
+const totalCount = result[0]?.metadata[0]?.total || 0;
+const totalPages = Math.ceil(totalCount / parseInt(limit));
 
-    res.status(200).json({
-      proposals,
-      pagination: {
-        totalCount,
-        currentPage: parseInt(page),
-        totalPages
-      }
-    });
+// --- THIS IS THE FIX ---
+// Explicitly map over the results to ensure `spaceDetails` is included.
+// While the $project stage includes it, this makes it foolproof.
+const proposalsWithDetails = proposalsData.map(p => ({
+    _id: p._id,
+    companyName: p.companyName,
+    clientName: p.clientName,
+    industry: p.industry,
+    clientType: p.clientType,
+    bookingSource: p.bookingSource,
+    createdAt: p.createdAt,
+    spaceDetails: p.spaceDetails // This ensures the populated data is attached
+}));
 
+res.status(200).json({
+  proposals: proposalsWithDetails, // Send the new variable with all the data
+  pagination: {
+    totalCount,
+    currentPage: parseInt(page),
+    totalPages
+  }
+});
   } catch (error) {
     console.error('CRITICAL ERROR in getProposalReport:', error); 
     res.status(500).json({ error: 'Failed to fetch proposal report', details: error.message });
@@ -155,8 +170,10 @@ router.post('/', async (req, res) => {
     } = req.body;
     
 
-    const spaceIds = campaigns[0]?.selectedSpaces?.map(space => space.id) || [];
-    
+ const spaceIds = campaigns[0]?.selectedSpaces?.map(
+        space => new mongoose.Types.ObjectId(space.id)
+    ) || [];
+        
     const proposal = new Proposal({
       companyName,
       clientName,

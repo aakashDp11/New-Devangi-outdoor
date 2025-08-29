@@ -44,7 +44,7 @@ function daysUntilUTC(targetDate) {
 
 export const startCampaignReminderJob = () => {
   // This schedule runs the job every 30 seconds for testing.
-  cron.schedule('*/30 * * * * *', async () => {
+  cron.schedule('5 0 * * *', async () =>{
     console.log('--- ✅ Campaign Reminder Job Started ---'); // Log when the job begins
 
     const reminderDays = [15, 10, 7, 5, 3, 2, 1];

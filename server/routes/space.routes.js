@@ -91,7 +91,7 @@ router.get('/available', async (req, res) => {
 });
 
 const ENUMS = {
-  spaceType: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk' , 'BQS', 'Miscellaneous' , 'Transit'],
+  spaceType: ['Billboard', 'DOOH', 'Gantry', 'Pole Kiosk' , 'BQS', 'DigitalBQS', 'Miscellaneous' , 'Transit'],
   category: ['Retail', 'Transit'],
   mediaType: ['Static', 'Digital'],
   audience: ['Youth', 'Working Professionals'], // Add specific audience enums if applicable
@@ -290,163 +290,151 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// ===================================================================
-// =========== START: CORRECTED /listInventory ROUTE =================
-// ===================================================================
 router.get('/listInventory', authenticate, async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        const { search, region, availability, spaceType, ownershipType, startDate, endDate } = req.query;
-
-        // ===== 1. BUILD THE BASE FILTER ('$match' stage) =====
-        const matchStage = {};
-        if (search) {
-            matchStage.$or = [
-                { spaceName: { $regex: search, $options: 'i' } },
-                { address: { $regex: search, $options: 'i' } },
-                { city: { $regex: search, $options: 'i' } },
-                { state: { $regex: search, $options: 'i' } },
-                { zone: { $regex: search, $options: 'i' } },
-                { tags: { $regex: search, $options: 'i' } },
-            ];
-        }
-        if (region) {
-          matchStage.$or = (matchStage.$or || []).concat([
-              { city: { $regex: region, $options: 'i' } },
-              { state: { $regex: region, $options: 'i' } },
-              { zone: { $regex: region, $options: 'i' } },
-          ]);
-      }
-        if (spaceType) matchStage.spaceType = spaceType;
-        if (ownershipType) matchStage.ownershipType = ownershipType;
-        
-        let pipeline = [
-            { $match: matchStage }
-        ];
-
-        // ===== 2. DYNAMICALLY CALCULATE AVAILABILITY =====
-        if (startDate && endDate) {
-            // --- LOGIC FOR WHEN A DATE FILTER IS APPLIED ---
-            const userStartDate = new Date(startDate);
-            const userEndDate = new Date(endDate);
-
-            pipeline.push(
-                {
-                    $lookup: {
-                        from: 'campaigns',
-                        let: { spaceId: '$_id' },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: {
-                                        $and: [
-                                            { $in: ['$$spaceId', '$spaces.id'] },
-                                            // VVV --- THIS IS THE FIX --- VVV
-                                            { $lte: [ { $toDate: '$startDate' }, userEndDate ] },
-                                            { $gte: [ { $toDate: '$endDate' }, userStartDate ] }
-                                            // ^^^ --- THIS IS THE FIX --- ^^^
-                                        ]
-                                    }
-                                }
-                            }
-                        ],
-                        as: 'conflictingCampaigns'
-                    }
-                },
-                { $addFields: { unitsBookedInPeriod: { $size: '$conflictingCampaigns' } } },
-                {
-                    $addFields: {
-                        availability: {
-                            $let: {
-                                vars: {
-                                    total: { $ifNull: ['$unit', 1] },
-                                    booked: '$unitsBookedInPeriod'
-                                },
-                                in: {
-                                    $switch: {
-                                        branches: [
-                                            { case: { $eq: ['$$booked', 0] }, then: 'Completely available' },
-                                            { case: { $gte: ['$$booked', '$$total'] }, then: 'Completely booked' },
-                                            { case: { $gt: ['$$booked', 0] }, then: 'Overlapping booking' }
-                                        ],
-                                        default: 'Completely available'
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            );
-        } else {
-            // --- LOGIC FOR WHEN NO DATE FILTER IS APPLIED ---
-            pipeline.push({
-                $addFields: {
-                    availability: {
-                        $let: {
-                            vars: {
-                                total: { $ifNull: ['$unit', 1] },
-                                occupied: { $ifNull: ['$occupiedUnits', 0] }
-                            },
-                            in: {
-                                $switch: {
-                                    branches: [
-                                        { case: { $eq: ['$$occupied', 0] }, then: 'Completely available' },
-                                        { case: { $gte: ['$$occupied', '$$total'] }, then: 'Completely booked' },
-                                        { case: { $gt: ['$$occupied', 0] }, then: 'Partially available' }
-                                    ],
-                                    default: 'Completely available'
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // ===== 3. FILTER BY THE COMPUTED AVAILABILITY STATUS (if provided) =====
-        if (availability) {
-            pipeline.push({
-                $match: { availability: availability }
-            });
-        }
-
-        // ===== 4. PAGINATION AND FINAL DATA SELECTION =====
-        const countPipeline = [...pipeline, { $count: 'totalCount' }];
-        const countResult = await Space.aggregate(countPipeline);
-        const totalCount = countResult.length > 0 ? countResult[0].totalCount : 0;
-        
-        pipeline.push(
-            { $sort: { createdAt: -1 } },
-            { $skip: skip },
-            { $limit: limit },
-            { 
-                $project: {
-                    spaceName: 1, address: 1, city: 1, state: 1, zone: 1, spaceType: 1, unit: 1,
-                    occupiedUnits: 1, availability: 1, tags: 1, mainPhoto: 1, ownershipType: 1,
-                    inventoryId: 1, latitude: 1, longitude: 1
-                }
-            }
-        );
-        
-        const spaces = await Space.aggregate(pipeline);
-
-        res.json({ spaces, totalCount });
-
-    } catch (error) {
-        console.error('Failed to fetch spaces:', error);
-        res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+ 
+    const search = req.query.search || '';
+    const region = req.query.region || '';
+    const availability = req.query.availability || '';
+    const spaceType = req.query.spaceType || '';
+    const ownershipType = req.query.ownershipType || '';  // Added ownershipType
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+ 
+    const projection = {
+      spaceName: 1,
+      address: 1,
+      city: 1,
+      state: 1,
+      zone: 1,
+      spaceType: 1,
+      unit: 1,
+      occupiedUnits: 1,
+      availability: 1,
+      footfall: 1,
+      audience: 1,
+      demographics: 1,
+      dates: 1,
+      tags: 1,
+      mainPhoto: 1,
+      overlappingBooking: 1,
+      ownershipType: 1,  // Ensure ownershipType is projected
+      createdAt: 1,
+      campaignDates: 1,
+      specification: 1
+    };
+ 
+    const filters = {};
+ 
+    // Search text
+    if (search) {
+      filters.$or = [
+        { spaceName: { $regex: search, $options: 'i' } },
+        { address: { $regex: search, $options: 'i' } },
+        { city: { $regex: search, $options: 'i' } },
+        { state: { $regex: search, $options: 'i' } },
+        { zone: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
+      ];
     }
+ 
+    // Region filter (match in city, state, or zone)
+    if (region) {
+      filters.$and = filters.$and || [];
+      filters.$and.push({
+        $or: [
+          { city: { $regex: region, $options: 'i' } },
+          { state: { $regex: region, $options: 'i' } },
+          { zone: { $regex: region, $options: 'i' } },
+        ],
+      });
+    }
+ 
+    // Space Type
+    if (spaceType) {
+      filters.spaceType = spaceType;
+    }
+ 
+    // Ownership Type filter
+    if (ownershipType) {
+      filters.ownershipType = ownershipType;  // Added ownershipType filter
+    }
+ 
+    // Availability (we compute after fetching below)
+    const rawData = await Space.find(filters, projection).sort({ createdAt: -1 });
+    const totalFiltered = rawData.length;
+ 
+    // Date Filter + Availability Logic
+    const filtered = rawData.filter((item) => {
+      // Computed availability
+      const totalUnits = item.unit || 0;
+      const occupied = item.occupiedUnits || 0;
+      let computedAvailability = 'Completely available';
+      if (item.overlappingBooking) computedAvailability = 'Overlapping booking';
+      else if (totalUnits === occupied && occupied !== 0) computedAvailability = 'Completely booked';
+      else if (occupied > 0 && occupied < totalUnits) computedAvailability = 'Partially available';
+ 
+      if (availability && computedAvailability !== availability) return false;
+ 
+      // Date filtering
+      if (startDate && endDate && item.dates?.length >= 2) {
+        const [d1, m1, y1] = item.dates[0].split('-');
+        const [d2, m2, y2] = item.dates[1].split('-');
+        const invStart = new Date(`${y1}-${m1}-${d1}`);
+        const invEnd = new Date(`${y2}-${m2}-${d2}`);
+        const selectedStart = new Date(startDate);
+        const selectedEnd = new Date(endDate);
+ 
+        const inRange = selectedStart >= invStart && selectedEnd <= invEnd;
+ 
+        const overlapWithCampaign = (item.campaignDates || []).some(c => {
+          const campStart = new Date(c.startDate);
+          const campEnd = new Date(c.endDate);
+          return selectedStart <= campEnd && selectedEnd >= campStart;
+        });
+ 
+        if (!inRange || overlapWithCampaign) return false;
+      }
+ 
+      return true;
+    });
+ 
+    //... inside router.get('/listInventory', ...)
+
+    const paginated = filtered.slice(skip, skip + limit);
+
+    // FIX: Map over the paginated results to ensure the availability status sent 
+    // to the frontend matches the computed logic used for filtering.
+    const responseSpaces = paginated.map(item => {
+      const totalUnits = item.unit || 0;
+      const occupied = item.occupiedUnits || 0;
+      let computedAvailability = 'Completely available';
+
+      if (item.overlappingBooking) {
+        computedAvailability = 'Overlapping booking';
+      } else if (totalUnits > 0 && totalUnits === occupied) {
+        computedAvailability = 'Completely booked';
+      } else if (occupied > 0 && occupied < totalUnits) {
+        computedAvailability = 'Partially available';
+      }
+
+      // Return a plain JavaScript object with the corrected availability
+      return {
+        ...item.toObject(), // Convert Mongoose document to a plain object
+        availability: computedAvailability
+      };
+    });
+
+    res.json({ spaces: responseSpaces, totalCount: filtered.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch spaces', details: error.message });
+  }
 });
 // ===================================================================
-// ============= END: CORRECTED /listInventory ROUTE =================
-// ===================================================================
-
-
-// ===================================================================
-// =========== START: CORRECTED /map-locations ROUTE =================
+// =========== START: UNIFIED /map-locations ROUTE ===================
 // ===================================================================
 router.get('/map-locations', authenticate, async (req, res) => {
     try {
@@ -476,73 +464,53 @@ router.get('/map-locations', authenticate, async (req, res) => {
         if (spaceType) matchStage.spaceType = spaceType;
         if (ownershipType) matchStage.ownershipType = ownershipType;
 
-        let pipeline = [{ $match: matchStage }];
+        // ===== UNIFIED AVAILABILITY LOGIC (Same logic as /listInventory) =====
+        const checkStartDate = startDate ? new Date(startDate) : new Date();
+        const checkEndDate = endDate ? new Date(endDate) : new Date();
 
-        if (startDate && endDate) {
-            const userStartDate = new Date(startDate);
-            const userEndDate = new Date(endDate);
-            pipeline.push(
-                {
-                    $lookup: {
-                        from: 'campaigns',
-                        let: { spaceId: '$_id' },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: {
-                                        $and: [
-                                            { $in: ['$$spaceId', '$spaces.id'] },
-                                            // VVV --- THIS IS THE FIX --- VVV
-                                            { $lte: [ { $toDate: '$startDate' }, userEndDate ] },
-                                            { $gte: [ { $toDate: '$endDate' }, userStartDate ] }
-                                            // ^^^ --- THIS IS THE FIX --- ^^^
-                                        ]
-                                    }
-                                }
-                            }
-                        ],
-                        as: 'conflictingCampaigns'
-                    }
-                },
-                { $addFields: { unitsBookedInPeriod: { $size: '$conflictingCampaigns' } } },
-                {
-                    $addFields: {
-                        availability: {
-                            $let: {
-                                vars: {
-                                    total: { $ifNull: ['$unit', 1] },
-                                    booked: '$unitsBookedInPeriod'
-                                },
-                                in: {
-                                    $switch: {
-                                        branches: [
-                                            { case: { $eq: ['$$booked', 0] }, then: 'Completely available' },
-                                            { case: { $gte: ['$$booked', '$$total'] }, then: 'Completely booked' },
-                                            { case: { $gt: ['$$booked', 0] }, then: 'Overlapping booking' }
-                                        ],
-                                        default: 'Completely available'
-                                    }
+        if (!startDate) checkStartDate.setHours(0, 0, 0, 0);
+        if (!endDate) checkEndDate.setHours(23, 59, 59, 999);
+
+        let pipeline = [
+            { $match: matchStage },
+            {
+                $lookup: {
+                    from: 'campaigns',
+                    let: { spaceId: '$_id' },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $in: ['$$spaceId', '$spaces.id'] },
+                                        { $lte: [ { $toDate: '$startDate' }, checkEndDate ] },
+                                        { $gte: [ { $toDate: '$endDate' }, checkStartDate ] }
+                                    ]
                                 }
                             }
                         }
-                    }
+                    ],
+                    as: 'conflictingCampaigns'
                 }
-            );
-        } else {
-             pipeline.push({
+            },
+            { $addFields: { unitsBookedInPeriod: { $size: '$conflictingCampaigns' } } },
+            {
                 $addFields: {
                     availability: {
                         $let: {
                             vars: {
                                 total: { $ifNull: ['$unit', 1] },
-                                occupied: { $ifNull: ['$occupiedUnits', 0] }
+                                booked: '$unitsBookedInPeriod'
                             },
                             in: {
                                 $switch: {
                                     branches: [
-                                        { case: { $eq: ['$$occupied', 0] }, then: 'Completely available' },
-                                        { case: { $gte: ['$$occupied', '$$total'] }, then: 'Completely booked' },
-                                        { case: { $gt: ['$$occupied', 0] }, then: 'Partially available' }
+                                        { case: { $eq: ['$$booked', 0] }, then: 'Completely available' },
+                                        { case: { $gte: ['$$booked', '$$total'] }, then: 'Completely booked' },
+                                        {
+                                            case: { $gt: ['$$booked', 0] },
+                                            then: startDate ? 'Overlapping booking' : 'Partially available'
+                                        }
                                     ],
                                     default: 'Completely available'
                                 }
@@ -550,8 +518,8 @@ router.get('/map-locations', authenticate, async (req, res) => {
                         }
                     }
                 }
-            });
-        }
+            }
+        ];
         
         if (availability) {
             pipeline.push({ $match: { availability: availability } });
@@ -575,8 +543,8 @@ router.get('/map-locations', authenticate, async (req, res) => {
     }
 });
 // ===================================================================
-// ============= END: CORRECTED /map-locations ROUTE =================
-// ===================================================================
+// ============= END: UNIFIED /map-locations ROUTE ===================
+// ======================================================================================================================
 
 
 router.get('/dashboard-stats', async (req, res) => {
@@ -813,14 +781,34 @@ router.put('/:id/mountingStatus', async (req, res) => {
   }
 });
 
+// ===== THIS IS THE CORRECTED CODE FOR Space.routes.js =====
+
 router.delete('/:id', async (req, res) => {
   try {
-    const space = await Space.findByIdAndDelete(req.params.id);
-    if (!space) return res.status(404).json({ error: 'Space not found' });
-    res.json({ message: 'Space deleted successfully' });
+    const spaceId = req.params.id;
+
+    // First, check if the space actually exists before trying to delete
+    const space = await Space.findById(spaceId);
+    if (!space) {
+      return res.status(404).json({ error: 'Space not found' });
+    }
+
+    // --- THIS IS THE CRUCIAL NEW STEP ---
+    // Find all campaigns that reference this spaceId and pull the reference from their 'spaces' array.
+    await Campaign.updateMany(
+      { 'spaces.id': spaceId }, // Find campaigns where a space object has this ID
+      { $pull: { spaces: { id: spaceId } } } // Remove that object from the array
+    );
+    // --- END OF NEW STEP ---
+
+    // Now, it's safe to delete the actual space document
+    await Space.findByIdAndDelete(spaceId);
+
+    res.json({ message: 'Space deleted and all campaign references were cleaned successfully' });
+
   } catch (error) {
     console.error('Error deleting space:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 

@@ -300,6 +300,7 @@ export default function InventoryReport({ handleShowDateModal = () => { } }) {
                             <option value="Gantry">Gantry</option>
                             <option value="Pole Kiosk">Pole Kiosk</option>
                             <option value="BQS">BQS</option>
+                            <option value="DigitalBQS">Digital BQS</option>
                             <option value="Miscellaneous">Miscellaneous</option>
                         </Select>
                         <Input

@@ -701,8 +701,8 @@ function InvoiceForm({ campaignId, onConfirm, onClose }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <AddButton onClick={() => setShowInvoice(true)} icon={FileText} title="Invoices" description="Add invoice section" isActive={showInvoice} />
-        <AddButton onClick={() => setShowCashMemo(true)} icon={Receipt} title="Cash Memos" description={isInvoiceSectionComplete ? "Add cash memo section" : "Complete invoice first"} isActive={showCashMemo} isDisabled={!isInvoiceSectionComplete} />
-        <AddButton onClick={() => setShowCreditNote(true)} icon={CreditCard} title="Credit Notes" description={isCashMemoSectionComplete ? "Add credit note section" : "Complete cash memo first"} isActive={showCreditNote} isDisabled={!isCashMemoSectionComplete} />
+        <AddButton onClick={() => setShowCashMemo(true)} icon={Receipt} title="Cash Memos" isActive={showCashMemo}  />
+        <AddButton onClick={() => setShowCreditNote(true)} icon={CreditCard} title="Credit Notes"  isActive={showCreditNote} />
       </div>
       
       {showInvoice && (

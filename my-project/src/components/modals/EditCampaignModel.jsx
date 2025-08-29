@@ -7,6 +7,7 @@ export default function EditCampaignModal({
   pipelineSpaces = [],
   onClose,
   onUpdate,
+  spaceId, // This component now accepts the spaceId
 }) {
   const [formData, setFormData] = useState({
     campaignName: "",
@@ -33,7 +34,6 @@ export default function EditCampaignModal({
   const handleGoToInvoice = () => {
     if (!campaignData?._id) return;
     onClose(); 
-    // --- FIX: Changed path from "/campaigns/pipeline/..." to "/pipeline/..." ---
     navigate(`/pipeline/${campaignData._id}?open=invoice`);
   };
 
@@ -111,7 +111,16 @@ export default function EditCampaignModal({
       const updated = await res.json();
       toast.success("Campaign updated successfully");
       onUpdate(updated);
-      onClose();
+      onClose(); // Close the modal first
+
+      // --- ADDED LOGIC ---
+      // If a spaceId was provided, navigate back to that page to force a reload.
+      // This ensures the campaign lists are updated.
+      if (spaceId) {
+        navigate(`/space-details/${spaceId}`);
+      }
+      // --- END OF ADDED LOGIC ---
+
     } catch (err) {
       console.error(err);
       toast.error("Failed to update campaign");

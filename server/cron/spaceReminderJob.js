@@ -49,7 +49,7 @@ function daysUntilUTC(targetDate) {
 
 export const startSpaceReminderJob = () => {
   // This schedule runs the job every 30 seconds for testing.
-  cron.schedule('*/30 * * * * *', async () => {
+ cron.schedule('5 0 * * *', async () => {
     console.log('--- ✅ Space Reminder Job Started ---'); // Log when the job begins
 
     const reminderDays = [60, 30, 15, 10, 7, 5, 3, 1];

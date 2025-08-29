@@ -39,6 +39,7 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import DisclaimerPolicy from "./components/DisclaimerPolicy";
 import NotificationsPage from "./components/NotificationsPage";
 import EditProposal from "./components/EditProposal";
+import CloneCampaignPage from "./components/CloneCampaignPage"; // <--- ADD THIS LINE
 
 // --- Error Pages ---
 import NotFound from "./components/NotFound";
@@ -67,6 +68,10 @@ export default function App() {
             <Route path="/proposal-dashboard" element={<ProposalDashboard />} />
             <Route path="/finances" element={<FinancePage />} />
             <Route path="/booking/:id" element={<BookingDetails />} />
+            <Route
+              path="/clone-campaign/:campaignId/from-booking/:bookingId"
+              element={<CloneCampaignPage />}
+            />
             <Route path="/space/:id" element={<SpaceDetails />} />
             <Route path="/space/:id/edit" element={<EditSpace />} />
             <Route path="/gallery" element={<Gallery />} />

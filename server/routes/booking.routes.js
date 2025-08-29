@@ -1,6 +1,7 @@
 import express from 'express';
 import Booking from '../models/booking.model.js';
 import Space from '../models/space.model.js';
+
 import upload from '../middleware/multer.middleware.js';
 import pipelineModel from '../models/pipeline.model.js';
 import User from '../models/user.model.js';
@@ -8,6 +9,7 @@ import mongoose from 'mongoose';
 import Campaign from '../models/campaign.model.js';
 import { uploadToS3 } from '../utils/s3uploader.js';
 import { authenticate } from '../middleware/authenticate.middleware.js';
+
 const router = express.Router();
 export const updateCampaign = async (req, res) => {
 const { id } = req.params;
@@ -809,49 +811,72 @@ console.error(error);
 return res.status(500).json({ error: error.message || 'Failed to update booking' });
 }
 };
+// In Booking.routes.js
+
 export const deleteBooking = async (req, res) => {
-const { id: bookingId } = req.params;
-const session = await mongoose.startSession();
-session.startTransaction();
-try {
-const booking = await Booking.findById(bookingId).populate('campaigns').session(session);
-if (!booking) {
-throw new Error('Booking not found');
-}
+    const { id: bookingId } = req.params;
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const booking = await Booking.findById(bookingId).populate('campaigns').session(session);
+        if (!booking) {
+            throw new Error('Booking not found');
+        }
 
-for (const campaign of booking.campaigns) {
-  for (const selected of campaign.spaces) {
-    const space = await Space.findById(selected.id).session(session);
-    if (!space) continue;
+        for (const campaign of booking.campaigns) {
+            for (const selected of campaign.spaces) {
+                const space = await Space.findById(selected.id).session(session);
+                if (!space) continue;
 
-    space.occupiedUnits = Math.max(0, space.occupiedUnits - selected.selectedUnits);
+                // Decrement the counters
+                space.occupiedUnits = Math.max(0, space.occupiedUnits - selected.selectedUnits);
+                space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
 
-    if (space.occupiedUnits >= space.unit) {
-      space.availability = 'Completely booked';
-    } else if (space.occupiedUnits === 0) {
-      space.availability = 'Completely available';
-    } else {
-      space.availability = 'Partialy available';
+                // Remove the date entries for this specific campaign
+                if (space.campaignDates && space.campaignDates.length > 0) {
+                    space.campaignDates = space.campaignDates.filter(
+                        d => !d.campaignId.equals(campaign._id)
+                    );
+                }
+
+                // --- START: THE FINAL FIX ---
+                // This is the crucial change.
+                // If the number of occupied units is now less than or equal to the total units,
+                // it is no longer overlapping. Reset the flag.
+                if (space.occupiedUnits <= space.unit) {
+                    space.overlappingBooking = false;
+                }
+                // --- END: THE FINAL FIX ---
+
+                // Now, set the final availability status based on the corrected state
+                if (space.overlappingBooking) {
+                    space.availability = 'Overlapping booking';
+                } else if (space.occupiedUnits >= space.unit && space.unit > 0) {
+                    space.availability = 'Completely booked';
+                } else if (space.occupiedUnits > 0) {
+                    space.availability = 'Partially available';
+                } else {
+                    space.availability = 'Completely available';
+                }
+                
+                await space.save({ session });
+            }
+
+            await Campaign.findByIdAndDelete(campaign._id).session(session);
+        }
+
+        await Booking.findByIdAndDelete(bookingId).session(session);
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json({ message: 'Booking deleted successfully' });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error(error);
+        return res.status(500).json({ error: error.message || 'Failed to delete booking' });
     }
-    space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
-    await space.save({ session });
-  }
-
-  await Campaign.findByIdAndDelete(campaign._id).session(session);
-}
-
-await Booking.findByIdAndDelete(bookingId).session(session);
-
-await session.commitTransaction();
-session.endSession();
-
-return res.status(200).json({ message: 'Booking deleted successfully' });
-} catch (error) {
-await session.abortTransaction();
-session.endSession();
-console.error(error);
-return res.status(500).json({ error: error.message || 'Failed to delete booking' });
-}
 };
 export const getBookingById = async (req, res) => {
 const { id: bookingId } = req.params;
@@ -1023,92 +1048,124 @@ console.error('Error in booking dashboard stats:', error);
 res.status(500).json({ error: 'Failed to generate booking dashboard stats' });
 }
 };
+
+
+// ===================================================================
+// ============= CORRECTED ROUTE DEFINITIONS START HERE ==============
+// ===================================================================
+
+// --- Specific, non-parameterized routes must come FIRST ---
+
 router.get('/dashboard-stats', authenticate, getBookingDashboardStats);
-router.get('/campaign/:id', getCampaignById);
-router.patch('/campaign/:id', updateCampaign);
-router.post('/:bookingId/campaigns', async (req, res) => {
-const session = await mongoose.startSession();
-session.startTransaction();
-try {
-const { bookingId } = req.params;
-const campaignData = req.body;
 
-const [newCampaign] = await Campaign.create([campaignData], { session });
-
-if (!newCampaign || !newCampaign._id) {
-  throw new Error('Campaign creation failed');
-}
-
-await Booking.findByIdAndUpdate(
-  bookingId,
-  { $push: { campaigns: newCampaign._id } },
-  { new: true, session }
-);
-
-for (const { id: spaceId, selectedUnits } of newCampaign.spaces) {
-  console.log("id of campaign is", newCampaign._id);
-
-  const space = await Space.findById(spaceId).session(session);
-  if (!space) throw new Error(`Space not found: ${spaceId}`);
-
-  const availableUnits = space.unit - space.occupiedUnits;
-  if (selectedUnits > availableUnits && !space.overlappingBooking) {
-    space.overlappingBooking = true;
-  }
-
-  space.occupiedUnits += selectedUnits;
-
-  const isDOOH = space.spaceType === 'DOOH';
-  const allUnitsBooked = space.occupiedUnits >= space.unit;
-  const noUnitsBooked = space.occupiedUnits === 0;
-
-  space.availability = isDOOH
-    ? allUnitsBooked
-      ? 'Completely booked'
-      : noUnitsBooked
-        ? 'Completely available'
-        : 'Partialy available'
-    : space.overlappingBooking
-      ? 'Overlapping booking'
-      : allUnitsBooked
-        ? 'Booked'
-        : 'Available';
-
-  if (!Array.isArray(space.campaignDates)) {
-    space.campaignDates = [];
-  }
-
-  for (let i = 0; i < selectedUnits; i++) {
-    space.campaignDates.push({
-      campaignId: newCampaign._id,
-      startDate: newCampaign.startDate,
-      endDate: newCampaign.endDate,
-    });
-  }
-
-  space.numberOfBookings += 1;
-  await space.save({ session });
-}
-
-await session.commitTransaction();
-session.endSession();
-
-res.status(201).json({ message: 'Campaign created and linked', campaign: newCampaign });
-} catch (err) {
-await session.abortTransaction();
-session.endSession();
-console.error('Error creating campaign:', err);
-res.status(500).json({ message: err.message || 'Failed to create and link campaign' });
-}
+router.get('/for-selection', authenticate, async (req, res) => {
+    try {
+        const bookings = await Booking.find({}, '_id companyName clientName').lean();
+        res.status(200).json(bookings);
+    } catch (error){
+        console.error('Error fetching bookings for selection:', error);
+        res.status(500).json({ message: 'Server error, could not fetch bookings list.' });
+    }
 });
+
+router.get('/inventories-for-selection', authenticate, async (req, res) => {
+    try {
+        const inventories = await Space.find({}, '_id spaceName city address spaceType availability ownershipType').lean();
+        res.status(200).json(inventories);
+    } catch (error){
+        console.error('Error fetching inventories for selection:', error);
+        res.status(500).json({ message: 'Server error, could not fetch inventories list.' });
+    }
+});
+
 router.get('/', authenticate, getAllBookings);
 router.get('/optimized', authenticate, getAllBookings1);
 router.get('/filter-by-date', authenticate, getFilteredBookings);
-router.post('/', upload.single('companyLogo'),
-createBooking
-);
+router.post('/', upload.single('companyLogo'), createBooking);
 router.get('/payment-report', getPaymentReport);
+
+// --- Routes with more specific parameters ---
+
+router.get('/campaign/:id', getCampaignById);
+router.patch('/campaign/:id', updateCampaign);
+router.post('/:bookingId/campaigns', async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { bookingId } = req.params;
+        const campaignData = req.body;
+
+        const [newCampaign] = await Campaign.create([campaignData], { session });
+
+        if (!newCampaign || !newCampaign._id) {
+            throw new Error('Campaign creation failed');
+        }
+
+        await Booking.findByIdAndUpdate(
+            bookingId,
+            { $push: { campaigns: newCampaign._id } },
+            { new: true, session }
+        );
+
+        for (const { id: spaceId, selectedUnits } of newCampaign.spaces) {
+            const space = await Space.findById(spaceId).session(session);
+            if (!space) throw new Error(`Space not found: ${spaceId}`);
+
+            const availableUnits = space.unit - space.occupiedUnits;
+            if (selectedUnits > availableUnits && !space.overlappingBooking) {
+                space.overlappingBooking = true;
+            }
+
+            space.occupiedUnits += selectedUnits;
+
+            const isDOOH = space.spaceType === 'DOOH';
+            const allUnitsBooked = space.occupiedUnits >= space.unit;
+            const noUnitsBooked = space.occupiedUnits === 0;
+
+            space.availability = isDOOH
+                ? allUnitsBooked
+                    ? 'Completely booked'
+                    : noUnitsBooked
+                        ? 'Completely available'
+                        : 'Partialy available'
+                : space.overlappingBooking
+                    ? 'Overlapping booking'
+                    : allUnitsBooked
+                        ? 'Booked'
+                        : 'Available';
+
+            if (!Array.isArray(space.campaignDates)) {
+                space.campaignDates = [];
+            }
+
+            for (let i = 0; i < selectedUnits; i++) {
+                space.campaignDates.push({
+                    campaignId: newCampaign._id,
+                    startDate: newCampaign.startDate,
+                    endDate: newCampaign.endDate,
+                });
+            }
+
+            space.numberOfBookings += 1;
+            await space.save({ session });
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(201).json({ message: 'Campaign created and linked', campaign: newCampaign });
+    } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error('Error creating campaign:', err);
+        res.status(500).json({ message: err.message || 'Failed to create and link campaign' });
+    }
+});
+
+// --- Generic, parameterized routes must come LAST ---
+
 router.get('/:id', getBookingById);
 router.put('/:id', updateBooking);
 router.delete('/:id', deleteBooking);
+
 export default router;
