@@ -135,6 +135,7 @@
 // const Space = model('Space', spaceSchema);
 
 // export default Space;
+
 import mongoose from 'mongoose';
 
 const { Schema, model } = mongoose;

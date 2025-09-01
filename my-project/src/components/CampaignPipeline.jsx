@@ -562,8 +562,8 @@ function buildCampaignDigitalFromPipeline(pipeline, campaignId) {
 {selectedNode.id.startsWith('digital-') && (
   <DigitalStatusForm
     existingData={campaignDigital?.[selectedNode.id.split('-')[1]] || []}  // 👈 campaign-scoped
-    campaignId={CampaignId}
     spaceId={selectedNode.id.split('-')[1]}
+    campaignId={CampaignId}
     unit={pipelineData.spaces.find(s => s._id === selectedNode.id.split('-')[1])?.unit}
     onClose={() => setSelectedNode(null)}
     onConfirm={() => { setSelectedNode(null); triggerRefresh(); }}
@@ -572,7 +572,10 @@ function buildCampaignDigitalFromPipeline(pipeline, campaignId) {
 
 
             {selectedNode.id.startsWith('live-') && (
-              <IsLiveStatusView spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} />
+              <IsLiveStatusView 
+              campaignId={CampaignId}
+              unitId={pipelineData.spaces.find(s => s._id === selectedNode.id.split('-')[1])?.unit}
+              spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} />
             )}
           </div>
         </div>
