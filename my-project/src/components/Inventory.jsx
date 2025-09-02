@@ -1283,7 +1283,8 @@ export default function InventoryDashboard() {
       if (res.status === 403) { localStorage.clear(); navigate('/login'); return; }
       const data = await res.json();
       setMapSpaces(data);
-      setTotalCount(data.length);
+      // For map view, totalCount reflects the number of *visible* map markers after all filters
+      setTotalCount(data.length); 
     } catch (error) { toast.error("Failed to fetch map locations."); }
   }, [search, selectedRegion, availability, startDate, endDate, spaceType, ownershipType, navigate]);
 
@@ -1328,7 +1329,8 @@ export default function InventoryDashboard() {
 
  const handleTagUpdate = async (action, spaceId, tag) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}/${action}-tag`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tag }) });
+      const token = localStorage.getItem('accessToken'); // Ensure token is sent
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}/${action}-tag`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ tag }) });
       if (res.ok) { toast.success(`Tag ${action === 'add' ? 'added' : 'removed'}`); fetchSpaces(); }
       else { toast.error(`Failed to ${action} tag`); }
     } catch (err) { toast.error(`Error while trying to ${action} tag`); }
@@ -1337,7 +1339,18 @@ export default function InventoryDashboard() {
  const handleDownloadExcel = () => {
     if (spaces.length === 0) { toast.error("No data to download."); return; }
     const excelData = spaces.map(item => ({
-      'Space Name': item.spaceName, 'Address': item.address, 'City': item.city, 'State': item.state, 'Zone': item.zone, 'Space Type': item.spaceType, 'Availability': item.availability, 'Units': item.unit, 'Occupied Units': item.occupiedUnits, 'Price': item.price, 'Inventory ID': item.inventoryId || item._id, 'Tags': (Array.isArray(item.tags) ? item.tags : String(item.tags || '').split(',')).join(', ')
+      'Space Name': item.spaceName,
+      'Address': item.address,
+      'City': item.city,
+      'State': item.state,
+      'Zone': item.zone,
+      'Space Type': item.spaceType,
+      'Availability': item.availability, // This will be the computed status
+      'Units': item.unit,
+      // 'Occupied Units': item.occupiedUnits, // Removed as it's no longer directly returned
+      'Price': item.price,
+      'Inventory ID': item.inventoryId || item._id,
+      'Tags': (Array.isArray(item.tags) ? item.tags : String(item.tags || '').split(',')).join(', ')
     }));
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
