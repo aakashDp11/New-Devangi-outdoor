@@ -25,8 +25,8 @@ import { startSpaceReminderJob } from './cron/spaceReminderJob.js';
 import { startAvailabilityUpdaterJob } from './cron/availabilityUpdater.js'; // <-- Updated pat
 import revenueRoutes from './routes/revenue.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
-import reportRoutes from './routes/reports.routes.js'; // ✅ 1. IMPORT YOUR NEW REPORTS ROUTE FILE
-
+import reportRoutes from './routes/reports.routes.js'; 
+// import { requestMetrics } from './metrics.js';
 dotenv.config();
 const app = express();
 const port = 3000;
@@ -41,7 +41,7 @@ app.get('/uploads/:filename', (req, res) => {
   res.download(filePath); // ✅ Force download
 });
 
-const allowedOrigins = ['http://localhost:5173', 'http://dooh-frontend.s3-website.ap-south-1.amazonaws.com', 'http://localhost:4173', 'http://localhost:5174', 'https://new-devangi-outdoor-1.onrender.com', 'https://new-devangi-outdoor.onrender.com', 'https://new-devangi-outdoor-1.onrender.com','http://devangi.digitalooh.io','http://test.digitalooh.io.s3-website.ap-south-1.amazonaws.com'];
+const allowedOrigins = ['http://localhost:5173', 'https://devangi.digitalooh.io','http://dooh-frontend.s3-website.ap-south-1.amazonaws.com', 'http://localhost:4173', 'http://localhost:5174', 'https://new-devangi-outdoor-1.onrender.com', 'https://new-devangi-outdoor.onrender.com', 'https://new-devangi-outdoor-1.onrender.com','http://devangi.digitalooh.io','http://test.digitalooh.io.s3-website.ap-south-1.amazonaws.com'];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -66,7 +66,7 @@ app.use(cors({
 
 let db;
 app.use(express.json()); // for parsing application/json
-
+// app.use(requestMetrics());
 app.use('/api/spaces', spaceRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/pipeline', pipelineRoutes);
