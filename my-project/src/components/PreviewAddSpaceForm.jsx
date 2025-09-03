@@ -27,11 +27,10 @@ export default function PreviewAddSpace() {
     dataToSubmit.dates = [form.startDate, form.endDate];
 
     // 2. Conditionally remove irrelevant price fields to prevent validation errors.
-    if (dataToSubmit.spaceType === 'BQS' || dataToSubmit.spaceType === 'Transit') {
+    if (dataToSubmit.spaceType === 'BQS'||dataToSubmit.spaceType === 'DigitalBQS' || dataToSubmit.spaceType === 'Transit') {
       delete dataToSubmit.price; // For BQS/Transit, we only want buyingPrice and sellingPrice.
     } else {
       delete dataToSubmit.buyingPrice; // For other types, we only want the single price field.
-      delete dataToSubmit.sellingPrice;
     }
 
     const formData = new FormData();
@@ -161,7 +160,7 @@ export default function PreviewAddSpace() {
                   <div className="text-gray-500">{form.additionalTags || 'N/A'}</div>
                 </div>
                 
-                {form.spaceType === 'BQS' || form.spaceType === 'Transit' ? (
+                {form.spaceType === 'BQS' || form.spaceType === 'DigitalBQS' || form.spaceType === 'Transit' ? (
                   <>
                     <div>
                       <strong>Buying Price</strong>

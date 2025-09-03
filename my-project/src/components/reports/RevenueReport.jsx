@@ -842,6 +842,7 @@ export default function RevenueReport({
                 <option value="Gantry">Gantry</option>
                 <option value="Pole kiosk">Pole kiosk</option>
                 <option value="BQS">BQS</option>
+                <option value="DigitalBQS">DigitalBQS</option>
                 <option value="Miscellaneous">Miscellaneous</option>
             </Select>
             <button
@@ -912,6 +913,7 @@ export default function RevenueReport({
                 <option value="Gantry">Gantry</option>
                 <option value="Pole kiosk">Pole kiosk</option>
                 <option value="BQS">BQS</option>
+                <option value="DigitalBQS">DigitalBQS</option>
                 <option value="Miscellaneous">Miscellaneous</option>
             </Select>
             <button

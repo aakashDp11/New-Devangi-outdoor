@@ -92,7 +92,7 @@ export default function EditSpace() {
   const ownershipOptions = ["Owned", "Leased", "Traded"];
   const illuminationOptions = ["Front Lit", "Back Lit", "Non Lit"];
   const specificationOptions = ["LHS", "RHS"];
-  const spaceTypeOptions = ["Billboard", "DOOH", "Pole Kiosk", "Gantry", "BQS", "Transit", "Miscellaneous"];
+  const spaceTypeOptions = ["Billboard", "DOOH", "Pole Kiosk", "Gantry", "BQS", "DigitalBQS" , "Transit", "Miscellaneous"];
   const categoryOptions = ["Retail", "Transit"];
   const mediaTypeOptions = ["Static", "Digital"];
   const audienceOptions = [
@@ -238,10 +238,9 @@ export default function EditSpace() {
             <SelectField label="Media Type" name="mediaType" value={space.mediaType || ""} onChange={handleChange} options={mediaTypeOptions} />
             <SelectField label="Illumination" name="illumination" value={space.illumination || ""} onChange={handleChange} options={illuminationOptions} />
             
-            {space.spaceType === 'BQS' || space.spaceType === 'Transit' ? (
+            {space.spaceType === 'BQS' || space.spaceType === 'DgitalBQS' || space.spaceType === 'Transit' ? (
               <>
                 <InputField label="Buying Price" name="buyingPrice" type="number" value={space.buyingPrice || ""} onChange={handleChange} />
-                <InputField label="Selling Price" name="sellingPrice" type="number" value={space.sellingPrice || ""} onChange={handleChange} />
               </>
             ) : (
               <InputField label="Price" name="price" type="number" value={space.price || ""} onChange={handleChange} />

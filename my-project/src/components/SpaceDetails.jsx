@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { toast } from 'sonner';
 import { useSidebar } from '../context/SidebarContext';
-import MapPreview from './MapPreview'; // Import the MapPreview component
+import MapPreview from './MapPreview';
+import EditCampaignModal from './modals/EditCampaignModel'; // --- PATH CORRECTED ---
 
 // Reusable component for Key-Value display.
 const DetailItem = ({ label, value, className = '' }) => (
@@ -13,19 +14,35 @@ const DetailItem = ({ label, value, className = '' }) => (
   </div>
 );
 
-// Reusable component for displaying a campaign card.
-const CampaignCard = ({ campaign, navigate }) => (
+// Reusable component for displaying a campaign card with an Edit button.
+const CampaignCard = ({ campaign, navigate, onEdit }) => (
   <div
     key={campaign._id}
-    className="bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 hover:shadow-sm transition-all"
-    onClick={() => navigate(`/campaign-details/${campaign._id}`)}
+    className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:bg-gray-100 hover:shadow-sm transition-all"
   >
-    <div className="flex justify-between items-center text-sm w-full">
-      <div>
+    <div className="flex justify-between items-start text-sm w-full mb-3">
+      <div 
+        onClick={() => navigate(`/campaign-details/${campaign._id}`)} 
+        className="cursor-pointer flex-grow pr-2"
+      >
         <p className="text-xs text-gray-500 uppercase tracking-wider">Campaign Name</p>
         <p className="font-medium text-gray-800 break-words">{campaign.campaignName}</p>
       </div>
-      <div className="text-right">
+      <button 
+        onClick={(e) => {
+          e.stopPropagation(); 
+          onEdit(campaign);
+        }}
+        className="text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300 flex-shrink-0"
+      >
+        Edit
+      </button>
+    </div>
+    <div 
+      onClick={() => navigate(`/campaign-details/${campaign._id}`)} 
+      className="flex justify-between items-center text-sm w-full cursor-pointer"
+    >
+      <div className="text-left">
         <p className="text-xs text-gray-500 uppercase tracking-wider">Start Date</p>
         <p className="font-medium text-gray-800">{campaign.startDate}</p>
       </div>
@@ -47,6 +64,25 @@ export default function SpaceDetails() {
   const [ongoingCampaigns, setOngoingCampaigns] = useState([]);
   const [upcomingCampaigns, setUpcomingCampaigns] = useState([]);
   const [previouslyEndedCampaigns, setPreviouslyEndedCampaigns] = useState([]);
+
+  // State for the edit modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+
+  // Handlers for the modal
+  const handleEditCampaign = (campaign) => {
+    setSelectedCampaign(campaign);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCampaignUpdate = (updatedCampaign) => {
+    const updateList = (list) => 
+      list.map(c => c._id === updatedCampaign._id ? updatedCampaign : c);
+    
+    setOngoingCampaigns(updateList);
+    setUpcomingCampaigns(updateList);
+    setPreviouslyEndedCampaigns(updateList);
+  };
 
   const handleDelete = async () => {
     try {
@@ -155,7 +191,7 @@ export default function SpaceDetails() {
             onClick={() => navigate(-1)}
             className="text-sm text-gray-700 hover:text-black hover:underline flex items-center"
             >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0-0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back
@@ -179,7 +215,6 @@ export default function SpaceDetails() {
                             {space.address ?? 'N/A Address'}, {space.city ?? 'N/A City'}, {space.state ?? 'N/A State'}, {space.zip ?? ''}
                         </p>
                     </div>
-                    {/* --- FINAL CORRECTED TOGGLE SWITCH --- */}
                     <div className="flex items-center gap-3">
                         <span className="text-sm font-medium text-gray-700">
                             Under Maintenance
@@ -197,12 +232,11 @@ export default function SpaceDetails() {
                             />
                         </button>
                     </div>
-                    {/* --- END OF FINAL TOGGLE --- */}
                 </div>
                 {space.isUnderMaintenance && (
                     <div className="mt-4 inline-block">
                         <span className="px-3 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">
-                            Under Maintenance
+                            Inventory Under Maintenance
                         </span>
                     </div>
                 )}
@@ -218,10 +252,9 @@ export default function SpaceDetails() {
               <DetailItem label="Category" value={space.category} />
               <DetailItem label="Specification" value={space.specification} />
               
-              {space.spaceType === 'BQS' || space.spaceType === 'Transit' ? (
+              {space.spaceType === 'BQS' ||space.spaceType === 'DigitalBQS'|| space.spaceType === 'Transit' ? (
                 <>
                   <DetailItem label="Buying Price" value={space.buyingPrice ? `₹${space.buyingPrice.toLocaleString()}`: 'N/A'} />
-                  <DetailItem label="Selling Price" value={space.sellingPrice ? `₹${space.sellingPrice.toLocaleString()}`: 'N/A'} />
                 </>
               ) : (
                 <DetailItem label="Price" value={space.price ? `₹${space.price.toLocaleString()}`: 'N/A'} />
@@ -299,14 +332,14 @@ export default function SpaceDetails() {
                 <div>
                   <h2 className="text-xl font-semibold text-gray-700 mb-4">Ongoing Campaigns</h2>
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                    {ongoingCampaigns.length > 0 ? ( ongoingCampaigns.map((campaign) => ( <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} /> )) ) : ( <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> <p className="text-sm text-gray-500">No ongoing campaigns.</p> </div> )}
+                    {ongoingCampaigns.length > 0 ? ( ongoingCampaigns.map((campaign) => ( <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} onEdit={handleEditCampaign} /> )) ) : ( <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> <p className="text-sm text-gray-500">No ongoing campaigns for this space.</p> </div> )}
                   </div>
                 </div>
                 <hr className="my-6 border-gray-200" />
                 <div>
                   <h2 className="text-xl font-semibold text-gray-700 mb-4">Upcoming Campaigns</h2>
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                    {upcomingCampaigns.length > 0 ? ( upcomingCampaigns.map((campaign) => ( <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} /> )) ) : ( <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> <p className="text-sm text-gray-500">No upcoming campaigns for this space.</p> </div> )}
+                    {upcomingCampaigns.length > 0 ? ( upcomingCampaigns.map((campaign) => ( <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} onEdit={handleEditCampaign} /> )) ) : ( <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> <p className="text-sm text-gray-500">No upcoming campaigns for this space.</p> </div> )}
                   </div>
                 </div>
                 <hr className="my-6 border-gray-200" />
@@ -315,7 +348,7 @@ export default function SpaceDetails() {
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
                     {previouslyEndedCampaigns.length > 0 ? ( 
                         previouslyEndedCampaigns.map((campaign) => ( 
-                            <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} /> 
+                            <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} onEdit={handleEditCampaign} /> 
                         )) 
                     ) : ( 
                         <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> 
@@ -349,6 +382,15 @@ export default function SpaceDetails() {
             </div>
           </div>
         </div>
+      )}
+
+      {isEditModalOpen && (
+        <EditCampaignModal
+          campaignData={selectedCampaign}
+          onClose={() => setIsEditModalOpen(false)}
+          onUpdate={handleCampaignUpdate}
+          spaceId={id}
+        />
       )}
     </div>
   );

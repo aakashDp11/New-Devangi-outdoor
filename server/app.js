@@ -37,7 +37,11 @@ app.get('/uploads/:filename', (req, res) => {
   res.download(filePath);
 });
 
+<<<<<<< HEAD
 const allowedOrigins = ['http://localhost:5173','https://devangi.digitalooh.io' ,'http://localhost:4173', 'http://dooh-frontend.s3-website.ap-south-1.amazonaws.com', 'http://localhost:5174', 'https://new-devangi-outdoor-1.onrender.com', 'https://new-devangi-outdoor.onrender.com','http://devangi.digitalooh.io','http://test.digitalooh.io.s3-website.ap-south-1.amazonaws.com'];
+=======
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:4173', 'http://dooh-frontend.s3-website.ap-south-1.amazonaws.com', 'http://localhost:5174', 'https://new-devangi-outdoor-1.onrender.com', 'https://new-devangi-outdoor.onrender.com','http://devangi.digitalooh.io','http://test.digitalooh.io.s3-website.ap-south-1.amazonaws.com' ];
+>>>>>>> origin/devangi-update
 
 app.use(cors({
   origin: function (origin, callback) {
