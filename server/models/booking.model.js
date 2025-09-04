@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 
 const { Schema, model } = mongoose;
@@ -7,7 +8,7 @@ const bookingSchema = new Schema({
   clientName: { type: String },
   clientEmail: {
     type: String,
-    match: [/.+\@.+\..+/, 'Please enter a valid email address']
+    match: [/.+\@.+\..+/, 'Please enter a valid email address'],
   },
   clientPanNumber: { type: String },
   clientGstNumber: { type: String },
@@ -19,26 +20,21 @@ const bookingSchema = new Schema({
   agencyName: { type: String },
   reminderTimeline: { type: Number },
   isFOCBooking: { type: Boolean, default: false },
-
-
-  // --- FIX: Changed this from String to a proper reference ---
   industry: {
     type: String,
     default: 'Other',
   },
-
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true  // optional: if every booking must have a user
+    required: true, // optional: if every booking must have a user
   },
-
-  
-
-
   campaignImages: [String],
-  campaigns: [{ type: Schema.Types.ObjectId, ref: 'Campaign' }],  // ✅ One booking → many campaigns
   companyLogo: String,
+  // Add the bookingCampaigns field here
+  bookingCampaigns: [
+    { type: mongoose.Schema.Types.ObjectId, ref: 'BookingCampaign' },
+  ],
 }, {
   timestamps: true
 });

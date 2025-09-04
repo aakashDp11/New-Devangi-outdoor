@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import Campaign from '../models/campaign.model.js';
 import { uploadToS3 } from '../utils/s3uploader.js';
 import { authenticate } from '../middleware/authenticate.middleware.js';
+import BookingCampaign from '../models/bookingCampaignMapping.model.js';
 const router = express.Router();
 export const updateCampaign = async (req, res) => {
 const { id } = req.params;
@@ -36,237 +37,444 @@ console.error("Error updating campaign:", err);
 res.status(500).json({ message: "Internal server error" });
 }
 };
+
 export const getPaymentReport = async (req, res) => {
-try {
-const page = parseInt(req.query.page) || 1;
-const limit = parseInt(req.query.limit) || 10;
-const skip = (page - 1) * limit;
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-const {
-clientName,
-bookingName,
-startDate,
-endDate,
-paymentDate,
-sortKey = 'paymentDate',      // NEW
-sortDirection = 'desc'    // NEW
-} = req.query;
+    const {
+      clientName,
+      bookingName,
+      startDate,
+      endDate,
+      paymentDate,
+      sortKey = 'paymentDate',
+      sortDirection = 'desc'
+    } = req.query;
 
-const pipeline = [
-  // 1. Join Campaigns
-  {
-    $lookup: {
-      from: 'campaigns',
-      localField: 'campaigns',
-      foreignField: '_id',
-      as: 'campaignObjects',
-    },
-  },
-  // 2. Unwind campaigns
-  { $unwind: '$campaignObjects' },
+    const pipeline = [
+      // 1. Join BookingCampaigns to get associated campaigns
+      {
+        $lookup: {
+          from: 'bookingcampaigns', // Referencing the new BookingCampaign model
+          localField: '_id', // Booking _id
+          foreignField: 'bookingId', // Referencing bookingId in BookingCampaign model
+          as: 'bookingCampaigns'
+        }
+      },
+      // 2. Unwind the campaigns from BookingCampaigns
+      { $unwind: '$bookingCampaigns' },
 
-  // 3. Join Pipelines
-  {
-    $lookup: {
-      from: 'pipelines',
-      localField: 'campaignObjects.pipeline',
-      foreignField: '_id',
-      as: 'pipelineDetails',
-    },
-  },
-  // 4. Unwind pipelineDetails
-  { $unwind: '$pipelineDetails' },
+      // 3. Join Campaigns from the BookingCampaigns model
+      {
+        $lookup: {
+          from: 'campaigns',
+          localField: 'bookingCampaigns.campaignId', // Referencing campaignId in BookingCampaign model
+          foreignField: '_id',
+          as: 'campaignObjects'
+        }
+      },
+      { $unwind: '$campaignObjects' },
 
-  // 5. Unwind payments array
-  { $unwind: '$pipelineDetails.payment.payments' },
+      // 4. Join Pipelines from the Campaigns model
+      {
+        $lookup: {
+          from: 'pipelines',
+          localField: 'campaignObjects.pipeline',
+          foreignField: '_id',
+          as: 'pipelineDetails'
+        }
+      },
+      { $unwind: '$pipelineDetails' },
 
-  // 6. Filtering Logic (clientName, bookingName, date filters)
-  {
-    $match: {
-      ...(clientName && { clientName: new RegExp(clientName, 'i') }),
-      ...(bookingName && { brandDisplayName: new RegExp(bookingName, 'i') }),
+      // 5. Unwind payments array from pipelineDetails
+      { $unwind: '$pipelineDetails.payment.payments' },
 
-      // 🔷 Specific payment date (highest priority)
-      ...(paymentDate && {
-        'pipelineDetails.payment.payments.date': {
-          $gte: new Date(new Date(paymentDate).setHours(0, 0, 0, 0)),
-          $lte: new Date(new Date(paymentDate).setHours(23, 59, 59, 999)),
+      // 6. Apply Filters (clientName, bookingName, date filters)
+      {
+        $match: {
+          ...(clientName && { clientName: new RegExp(clientName, 'i') }),
+          ...(bookingName && { brandDisplayName: new RegExp(bookingName, 'i') }),
+
+          // Payment date filter
+          ...(paymentDate && {
+            'pipelineDetails.payment.payments.date': {
+              $gte: new Date(new Date(paymentDate).setHours(0, 0, 0, 0)),
+              $lte: new Date(new Date(paymentDate).setHours(23, 59, 59, 999)),
+            },
+          }),
+
+          // Date range filters
+          ...(startDate && !endDate && !paymentDate && {
+            'pipelineDetails.payment.payments.date': {
+              $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+            },
+          }),
+          ...(endDate && !startDate && !paymentDate && {
+            'pipelineDetails.payment.payments.date': {
+              $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+            },
+          }),
+          ...(startDate && endDate && !paymentDate && {
+            'pipelineDetails.payment.payments.date': {
+              $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+              $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+            },
+          }),
         },
-      }),
+      },
 
-      // 🔷 Open-ended date filters (only if paymentDate is not provided)
-      ...(startDate && !endDate && !paymentDate && {
-        'pipelineDetails.payment.payments.date': {
-          $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+      // 7. Project the required fields
+      {
+        $project: {
+          _id: 0,
+          bookingName: '$brandDisplayName',
+          clientName: '$clientName',
+          amount: '$pipelineDetails.payment.payments.amount',
+          paymentDate: '$pipelineDetails.payment.payments.date',
+          mode: '$pipelineDetails.payment.payments.modeOfPayment',
+          referenceNumber: '$pipelineDetails.payment.payments.referenceNumber',
+          documentUrl: '$pipelineDetails.payment.payments.documentUrl',
         },
-      }),
-      ...(endDate && !startDate && !paymentDate && {
-        'pipelineDetails.payment.payments.date': {
-          $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
-        },
-      }),
-      ...(startDate && endDate && !paymentDate && {
-        'pipelineDetails.payment.payments.date': {
-          $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
-          $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
-        },
-      }),
-    },
-  },
+      },
+    ];
 
-  // 7. Project desired fields
-  {
-    $project: {
-      _id: 0,
-      bookingName: '$brandDisplayName',
-      clientName: '$clientName',
-      amount: '$pipelineDetails.payment.payments.amount',
-      paymentDate: '$pipelineDetails.payment.payments.date',
-      mode: '$pipelineDetails.payment.payments.modeOfPayment',
-      referenceNumber: '$pipelineDetails.payment.payments.referenceNumber',
-      documentUrl: '$pipelineDetails.payment.payments.documentUrl',
-    },
-  },
-];
-const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
+    // Sorting options
+    const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
 
-// Paginated result pipeline
-const reportPipeline = [
-  ...pipeline,
-  { $sort: sortOptions },
-  { $skip: skip },
-  { $limit: limit },
-];
+    // Paginated result pipeline
+    const reportPipeline = [
+      ...pipeline,
+      { $sort: sortOptions },
+      { $skip: skip },
+      { $limit: limit },
+    ];
 
-const countPipeline = [...pipeline, { $count: 'totalCount' }];
+    // Count pipeline for pagination
+    const countPipeline = [...pipeline, { $count: 'totalCount' }];
 
-const [payments, total] = await Promise.all([
-  Booking.aggregate(reportPipeline),
-  Booking.aggregate(countPipeline),
-]);
+    // Execute the aggregations
+    const [payments, total] = await Promise.all([
+      Booking.aggregate(reportPipeline),
+      Booking.aggregate(countPipeline),
+    ]);
 
-const totalCount = total[0]?.totalCount || 0;
+    const totalCount = total[0]?.totalCount || 0;
 
-res.status(200).json({
-  payments,
-  pagination: {
-    totalCount,
-    currentPage: page,
-    totalPages: Math.ceil(totalCount / limit),
-  },
-});
-} catch (error) {
-console.error('Error fetching payment report:', error);
-res.status(500).json({ error: 'Failed to fetch payment report' });
-}
-};
-// EndPoint for Booking Dashboard Page.
-export const getFilteredBookings = async (req, res) => {
-try {
-
-const page = parseInt(req.query.page) || 1;
-const limit = parseInt(req.query.limit) || 10;
-const skip = (page - 1) * limit;
-
-
-const search = req.query.search || '';
-const startDate = req.query.startDate;
-const endDate = req.query.endDate;
-
-const searchRegex = new RegExp(search, 'i');
-
-let bookingQueryConditions = [];
-
-
-let campaignIdsToMatch = [];
-const campaignFilterConditions = {};
-
-if (startDate) {
-  campaignFilterConditions.startDate = { $gte: startDate };
-}
-if (endDate) {
-  campaignFilterConditions.endDate = { $lte: endDate };
-}
-if (search) {
-
-  campaignFilterConditions.campaignName = searchRegex;
-}
-
-// If any campaign-related filter is present, query the Campaign model first
-if (Object.keys(campaignFilterConditions).length > 0) {
-  const matchingCampaigns = await Campaign.find(campaignFilterConditions).select('_id').lean();
-  campaignIdsToMatch = matchingCampaigns.map(c => c._id);
-
-  if (campaignIdsToMatch.length === 0 && (startDate || endDate || search)) {
-    bookingQueryConditions.push({ campaigns: { $in: [new mongoose.Types.ObjectId()] } });
-  } else if (campaignIdsToMatch.length > 0) {
-    bookingQueryConditions.push({ campaigns: { $in: campaignIdsToMatch } });
+    res.status(200).json({
+      payments,
+      pagination: {
+        totalCount,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching payment report:', error);
+    res.status(500).json({ error: 'Failed to fetch payment report' });
   }
-}
-
-
-const directBookingSearchConditions = [];
-if (search) {
-  directBookingSearchConditions.push(
-    { companyName: searchRegex },
-    { clientName: searchRegex },
-    { brandDisplayName: searchRegex }
-  );
-}
-
-
-let finalBookingQuery = {};
-
-if (bookingQueryConditions.length > 0 && directBookingSearchConditions.length > 0) {
-  finalBookingQuery.$or = [
-    ...bookingQueryConditions,
-    { $or: directBookingSearchConditions }
-  ];
-} else if (bookingQueryConditions.length > 0) {
-  finalBookingQuery = bookingQueryConditions[0];
-} else if (directBookingSearchConditions.length > 0) {
-  finalBookingQuery.$or = directBookingSearchConditions;
-}
-
-const totalCount = await Booking.countDocuments(finalBookingQuery);
-
-const bookings = await Booking.find(finalBookingQuery)
-  .populate({
-    path: 'campaigns',
-    populate: [
-      {
-        path: 'spaces.id',
-        model: 'Space',
-      },
-      {
-        path: 'pipeline',
-        model: 'Pipeline',
-        options: { strictPopulate: false },
-      },
-    ],
-  })
-  .sort({ createdAt: -1 })
-  .skip(skip)
-  .limit(limit)
-  .lean(false);
-
-return res.status(200).json({
-  bookings,
-  pagination: {
-    totalCount,
-    currentPage: page,
-    totalPages: Math.ceil(totalCount / limit),
-  },
-});
-} catch (error) {
-console.error('Error fetching filtered bookings:', error);
-return res
-.status(500)
-.json({ error: error.message || 'Failed to fetch filtered bookings' });
-}
 };
-// --- START: CORRECTED FUNCTION ---
-// Booking Report Endpoint (FIXED and more robust)
+
+
+
+
+// export const getFilteredBookings = async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+
+//     const search = req.query.search || '';
+//     const startDate = req.query.startDate;
+//     const endDate = req.query.endDate;
+
+//     const searchRegex = new RegExp(search, 'i');
+
+//     let bookingQueryConditions = [];
+//     let campaignIdsToMatch = [];
+//     const campaignFilterConditions = {};
+
+//     // If any filter is provided for campaign date or search
+//     if (startDate) {
+//       campaignFilterConditions.startDate = { $gte: startDate };
+//     }
+//     if (endDate) {
+//       campaignFilterConditions.endDate = { $lte: endDate };
+//     }
+//     if (search) {
+//       campaignFilterConditions.campaignName = searchRegex;
+//     }
+
+//     // If campaign-related filter is present, query the BookingCampaign model first
+//     if (Object.keys(campaignFilterConditions).length > 0) {
+//       console.log("Fetching campaigns with filters:", campaignFilterConditions);
+//       const matchingCampaigns = await Campaign.find(campaignFilterConditions)
+//         .select('_id startDate endDate campaignName') // Fetch necessary fields
+//         .lean();
+
+//       console.log("Matching campaigns found:", matchingCampaigns[0]);
+//       campaignIdsToMatch = matchingCampaigns.map(c => c._id);
+
+//       if (campaignIdsToMatch.length === 0 && (startDate || endDate || search)) {
+//         bookingQueryConditions.push({ _id: { $in: [] } });
+//       } else if (campaignIdsToMatch.length > 0) {
+//         console.log("Fetching BookingCampaigns with campaignIds:", campaignIdsToMatch);
+//         // Fetch BookingCampaigns based on the campaignIds
+//         const bookingCampaigns = await BookingCampaign.find({ campaignId: { $in: campaignIdsToMatch } })
+//           .select('bookingId campaignId') // Only fetch the bookingId and campaignId from the BookingCampaign model
+//           .populate({
+//             path: 'campaignId',
+//             model: 'Campaign',
+//             select: 'campaignName startDate endDate'  // Populate the necessary fields from Campaign
+//           })
+//           .lean();
+
+//         console.log("BookingCampaigns populated:", bookingCampaigns[0]);
+//         const bookingIds = bookingCampaigns.map(bc => bc.bookingId);
+//         bookingQueryConditions.push({ _id: { $in: bookingIds } });
+//       }
+//     }
+
+//     const directBookingSearchConditions = [];
+//     if (search) {
+//       directBookingSearchConditions.push(
+//         { companyName: searchRegex },
+//         { clientName: searchRegex },
+//         { brandDisplayName: searchRegex }
+//       );
+//     }
+
+//     let finalBookingQuery = {};
+
+//     if (bookingQueryConditions.length > 0 && directBookingSearchConditions.length > 0) {
+//       finalBookingQuery.$or = [
+//         ...bookingQueryConditions,
+//         { $or: directBookingSearchConditions }
+//       ];
+//     } else if (bookingQueryConditions.length > 0) {
+//       finalBookingQuery = bookingQueryConditions[0];
+//     } else if (directBookingSearchConditions.length > 0) {
+//       finalBookingQuery.$or = directBookingSearchConditions;
+//     }
+
+//     const totalCount = await Booking.countDocuments(finalBookingQuery);
+
+//     // Query the bookings
+//     const bookings = await Booking.find(finalBookingQuery)
+//       .sort({ createdAt: -1 })
+//       .skip(skip)
+//       .limit(limit)
+//       .lean(false);
+
+//     console.log("Bookings found:", bookings[0]);
+
+//     // Query the related BookingCampaigns separately
+//     const bookingIds = bookings.map(b => b._id); // Collect all booking IDs
+//     const bookingCampaigns = await BookingCampaign.find({ bookingId: { $in: bookingIds } })
+//       .populate({
+//         path: 'campaignId',
+//         model: 'Campaign',
+//         select: 'campaignName startDate endDate'  // Select necessary fields from Campaign
+//       })
+//       .lean();
+
+//     console.log("BookingCampaigns fetched:", bookingCampaigns[0]);
+
+//     // Attach the corresponding campaigns to each booking
+//     bookings.forEach(booking => {
+//       // Find the campaigns related to this booking
+//       booking.bookingCampaigns = bookingCampaigns
+//         .filter(bc => bc.bookingId.equals(booking._id))
+//         .map(bc => {
+//           return {
+//             _id: bc.campaignId._id,
+//             campaignName: bc.campaignId.campaignName,
+//             startDate: bc.campaignId.startDate,
+//             endDate: bc.campaignId.endDate,
+//           };
+//         });
+//     });
+
+//     console.log("Final bookings response:", bookings[0]);
+
+//     return res.status(200).json({
+//       bookings,
+//       pagination: {
+//         totalCount,
+//         currentPage: page,
+//         totalPages: Math.ceil(totalCount / limit),
+//       },
+//     });
+//   } catch (error) {
+//     console.error('Error fetching filtered bookings:', error);
+//     return res.status(500).json({ error: error.message || 'Failed to fetch filtered bookings' });
+//   }
+// };
+
+
+
+
+export const getFilteredBookings = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search || '';
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+
+    const searchRegex = new RegExp(search, 'i');
+
+    let bookingQueryConditions = [];
+    let campaignIdsToMatch = [];
+    const campaignFilterConditions = {};
+
+    // If any filter is provided for campaign date or search
+    if (startDate) {
+      campaignFilterConditions.startDate = { $gte: startDate };
+    }
+    if (endDate) {
+      campaignFilterConditions.endDate = { $lte: endDate };
+    }
+    if (search) {
+      campaignFilterConditions.campaignName = searchRegex;
+    }
+
+    // If campaign-related filter is present, query the BookingCampaign model first
+    if (Object.keys(campaignFilterConditions).length > 0) {
+      console.log("Fetching campaigns with filters:", campaignFilterConditions);
+      const matchingCampaigns = await Campaign.find(campaignFilterConditions)
+        .select('_id startDate endDate campaignName') // Fetch necessary fields
+        .lean();
+
+      // console.log("Matching campaigns found:", matchingCampaigns);
+      campaignIdsToMatch = matchingCampaigns.map(c => c._id);
+
+      if (campaignIdsToMatch.length === 0 && (startDate || endDate || search)) {
+        bookingQueryConditions.push({ _id: { $in: [] } });
+      } else if (campaignIdsToMatch.length > 0) {
+        console.log("Fetching BookingCampaigns with campaignIds:", campaignIdsToMatch);
+        // Fetch BookingCampaigns based on the campaignIds
+        const bookingCampaigns = await BookingCampaign.find({ campaignId: { $in: campaignIdsToMatch } })
+          .select('bookingId campaignId') // Only fetch the bookingId and campaignId from the BookingCampaign model
+          .populate({
+            path: 'campaignId',
+            model: 'Campaign',
+            select: 'campaignName startDate endDate'  // Populate the necessary fields from Campaign
+          })
+          .lean();
+
+        // console.log("BookingCampaigns populated:", bookingCampaigns);
+        const bookingIds = bookingCampaigns.map(bc => bc.bookingId);
+        bookingQueryConditions.push({ _id: { $in: bookingIds } });
+      }
+    }
+
+    const directBookingSearchConditions = [];
+    if (search) {
+      directBookingSearchConditions.push(
+        { companyName: searchRegex },
+        { clientName: searchRegex },
+        { brandDisplayName: searchRegex }
+      );
+    }
+
+    let finalBookingQuery = {};
+
+    if (bookingQueryConditions.length > 0 && directBookingSearchConditions.length > 0) {
+      finalBookingQuery.$or = [
+        ...bookingQueryConditions,
+        { $or: directBookingSearchConditions }
+      ];
+    } else if (bookingQueryConditions.length > 0) {
+      finalBookingQuery = bookingQueryConditions[0];
+    } else if (directBookingSearchConditions.length > 0) {
+      finalBookingQuery.$or = directBookingSearchConditions;
+    }
+
+    const totalCount = await Booking.countDocuments(finalBookingQuery);
+
+    // Query the bookings
+    const bookings = await Booking.find(finalBookingQuery)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(false);
+
+    // console.log("Bookings found:", bookings);
+
+    // Query the related BookingCampaigns separately
+    const bookingIds = bookings.map(b => b._id); // Collect all booking IDs
+    const bookingCampaigns = await BookingCampaign.find({ bookingId: { $in: bookingIds } })
+      .populate({
+        path: 'campaignId',
+        model: 'Campaign',
+        select: 'campaignName startDate endDate'  // Select necessary fields from Campaign
+      })
+      .lean();
+
+    // console.log("BookingCampaigns fetched:", bookingCampaigns);
+let bookings1=bookings;
+    // Attach the corresponding campaigns to each booking
+    bookings.forEach(booking => {
+      // Find the campaigns related to this booking
+      bookings1.campaigns1 = bookingCampaigns
+        .filter(bc => bc.bookingId.equals(booking._id))
+        .map(bc => {
+          const { _id, campaignName, startDate, endDate } = bc.campaignId;
+          console.log("Details are", _id, campaignName, startDate, endDate);
+          return {
+            // _id: bc.campaignId._id,
+            // campaignName: bc.campaignId.campaignName,
+            // startDate: bc.campaignId.startDate,
+            // endDate: bc.campaignId.endDate,
+                     _id,
+            campaignName,
+            startDate,
+            endDate,
+          };
+        });
+    });
+    // bookings.forEach(booking => {
+    //   // Find the campaigns related to this booking
+    //   booking.bookingCampaigns = bookingCampaigns
+    //     .filter(bc => bc.bookingId.equals(booking._id))
+    //     .map(bc => {
+    //       // Directly pull the fields from the populated campaignId
+    //       const { _id, campaignName, startDate, endDate } = bc.campaignId;
+    //       console.log("Details are", _id, campaignName, startDate, endDate);
+    //       return {
+    //         _id,
+    //         campaignName,
+    //         startDate,
+    //         endDate,
+    //       };
+    //     });
+    // });
+    
+    // console.log("Final bookings response:", bookings);
+
+    return res.status(200).json({
+      bookings:bookings1,
+      pagination: {
+        totalCount,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching filtered bookings:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch filtered bookings' });
+  }
+};
+
+
+
+
+
 export const getAllBookings = async (req, res) => {
 try {
 const page = parseInt(req.query.page) || 1;
@@ -552,10 +760,10 @@ if (!campaign) {
   return res.status(404).json({ error: 'Campaign not found' });
 }
 
-const booking = await Booking.findOne({ campaigns: id }).lean();
-if (!booking) {
-  return res.status(404).json({ error: 'Campaign is not linked to any booking' });
-}
+// const booking = await Booking.findOne({ campaigns: id }).lean();
+// if (!booking) {
+//   return res.status(404).json({ error: 'Campaign is not linked to any booking' });
+// }
 
 return res.status(200).json(campaign);
 } catch (error) {
@@ -853,96 +1061,115 @@ console.error(error);
 return res.status(500).json({ error: error.message || 'Failed to delete booking' });
 }
 };
-export const getBookingById = async (req, res) => {
-const { id: bookingId } = req.params;
-try {
-const booking = await Booking.findById(bookingId).populate('user')
-.populate({
-path: 'campaigns',
-populate: [
-{
-path: 'spaces.id',
-model: 'Space'
-},
-{
-path: 'pipeline',
-model: 'Pipeline'
-}
-]
-});
-
-if (!booking) {
-  return res.status(404).json({ error: 'Booking not found' });
-}
-
-return res.status(200).json(booking);
-} catch (error) {
-console.error(error);
-return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
-}
-};
-// export const getAllBookings1 = async (req, res) => {
+// export const getBookingById = async (req, res) => {
+// const { id: bookingId } = req.params;
 // try {
-// const page = parseInt(req.query.page) || 1;
-// const limit = parseInt(req.query.limit) || 10;
-// const skip = (page - 1) * limit;
-// const search = req.query.search || '';
-// const { sortKey = 'createdAt', sortDirection = 'desc' } = req.query;
-
-// const searchFilter = {
-//   $or: [
-//     { companyName: { $regex: search, $options: 'i' } },
-//     { clientName: { $regex: search, $options: 'i' } },
-//     { brandDisplayName: { $regex: search, $options: 'i' } }
-//   ]
-// };
-
-// const projection = {
-//   _id: 1,
-//   companyName: 1,
-//   clientName: 1,
-//   brandDisplayName: 1,
-//   clientType: 1,
-//   createdAt: 1,
-//   campaigns: 1
-// };
-
-// const totalCount = await Booking.countDocuments(searchFilter);
-// const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
-
-// const bookings = await Booking.find(searchFilter, projection)
-//   .skip(skip)
-//   .limit(limit)
-//   .sort(sortOptions).populate({
-//     path: 'campaigns',
-//     select: 'campaignName startDate endDate industry',
-//     populate: [
-//       {
-//         path: 'spaces.id',
-//         model: 'Space',
-//         select: 'spaceName'
-//       },
-//       {
-//         path: 'pipeline',
-//         model: 'Pipeline',
-//         options: { strictPopulate: false }
-//       }
-//     ]
-//   })
-
-
-// return res.status(200).json({
-//   bookings,
-//   totalCount,
-//   currentPage: page,
-//   totalPages: Math.ceil(totalCount / limit)
+// const booking = await Booking.findById(bookingId).populate('user')
+// .populate({
+// path: 'campaigns',
+// populate: [
+// {
+// path: 'spaces.id',
+// model: 'Space'
+// },
+// {
+// path: 'pipeline',
+// model: 'Pipeline'
+// }
+// ]
 // });
+
+// if (!booking) {
+//   return res.status(404).json({ error: 'Booking not found' });
+// }
+
+// return res.status(200).json(booking);
 // } catch (error) {
 // console.error(error);
-// return res.status(500).json({ error: error.message || 'Failed to fetch bookings' });
+// return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
 // }
 // };
 
+// export const getBookingById = async (req, res) => {
+//   const { id: bookingId } = req.params;
+
+//   try {
+//     // Step 1: Fetch the booking
+//     const booking = await Booking.findById(bookingId).populate('user');
+
+//     if (!booking) {
+//       return res.status(404).json({ error: 'Booking not found' });
+//     }
+
+//     // Step 2: Fetch related BookingCampaigns for this booking
+//     const bookingCampaigns = await BookingCampaign.find({ bookingId }).populate({
+//       path: 'campaignId',
+//       model: 'Campaign',
+//       select: 'campaignName startDate endDate',  // Populate the necessary fields from Campaign
+//     }).populate({
+//       path: 'pipeline',
+//       model: 'Pipeline',
+//       select: 'payment bookingStatus artwork po invoice',  // Populate necessary fields from Pipeline
+//       strictPopulate: false,  // Allow populating even if not strictly defined in schema
+//     });
+
+//     // Attach the campaigns and pipeline data to the booking object
+//     booking.bookingCampaigns = bookingCampaigns;
+
+//     return res.status(200).json(booking);
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
+//   }
+// };
+
+export const getBookingById = async (req, res) => {
+  const { id: bookingId } = req.params;
+
+  try {
+    // Step 1: Fetch the booking by ID, populate the 'user' field
+    const booking = await Booking.findById(bookingId).populate('user');
+
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Step 2: Fetch related BookingCampaigns for this booking
+    const bookingCampaigns = await BookingCampaign.find({ bookingId }).populate({
+      path: 'campaignId',
+      model: 'Campaign',
+      select: '_id campaignName startDate endDate industry isFOC',  // Populate Campaign details
+    }).populate({
+      path: 'pipeline',
+      model: 'Pipeline',
+      select: 'payment bookingStatus artwork po invoice',  // Populate Pipeline details
+      strictPopulate: false,  // Allow populating even if not strictly defined in schema
+    });
+
+    // Step 3: Prepare the response data exactly as the previous structure
+    const result = {
+      companyName: booking.companyName,
+      clientName: booking.clientName,
+      brandDisplayName: booking.brandDisplayName,
+      clientType: booking.clientType,
+      createdAt: booking.createdAt,
+      campaigns: bookingCampaigns.map(bc => ({
+        _id: bc.campaignId._id,
+        campaignName: bc.campaignId.campaignName,
+        startDate: bc.campaignId.startDate,
+        endDate: bc.campaignId.endDate,
+        industry: bc.campaignId.industry,
+        isFOC: bc.campaignId.isFOC,
+        pipeline: bc.pipeline,  // Include the entire pipeline for each campaign
+      }))
+    };
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
+  }
+};
 
 export const getAllBookings1 = async (req, res) => {
   try {
@@ -969,11 +1196,24 @@ export const getAllBookings1 = async (req, res) => {
     const pipeline = [
       { $match: searchMatch },
 
-      // Join campaigns
+      // Join BookingCampaignMapping to find associated campaigns for the booking
+      {
+        $lookup: {
+          from: 'bookingcampaignmappings', // New model to map bookings to campaigns
+          localField: '_id', // Booking ID
+          foreignField: 'bookingId', // Referencing the bookingId field in the new model
+          as: 'campaignMappings'
+        }
+      },
+
+      // Unwind the campaignMappings to get the campaign IDs
+      { $unwind: '$campaignMappings' },
+
+      // Join campaigns based on the campaignId from the mapping model
       {
         $lookup: {
           from: 'campaigns',
-          localField: 'campaigns',
+          localField: 'campaignMappings.campaignId', // Reference to the campaignId in BookingCampaignMapping
           foreignField: '_id',
           as: 'campaigns'
         }
@@ -1052,100 +1292,321 @@ export const getAllBookings1 = async (req, res) => {
   }
 };
 
-// export const getBookingDashboardStats = async (req, res) => {
+// export const getAllBookings1 = async (req, res) => {
 // try {
-// const bookings = await Booking.find({}, { createdAt: 1, campaigns: 1 , clientName: 1 , companyName: 1 })
-// .populate({
-// path: 'campaigns',
-// select: 'pipeline spaces isFOC campaignName startDate endDate',
-// populate: [
-// {
-// path: 'pipeline',
-// select: 'payment bookingStatus artwork po invoice'
-// },
-// {
-// path: 'spaces.id',
-// select: 'printingStatus mountingStatus'
-// }
-// ]
+// const page = parseInt(req.query.page) || 1;
+// const limit = parseInt(req.query.limit) || 10;
+// const skip = (page - 1) * limit;
+// const search = req.query.search || '';
+// const { sortKey = 'createdAt', sortDirection = 'desc' } = req.query;
+
+// const searchFilter = {
+//   $or: [
+//     { companyName: { $regex: search, $options: 'i' } },
+//     { clientName: { $regex: search, $options: 'i' } },
+//     { brandDisplayName: { $regex: search, $options: 'i' } }
+//   ]
+// };
+
+// const projection = {
+//   _id: 1,
+//   companyName: 1,
+//   clientName: 1,
+//   brandDisplayName: 1,
+//   clientType: 1,
+//   createdAt: 1,
+//   campaigns: 1
+// };
+
+// const totalCount = await Booking.countDocuments(searchFilter);
+// const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
+
+// const bookings = await Booking.find(searchFilter, projection)
+//   .skip(skip)
+//   .limit(limit)
+//   .sort(sortOptions).populate({
+//     path: 'campaigns',
+//     select: 'campaignName startDate endDate industry',
+//     populate: [
+//       {
+//         path: 'spaces.id',
+//         model: 'Space',
+//         select: 'spaceName'
+//       },
+//       {
+//         path: 'pipeline',
+//         model: 'Pipeline',
+//         options: { strictPopulate: false }
+//       }
+//     ]
+//   })
+
+
+// return res.status(200).json({
+//   bookings,
+//   totalCount,
+//   currentPage: page,
+//   totalPages: Math.ceil(totalCount / limit)
 // });
-
-// const bookingStats = [];
-
-// bookings.forEach((booking) => {
-//   const createdAt = booking.createdAt;
-
-//   booking.campaigns?.forEach((campaign) => {
-//     const pipeline = campaign.pipeline || {};
-//     const spaces = campaign.spaces || [];
-
-//     const payment = pipeline.payment || {};
-//     const bookingStatus = pipeline.bookingStatus || {};
-//     const artwork = pipeline.artwork || {};
-//     const po = pipeline.po || {};
-//     const invoice = pipeline.invoice || {};
-
-//     console.log('INSPECTING INVOICE OBJECT:', JSON.stringify(invoice, null, 2));
-
-
-//     const isInvoiceReceived = (invoice && (
-//     (Array.isArray(invoice) && invoice.length > 0) || 
-//     (typeof invoice === 'object' && !Array.isArray(invoice) && invoice.invoiceNumber)
-//   ));
-
-//     const statusSummary = {
-//       createdAt,
-//       totalPaid: payment.totalPaid || 0,
-//       paymentDue: payment.paymentDue || 0,
-//       bookingConfirmed: !!bookingStatus.confirmed,
-//       artworkReceived: !!artwork.confirmed,
-//       poReceived: !!po.documentUrl,
-//       invoiceReceived: isInvoiceReceived,
-//       invoices: (Array.isArray(invoice) ? invoice : []).map(inv => ({
-//         documentName: inv.invoiceNumber || 'Invoice Document', // Renames the key
-//         fileUrl: inv.documentUrl                             // This key already matches
-//       })),      
-//       printingStatus: 0,
-//       mountingStatus: 0,
-//       isFOC: campaign.isFOC,
-//       campaignName: campaign.campaignName,
-//       clientName: booking.clientName,
-//       startDate: campaign.startDate,
-//       endDate: campaign.endDate,
-//       bookingId: booking._id,
-//       campaignId: campaign._id,
-//       companyName: booking.companyName, 
-//     };
-
-//     spaces.forEach((space) => {
-//       const s = space?.id || {};
-//       if (s.printingStatus?.confirmed) statusSummary.printingStatus++;
-//       if (s.mountingStatus?.confirmed) statusSummary.mountingStatus++;
-//     });
-
-//     bookingStats.push(statusSummary);
-//   });
-// });
-
-// return res.status(200).json({ bookingStats });
 // } catch (error) {
-// console.error('Error in booking dashboard stats:', error);
-// res.status(500).json({ error: 'Failed to generate booking dashboard stats' });
+// console.error(error);
+// return res.status(500).json({ error: error.message || 'Failed to fetch bookings' });
 // }
+// };
+
+
+// export const getAllBookings1 = async (req, res) => {
+//   try {
+//     const page  = parseInt(req.query.page)  || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip  = (page - 1) * limit;
+
+//     const search       = req.query.search || '';
+//     const { sortKey = 'createdAt', sortDirection = 'desc' } = req.query;
+
+//     const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
+
+//     // 🔍 Search filter
+//     const searchMatch = search
+//       ? {
+//           $or: [
+//             { companyName: { $regex: search, $options: 'i' } },
+//             { clientName: { $regex: search, $options: 'i' } },
+//             { brandDisplayName: { $regex: search, $options: 'i' } }
+//           ]
+//         }
+//       : {};
+
+//     const pipeline = [
+//       { $match: searchMatch },
+
+//       // Join campaigns
+//       {
+//         $lookup: {
+//           from: 'campaigns',
+//           localField: 'campaigns',
+//           foreignField: '_id',
+//           as: 'campaigns'
+//         }
+//       },
+
+//       // Join spaces inside each campaign
+//       {
+//         $lookup: {
+//           from: 'spaces',
+//           localField: 'campaigns.spaces.id',
+//           foreignField: '_id',
+//           as: 'spaces'
+//         }
+//       },
+
+//       // Join pipelines
+//       {
+//         $lookup: {
+//           from: 'pipelines',
+//           localField: 'campaigns.pipeline',
+//           foreignField: '_id',
+//           as: 'pipelines'
+//         }
+//       },
+
+//       // Keep only the fields you actually need
+//       {
+//         $project: {
+//           companyName: 1,
+//           clientName: 1,
+//           brandDisplayName: 1,
+//           clientType: 1,
+//           createdAt: 1,
+//           campaigns: {
+//             campaignName: 1,
+//             startDate: 1,
+//             endDate: 1,
+//             industry: 1,
+//             pipeline: 1,
+//             spaces: 1
+//           },
+//           // flatten lookups
+//           spaces: { spaceName: 1 },
+//           pipelines: {
+//             payment: 1,
+//             po: 1,
+//             bookingStatus: 1
+//           }
+//         }
+//       },
+
+//       { $sort: sortOptions },
+
+//       {
+//         $facet: {
+//           bookings: [{ $skip: skip }, { $limit: limit }],
+//           totalCount: [{ $count: 'count' }]
+//         }
+//       }
+//     ];
+
+//     const result = await Booking.aggregate(pipeline).option({ allowDiskUse: true });
+
+//     const bookings   = result[0]?.bookings || [];
+//     const totalCount = result[0]?.totalCount[0]?.count || 0;
+
+//     return res.status(200).json({
+//       bookings,
+//       totalCount,
+//       currentPage: page,
+//       totalPages: Math.ceil(totalCount / limit)
+//     });
+//   } catch (error) {
+//     console.error('Error in getAllBookings1 (agg optimized):', error);
+//     return res.status(500).json({ error: error.message || 'Failed to fetch bookings' });
+//   }
+// };
+
+
+// export const getBookingDashboardStats = async (req, res) => {
+//   try {
+//     const pipeline = [
+//       {
+//         $lookup: {
+//           from: "campaigns",
+//           localField: "campaigns",
+//           foreignField: "_id",
+//           as: "campaigns"
+//         }
+//       },
+//       { $unwind: { path: "$campaigns", preserveNullAndEmptyArrays: true } },
+//       {
+//         $lookup: {
+//           from: "pipelines",
+//           localField: "campaigns.pipeline",
+//           foreignField: "_id",
+//           as: "pipeline"
+//         }
+//       },
+//       { $unwind: { path: "$pipeline", preserveNullAndEmptyArrays: true } },
+//       {
+//         $lookup: {
+//           from: "spaces",
+//           localField: "campaigns.spaces.id",
+//           foreignField: "_id",
+//           as: "spaces"
+//         }
+//       },
+
+//       // 🔒 Normalize everything into arrays
+//       {
+//         $addFields: {
+//           safeSpaces: {
+//             $cond: [
+//               { $isArray: "$spaces" },
+//               "$spaces",
+//               { $cond: [{ $gt: ["$spaces", null] }, ["$spaces"], []] }
+//             ]
+//           },
+//           safeInvoices: {
+//             $cond: [
+//               { $isArray: "$pipeline.invoice" },
+//               "$pipeline.invoice",
+//               { $cond: [{ $gt: ["$pipeline.invoice", null] }, ["$pipeline.invoice"], []] }
+//             ]
+//           }
+//         }
+//       },
+
+//       {
+//         $project: {
+//           createdAt: 1,
+//           companyName: 1,
+//           clientName: 1,
+//           campaignId: "$campaigns._id",
+//           campaignName: "$campaigns.campaignName",
+//           startDate: "$campaigns.startDate",
+//           endDate: "$campaigns.endDate",
+//           isFOC: "$campaigns.isFOC",
+
+//           totalPaid: { $ifNull: ["$pipeline.payment.totalPaid", 0] },
+//           paymentDue: { $ifNull: ["$pipeline.payment.paymentDue", 0] },
+//           bookingConfirmed: { $ifNull: ["$pipeline.bookingStatus.confirmed", false] },
+//           artworkReceived: { $ifNull: ["$pipeline.artwork.confirmed", false] },
+//           poReceived: { $ifNull: ["$pipeline.po.documentUrl", false] },
+
+//           invoiceReceived: {
+//             $cond: [{ $gt: [{ $size: "$safeInvoices" }, 0] }, true, false]
+//           },
+
+//           invoices: {
+//             $map: {
+//               input: "$safeInvoices",
+//               as: "inv",
+//               in: {
+//                 documentName: { $ifNull: ["$$inv.invoiceNumber", "Invoice Document"] },
+//                 fileUrl: "$$inv.documentUrl"
+//               }
+//             }
+//           },
+
+//           printingStatus: {
+//             $size: {
+//               $filter: {
+//                 input: "$safeSpaces",
+//                 as: "s",
+//                 cond: { $eq: ["$$s.printingStatus.confirmed", true] }
+//               }
+//             }
+//           },
+
+//           mountingStatus: {
+//             $size: {
+//               $filter: {
+//                 input: "$safeSpaces",
+//                 as: "s",
+//                 cond: { $eq: ["$$s.mountingStatus.confirmed", true] }
+//               }
+//             }
+//           }
+//         }
+//       }
+//     ];
+
+//     const bookingStats = await Booking.aggregate(pipeline);
+//     return res.status(200).json({ bookingStats });
+//   } catch (error) {
+//     console.error("Error in booking dashboard stats:", error);
+//     res.status(500).json({ error: error.message || "Failed to generate booking dashboard stats" });
+//   }
 // };
 
 export const getBookingDashboardStats = async (req, res) => {
   try {
     const pipeline = [
+      // 1. Lookup to get BookingCampaigns (mapping between bookings and campaigns)
       {
         $lookup: {
-          from: "campaigns",
-          localField: "campaigns",
-          foreignField: "_id",
+          from: "bookingcampaigns", // BookingCampaign collection
+          localField: "_id",         // Booking's _id
+          foreignField: "bookingId", // Mapping with the bookingId field in BookingCampaign
+          as: "bookingCampaigns"
+        }
+      },
+      
+      // 2. Unwind the bookingCampaigns
+      { $unwind: { path: "$bookingCampaigns", preserveNullAndEmptyArrays: true } },
+
+      // 3. Lookup to get the campaigns from the campaign collection
+      {
+        $lookup: {
+          from: "campaigns",   // Campaign collection
+          localField: "bookingCampaigns.campaignId", // Referencing campaignId in BookingCampaign
+          foreignField: "_id", // Matching with campaign's _id
           as: "campaigns"
         }
       },
+
+      // 4. Unwind the campaigns
       { $unwind: { path: "$campaigns", preserveNullAndEmptyArrays: true } },
+
+      // 5. Lookup to get the pipeline associated with each campaign
       {
         $lookup: {
           from: "pipelines",
@@ -1154,7 +1615,11 @@ export const getBookingDashboardStats = async (req, res) => {
           as: "pipeline"
         }
       },
+
+      // 6. Unwind pipeline (as there will be only one pipeline per campaign)
       { $unwind: { path: "$pipeline", preserveNullAndEmptyArrays: true } },
+
+      // 7. Lookup to get the spaces associated with the campaign
       {
         $lookup: {
           from: "spaces",
@@ -1239,15 +1704,16 @@ export const getBookingDashboardStats = async (req, res) => {
       }
     ];
 
+    // Step 8: Execute the aggregation pipeline
     const bookingStats = await Booking.aggregate(pipeline);
+
+    // Step 9: Return the results
     return res.status(200).json({ bookingStats });
   } catch (error) {
     console.error("Error in booking dashboard stats:", error);
     res.status(500).json({ error: error.message || "Failed to generate booking dashboard stats" });
   }
 };
-
-
 
 
 router.get('/inventories-for-selection', authenticate, async (req, res) => {

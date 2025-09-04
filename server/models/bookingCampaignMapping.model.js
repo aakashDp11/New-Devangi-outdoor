@@ -1,3 +1,6 @@
+import mongoose from 'mongoose';
+
+const { Schema, model } = mongoose;
 const bookingCampaignSchema = new Schema({
     bookingId: { type: Schema.Types.ObjectId, ref: 'Booking', required: true },
     campaignId: { type: Schema.Types.ObjectId, ref: 'Campaign', required: true },
@@ -11,3 +14,4 @@ const bookingCampaignSchema = new Schema({
   
   const BookingCampaign = model('BookingCampaign', bookingCampaignSchema);
   
+  export default BookingCampaign;
