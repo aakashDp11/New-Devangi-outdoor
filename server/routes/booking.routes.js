@@ -1250,7 +1250,15 @@ export const getBookingDashboardStats = async (req, res) => {
 
 
 
-
+router.get('/inventories-for-selection', authenticate, async (req, res) => {
+  try {
+      const inventories = await Space.find({}, '_id spaceName city address spaceType availability ownershipType').lean();
+      res.status(200).json(inventories);
+  } catch (error){
+      console.error('Error fetching inventories for selection:', error);
+      res.status(500).json({ message: 'Server error, could not fetch inventories list.' });
+  }
+});
 
 router.get('/dashboard-stats', authenticate, getBookingDashboardStats);
 router.get('/campaign/:id', getCampaignById);

@@ -19,9 +19,7 @@ const bookingSchema = new Schema({
   agencyName: { type: String },
   reminderTimeline: { type: Number },
   isFOCBooking: { type: Boolean, default: false },
-  agencyName: { type: String },
-  reminderTimeline: { type: Number },
-  isFOCBooking: { type: Boolean, default: false },
+
 
   // --- FIX: Changed this from String to a proper reference ---
   industry: {
@@ -44,6 +42,11 @@ const bookingSchema = new Schema({
 }, {
   timestamps: true
 });
+
+bookingSchema.index({ createdAt: -1 });
+bookingSchema.index({ clientName: 1 });
+bookingSchema.index({ companyName: 1 });
+bookingSchema.index({ campaigns: 1 });
 
 const Booking = model('Booking', bookingSchema);
 

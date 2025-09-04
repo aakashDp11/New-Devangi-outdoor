@@ -2,7 +2,9 @@ import express from 'express';
 import Campaign from '../models/campaign.model.js';
 import Space from '../models/space.model.js';
 import { authenticate } from '../middleware/authenticate.middleware.js';
-
+import Booking from '../models/booking.model.js';
+import mongoose from 'mongoose';
+import Pipeline from '../models/pipeline.model.js';
 const router = express.Router();
 
 // ===================================================================
@@ -53,8 +55,190 @@ router.get('/by-space/:spaceId', async (req, res) => {
     res.status(500).json({ message: 'Server error, could not fetch campaigns by space.' });
   }
 });
+router.post('/check-availability', authenticate, async (req, res) => {
+    try {
+        const { spaceIds, startDate, endDate, campaignIdToIgnore } = req.body;
+        if (!spaceIds || spaceIds.length === 0 || !startDate || !endDate) {
+            return res.status(200).json({ conflictingSpaceIds: [] });
+        }
+       
+        // When checking availability, we should ignore FOC campaigns,
+        // as they don't count towards 'occupiedUnits' for other bookings.
+        const conflictingCampaigns = await Campaign.find({
+            'spaces.id': { $in: spaceIds },
+            _id: { $ne: campaignIdToIgnore },
+            startDate: { $lte: endDate },
+            endDate: { $gte: startDate },
+            isFOC: false, // <--- Only consider non-FOC campaigns for conflicts
+        }).select('spaces.id');
+ 
+        const conflictingSpaceIds = new Set();
+        conflictingCampaigns.forEach(campaign => {
+            campaign.spaces.forEach(space => {
+                if (spaceIds.includes(space.id.toString())) {
+                    conflictingSpaceIds.add(space.id.toString());
+                }
+            });
+        });
+        res.status(200).json({ conflictingSpaceIds: Array.from(conflictingSpaceIds) });
+    } catch (error) {
+        console.error('Error checking campaign availability:', error);
+        res.status(500).json({ error: 'Server error while checking availability.' });
+    }
+});
 
-
+router.post('/:campaignId/clone/:bookingId', authenticate, async (req, res) => {
+    try {
+        const { campaignId, bookingId } = req.params;
+        // Destructure isFOC from req.body, default to false if not provided
+        const { campaignName, startDate, endDate, description, inventoryIds = [], isFOC = false } = req.body;
+ 
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ error: 'Target booking not found.' });
+        }
+ 
+        const originalCampaign = await Campaign.findById(campaignId).populate('pipeline').lean();
+        if (!originalCampaign) {
+            return res.status(404).json({ error: 'Original campaign not found.' });
+        }
+ 
+        const newSpacesFromInventories = inventoryIds.map(id => ({
+            id: new mongoose.Types.ObjectId(id),
+            selectedUnits: 1 // Assuming 1 unit for newly added inventories
+        }));
+ 
+        const finalSpacesMap = new Map();
+        originalCampaign.spaces.forEach(space => finalSpacesMap.set(space.id.toString(), space));
+        newSpacesFromInventories.forEach(space => finalSpacesMap.set(space.id.toString(), space));
+       
+        const finalSpacesArray = Array.from(finalSpacesMap.values());
+ 
+        const newPipeline = new Pipeline({
+            artwork: originalCampaign.pipeline?.artwork,
+            campaign: new mongoose.Types.ObjectId()
+        });
+ 
+        const clonedCampaign = new Campaign({
+            ...originalCampaign,
+            _id: undefined, // Mongoose will generate a new _id
+            createdAt: undefined, // Mongoose will set new timestamps
+            updatedAt: undefined, // Mongoose will set new timestamps
+            pipeline: newPipeline._id,
+            campaignName: campaignName || `Copy of ${originalCampaign.campaignName}`,
+            startDate: startDate || originalCampaign.startDate,
+            endDate: endDate || originalCampaign.endDate,
+            description: description !== undefined ? description : originalCampaign.description,
+            spaces: finalSpacesArray,
+            isFOC: isFOC, // <--- Set the isFOC flag for the cloned campaign
+        });
+ 
+        newPipeline.campaign = clonedCampaign._id;
+        await newPipeline.save();
+        await clonedCampaign.save();
+ 
+        // **Conditional Update for occupiedUnits based on isFOC**
+        if (!isFOC && clonedCampaign.spaces && clonedCampaign.spaces.length > 0) { // Only update occupiedUnits if NOT FOC
+            const bulkOps = clonedCampaign.spaces.map(selected => {
+                const campaignDateEntry = {
+                    campaignId: clonedCampaign._id,
+                    startDate: clonedCampaign.startDate,
+                    endDate: clonedCampaign.endDate,
+                };
+                return {
+                    updateOne: {
+                        filter: { _id: selected.id },
+                        update: {
+                            $inc: {
+                                occupiedUnits: selected.selectedUnits,
+                                numberOfBookings: 1 // Still count as a booking for other metrics if needed
+                            },
+                            $push: { campaignDates: { $each: Array(selected.selectedUnits).fill(campaignDateEntry) } }
+                        }
+                    }
+                };
+            });
+ 
+            if (bulkOps.length > 0) {
+                await Space.bulkWrite(bulkOps);
+            }
+        } else if (isFOC && clonedCampaign.spaces && clonedCampaign.spaces.length > 0) {
+            // If FOC, still push campaign dates to the space, but do not increment occupiedUnits
+            // This allows the space to know it has an FOC campaign for those dates, without blocking availability
+            const bulkOps = clonedCampaign.spaces.map(selected => {
+                const campaignDateEntry = {
+                    campaignId: clonedCampaign._id,
+                    startDate: clonedCampaign.startDate,
+                    endDate: clonedCampaign.endDate,
+                };
+                return {
+                    updateOne: {
+                        filter: { _id: selected.id },
+                        update: {
+                             $inc: { numberOfBookings: 1 }, // Still count as a booking for other metrics if needed
+                             $push: { campaignDates: { $each: Array(selected.selectedUnits).fill(campaignDateEntry) } }
+                        }
+                    }
+                };
+            });
+            if (bulkOps.length > 0) {
+                await Space.bulkWrite(bulkOps);
+            }
+        }
+ 
+        booking.campaigns.push(clonedCampaign._id);
+        await booking.save();
+ 
+        const populatedClonedCampaign = await Campaign.findById(clonedCampaign._id).populate('pipeline');
+        res.status(201).json({
+            message: 'Campaign cloned and linked successfully!',
+            campaign: populatedClonedCampaign
+        });
+ 
+    } catch (error) {
+        console.error('CRITICAL ERROR cloning campaign:', error);
+        if (error.name === 'ValidationError') {
+             return res.status(400).json({ error: error.message });
+        }
+        res.status(500).json({ error: 'Server error while cloning campaign.' });
+    }
+});
+router.get('/:id', async (req, res) => {
+    try {
+      const campaignId = req.params.id;
+   
+      // Step 1: Find the parent booking and get the FULL document.
+      const parentBooking = await Booking.findOne({ campaigns: campaignId }).lean();
+   
+      // Step 2: Find the campaign and populate the FULL space documents.
+      const campaign = await Campaign.findById(campaignId)
+        .populate({
+          path: 'spaces.id' // Get all fields from the Space model
+        })
+        .lean();
+   
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campaign not found' });
+      }
+   
+      // Step 3: Construct a response that includes the full objects for the frontend.
+      const responseData = {
+        ...campaign,
+        booking: parentBooking, // Send the entire booking object
+        bookingName: parentBooking ? (parentBooking.companyName || parentBooking.clientName) : 'N/A',
+        spaceNames: campaign.spaces ? campaign.spaces.map(space => space.id?.spaceName).filter(Boolean) : []
+      };
+   
+      res.status(200).json(responseData);
+   
+    } catch (err) {
+      console.error('Error fetching single campaign:', err);
+      if (err.kind === 'ObjectId') {
+          return res.status(400).json({ message: 'Invalid campaign ID format' });
+      }
+      res.status(500).json({ message: 'Server error, could not fetch the campaign.' });
+    }
+  });
 // ===================================================================
 // =========== START: NEW CAMPAIGN CREATION ROUTE ====================
 // ===================================================================
