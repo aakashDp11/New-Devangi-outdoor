@@ -1670,12 +1670,13 @@ export const getBookingById = async (req, res) => {
       path: 'campaignId',
       model: 'Campaign',
       select: '_id campaignName startDate endDate industry isFOC',  // Populate Campaign details
-    }).populate({
-      path: 'pipeline',
-      model: 'Pipeline',
-      select: 'payment bookingStatus artwork po invoice',  // Populate Pipeline details
-      strictPopulate: false,  // Allow populating even if not strictly defined in schema
-    });
+    })
+    // .populate({
+    //   path: 'pipeline',
+    //   model: 'Pipeline',
+    //   select: 'payment bookingStatus artwork po invoice',  // Populate Pipeline details
+    //   strictPopulate: false,  // Allow populating even if not strictly defined in schema
+    // });
 
     // Step 3: Prepare the response data exactly as the previous structure
     const result = {
@@ -1698,7 +1699,7 @@ export const getBookingById = async (req, res) => {
         endDate: bc.campaignId.endDate,
         industry: bc.campaignId.industry,
         isFOC: bc.campaignId.isFOC,
-        pipeline: bc.pipeline,  // Include the entire pipeline for each campaign
+        // pipeline: bc.pipeline,  // Include the entire pipeline for each campaign
       }))
     };
 
