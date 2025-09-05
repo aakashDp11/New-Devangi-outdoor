@@ -1397,6 +1397,9 @@ export const getBookingById = async (req, res) => {
     const result = {
       companyName: booking.companyName,
       clientName: booking.clientName,
+      clientEmail: booking.clientEmail,
+      clientContactNumber: booking.clientContactNumber,
+      clientPanNumber: booking.clientPanNumber,
       brandDisplayName: booking.brandDisplayName,
       clientType: booking.clientType,
       createdAt: booking.createdAt,
