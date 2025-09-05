@@ -64,7 +64,12 @@ const campaignSchema = new Schema({
 }, {
   timestamps: true
 });
+campaignSchema.index({ startDate: 1, endDate: 1 });
 
+
+
+// Membership + time window (availability/performance lookups)
+campaignSchema.index({ 'spaces.id': 1, startDate: 1, endDate: 1 });
 const Campaign = model('Campaign', campaignSchema);
 
 export default Campaign;

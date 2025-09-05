@@ -146,194 +146,403 @@ router.use(authenticate);
 
 // GET /inventory-report
 router.get('/inventory-report', async (req, res) => {
+    // try {
+    //   const {
+    //     page = 1,
+    //     limit = 10,
+    //     name = '',
+    //     type = '',
+    //     agency = '',
+    //     industry = '',
+    //     sortKey = 'revenue',
+    //     sortDirection = 'desc'
+    //   } = req.query;
+  
+    //   const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    //   const lim = parseInt(limit, 10);
+  
+    //   const baseFilter = {};
+    //   if (name) baseFilter.spaceName = { $regex: name, $options: 'i' };
+    //   if (type) baseFilter.spaceType = { $regex: type, $options: 'i' };
+  
+    //   const pipeline = [
+    //     { $match: baseFilter },
+    //     {
+    //       $lookup: {
+    //         from: 'campaigns',
+    //         let: { spaceId: '$_id' },
+    //         pipeline: [
+    //           { $match: { $expr: { $in: ['$$spaceId', '$spaces.id'] } } },
+    //           { $project: { _id: 1, pipeline: 1, industry: 1, createdAt: 1 } },
+  
+    //           { // BookingCampaign links for this campaign
+    //             $lookup: {
+    //               from: 'bookingcampaigns',
+    //               localField: '_id',
+    //               foreignField: 'campaignId',
+    //               as: 'bc'
+    //             }
+    //           },
+    //           { $unwind: { path: '$bc', preserveNullAndEmptyArrays: true } },
+  
+    //           { // Pull the Booking (agencyName, createdAt)
+    //             $lookup: {
+    //               from: 'bookings',
+    //               localField: 'bc.bookingId',
+    //               foreignField: '_id',
+    //               as: 'booking'
+    //             }
+    //           },
+    //           { $unwind: { path: '$booking', preserveNullAndEmptyArrays: true } }, // <-- FIXED
+  
+    //           { // Pipeline for revenue
+    //             $lookup: {
+    //               from: 'pipelines',
+    //               localField: 'pipeline',
+    //               foreignField: '_id',
+    //               as: 'pipelineDoc'
+    //             }
+    //           },
+    //           { $unwind: { path: '$pipelineDoc', preserveNullAndEmptyArrays: true } }, // <-- FIXED
+  
+    //           {
+    //             $project: {
+    //               _id: 0,
+    //               campaignId: '$_id',
+    //               industry: '$industry',
+    //               agency: '$booking.agencyName',
+    //               bookingCreatedAt: '$booking.createdAt',
+    //               revenue: { $ifNull: ['$pipelineDoc.payment.finalAmountWithGST', 0] }
+    //             }
+    //           }
+    //         ],
+    //         as: 'bookingData'
+    //       }
+    //     },
+    //     {
+    //       $addFields: {
+    //         bookingData: {
+    //           $filter: {
+    //             input: '$bookingData',
+    //             as: 'b',
+    //             cond: { $ne: ['$$b.agency', null] }
+    //           }
+    //         }
+    //       }
+    //     },
+    //     {
+    //       $addFields: {
+    //         totalBookings: { $size: '$bookingData' },
+    //         totalRevenue: {
+    //           $sum: {
+    //             $map: {
+    //               input: '$bookingData',
+    //               as: 'b',
+    //               in: { $ifNull: ['$$b.revenue', 0] }
+    //             }
+    //           }
+    //         },
+    //         lastBookedDate: { $max: '$bookingData.bookingCreatedAt' },
+    //         agency: {
+    //           $let: {
+    //             vars: {
+    //               nonNullAgencies: {
+    //                 $filter: { input: '$bookingData', as: 'b', cond: { $ne: ['$$b.agency', null] } }
+    //               }
+    //             },
+    //             in: { $ifNull: [{ $first: '$$nonNullAgencies.agency' }, null] }
+    //           }
+    //         },
+    //         industry: {
+    //           $let: {
+    //             vars: {
+    //               nonNullIndustries: {
+    //                 $filter: { input: '$bookingData', as: 'b', cond: { $ne: ['$$b.industry', null] } }
+    //               }
+    //             },
+    //             in: { $ifNull: [{ $first: '$$nonNullIndustries.industry' }, null] }
+    //           }
+    //         }
+    //       }
+    //     }
+    //   ];
+  
+    //   if (agency) pipeline.push({ $match: { agency: { $regex: agency, $options: 'i' } } });
+    //   if (industry) pipeline.push({ $match: { industry: { $regex: industry, $options: 'i' } } });
+  
+    //   const sortKeyMap = {
+    //     name: 'spaceName',
+    //     type: 'spaceType',
+    //     agency: 'agency',
+    //     industry: 'industry',
+    //     bookings: 'totalBookings',
+    //     revenue: 'totalRevenue'
+    //   };
+    //   const backendSortKey = sortKeyMap[sortKey] || 'totalRevenue';
+    //   const sortOrder = (String(sortDirection).toLowerCase() === 'asc') ? 1 : -1;
+  
+    //   pipeline.push({ $sort: { [backendSortKey]: sortOrder, _id: 1 } });
+  
+    //   const countPipeline = pipeline
+    //     .filter(stage => !stage.$sort) // remove sort for count
+    //     .concat([{ $count: 'total' }]);
+  
+    //   pipeline.push(
+    //     { $skip: skip },
+    //     { $limit: lim },
+    //     {
+    //       $project: {
+    //         _id: 0,
+    //         id: { $toString: '$_id' },
+    //         name: '$spaceName',
+    //         type: { $ifNull: ['$spaceType', null] },
+    //         agency: { $ifNull: ['$agency', null] },
+    //         industry: { $ifNull: ['$industry', null] },
+    //         bookings: { $ifNull: ['$totalBookings', 0] },
+    //         revenue: { $ifNull: ['$totalRevenue', 0] },
+    //         lastBookedDate: { $ifNull: ['$lastBookedDate', null] },
+    //         category: { $ifNull: ['$category', null] },
+    //         mediaType: { $ifNull: ['$mediaType', null] },
+    //         city: { $ifNull: ['$city', null] },
+    //         state: { $ifNull: ['$state', null] },
+    //         price: { $ifNull: ['$price', null] }
+    //       }
+    //     }
+    //   );
+  
+    //   const [items, countRes] = await Promise.all([
+    //     Space.aggregate(pipeline),
+    //     Space.aggregate(countPipeline)
+    //   ]);
+  
+    //   const totalCount = countRes[0]?.total || 0;
+    //   const totalPages = Math.ceil(totalCount / lim);
+  
+    //   res.json({
+    //     success: true,
+    //     data: items,
+    //     pagination: {
+    //       currentPage: parseInt(page, 10),
+    //       totalPages,
+    //       totalCount
+    //     }
+    //   });
+    // } catch (err) {
+    //   console.error('Inventory Report Error:', err);
+    //   res.status(500).json({
+    //     success: false,
+    //     message: 'Internal server error',
+    //     error: err.message
+    //   });
+    // }
     try {
-      const {
-        page = 1,
-        limit = 10,
-        name = '',
-        type = '',
-        agency = '',
-        industry = '',
-        sortKey = 'revenue',
-        sortDirection = 'desc'
-      } = req.query;
-  
-      const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-      const lim = parseInt(limit, 10);
-  
-      const baseFilter = {};
-      if (name) baseFilter.spaceName = { $regex: name, $options: 'i' };
-      if (type) baseFilter.spaceType = { $regex: type, $options: 'i' };
-  
-      const pipeline = [
-        { $match: baseFilter },
-        {
-          $lookup: {
-            from: 'campaigns',
-            let: { spaceId: '$_id' },
-            pipeline: [
-              { $match: { $expr: { $in: ['$$spaceId', '$spaces.id'] } } },
-              { $project: { _id: 1, pipeline: 1, industry: 1, createdAt: 1 } },
-  
-              { // BookingCampaign links for this campaign
-                $lookup: {
-                  from: 'bookingcampaigns',
-                  localField: '_id',
-                  foreignField: 'campaignId',
-                  as: 'bc'
+        const {
+          page = 1,
+          limit = 10,
+          name = '',
+          type = '',
+          agency = '',
+          industry = '',
+          sortKey = 'revenue',
+          sortDirection = 'desc'
+        } = req.query;
+    
+        const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+        const lim = parseInt(limit, 10);
+        const sortOrder = (String(sortDirection).toLowerCase() === 'asc') ? 1 : -1;
+    
+        // Map UI sort keys to computed fields (post-derivation)
+        const sortKeyMap = {
+          name: 'spaceName',
+          type: 'spaceType',
+          agency: 'agency',
+          industry: 'industry',
+          bookings: 'totalBookings',
+          revenue: 'totalRevenue'
+        };
+        const backendSortKey = sortKeyMap[sortKey] || 'totalRevenue';
+    
+        // Base Space filters
+        const baseFilter = {};
+        if (name) baseFilter.spaceName = { $regex: name, $options: 'i' };
+        if (type) baseFilter.spaceType = { $regex: type, $options: 'i' };
+    
+        const pipeline = [
+          { $match: baseFilter },
+    
+          // Join campaigns that include this space
+          {
+            $lookup: {
+              from: 'campaigns',
+              let: { spaceId: '$_id' },
+              pipeline: [
+                { $match: { $expr: { $in: ['$$spaceId', '$spaces.id'] } } },
+                { $project: { _id: 1, pipeline: 1, industry: 1, createdAt: 1 } },
+    
+                // BookingCampaign links (may be none)
+                {
+                  $lookup: {
+                    from: 'bookingcampaigns',
+                    localField: '_id',
+                    foreignField: 'campaignId',
+                    as: 'bc'
+                  }
+                },
+                { $unwind: { path: '$bc', preserveNullAndEmptyArrays: true } },
+    
+                // Pull the Booking (agencyName, createdAt)
+                {
+                  $lookup: {
+                    from: 'bookings',
+                    localField: 'bc.bookingId',
+                    foreignField: '_id',
+                    as: 'booking'
+                  }
+                },
+                { $unwind: { path: '$booking', preserveNullAndEmptyArrays: true } },
+    
+                // Pipeline doc for revenue snapshot
+                {
+                  $lookup: {
+                    from: 'pipelines',
+                    localField: 'pipeline',
+                    foreignField: '_id',
+                    as: 'pipelineDoc'
+                  }
+                },
+                { $unwind: { path: '$pipelineDoc', preserveNullAndEmptyArrays: true } },
+    
+                // One row per (campaign x booking)
+                {
+                  $project: {
+                    _id: 0,
+                    campaignId: '$_id',
+                    industry: 1,
+                    agency: '$booking.agencyName',
+                    bookingCreatedAt: '$booking.createdAt',
+                    revenue: { $ifNull: ['$pipelineDoc.payment.finalAmountWithGST', 0] }
+                  }
                 }
-              },
-              { $unwind: { path: '$bc', preserveNullAndEmptyArrays: true } },
-  
-              { // Pull the Booking (agencyName, createdAt)
-                $lookup: {
-                  from: 'bookings',
-                  localField: 'bc.bookingId',
-                  foreignField: '_id',
-                  as: 'booking'
-                }
-              },
-              { $unwind: { path: '$booking', preserveNullAndEmptyArrays: true } }, // <-- FIXED
-  
-              { // Pipeline for revenue
-                $lookup: {
-                  from: 'pipelines',
-                  localField: 'pipeline',
-                  foreignField: '_id',
-                  as: 'pipelineDoc'
-                }
-              },
-              { $unwind: { path: '$pipelineDoc', preserveNullAndEmptyArrays: true } }, // <-- FIXED
-  
-              {
-                $project: {
-                  _id: 0,
-                  campaignId: '$_id',
-                  industry: '$industry',
-                  agency: '$booking.agencyName',
-                  bookingCreatedAt: '$booking.createdAt',
-                  revenue: { $ifNull: ['$pipelineDoc.payment.finalAmountWithGST', 0] }
-                }
-              }
-            ],
-            as: 'bookingData'
-          }
-        },
-        {
-          $addFields: {
-            bookingData: {
-              $filter: {
-                input: '$bookingData',
-                as: 'b',
-                cond: { $ne: ['$$b.agency', null] }
-              }
+              ],
+              as: 'bookingData'
             }
-          }
-        },
-        {
-          $addFields: {
-            totalBookings: { $size: '$bookingData' },
-            totalRevenue: {
-              $sum: {
-                $map: {
+          },
+    
+          // Keep only rows that actually have a booking (agency present)
+          {
+            $addFields: {
+              bookingData: {
+                $filter: {
                   input: '$bookingData',
                   as: 'b',
-                  in: { $ifNull: ['$$b.revenue', 0] }
+                  cond: { $ne: ['$$b.agency', null] }
                 }
               }
-            },
-            lastBookedDate: { $max: '$bookingData.bookingCreatedAt' },
-            agency: {
-              $let: {
-                vars: {
-                  nonNullAgencies: {
-                    $filter: { input: '$bookingData', as: 'b', cond: { $ne: ['$$b.agency', null] } }
-                  }
-                },
-                in: { $ifNull: [{ $first: '$$nonNullAgencies.agency' }, null] }
-              }
-            },
-            industry: {
-              $let: {
-                vars: {
-                  nonNullIndustries: {
-                    $filter: { input: '$bookingData', as: 'b', cond: { $ne: ['$$b.industry', null] } }
-                  }
-                },
-                in: { $ifNull: [{ $first: '$$nonNullIndustries.industry' }, null] }
+            }
+          },
+    
+          // Derive per-space metrics once
+          {
+            $addFields: {
+              totalBookings: { $size: '$bookingData' },
+              totalRevenue: {
+                $sum: {
+                  $map: { input: '$bookingData', as: 'b', in: { $ifNull: ['$$b.revenue', 0] } }
+                }
+              },
+              lastBookedDate: { $max: '$bookingData.bookingCreatedAt' },
+              agency: {
+                $let: {
+                  vars: {
+                    rows: {
+                      $filter: { input: '$bookingData', as: 'b', cond: { $ne: ['$$b.agency', null] } }
+                    }
+                  },
+                  in: { $ifNull: [{ $first: '$$rows.agency' }, null] }
+                }
+              },
+              industry: {
+                $let: {
+                  vars: {
+                    rows: {
+                      $filter: { input: '$bookingData', as: 'b', cond: { $ne: ['$$b.industry', null] } }
+                    }
+                  },
+                  in: { $ifNull: [{ $first: '$$rows.industry' }, null] }
+                }
               }
             }
+          },
+    
+          // Single pass: branch into data + count
+          {
+            $facet: {
+              data: [
+                // Apply post-derivation filters
+                ...(agency ? [{ $match: { agency: { $regex: agency, $options: 'i' } } }] : []),
+                ...(industry ? [{ $match: { industry: { $regex: industry, $options: 'i' } } }] : []),
+    
+                { $sort: { [backendSortKey]: sortOrder, _id: 1 } },
+                { $skip: skip },
+                { $limit: lim },
+                {
+                  $project: {
+                    _id: 0,
+                    id: { $toString: '$_id' },
+                    name: '$spaceName',
+                    type: { $ifNull: ['$spaceType', null] },
+                    agency: { $ifNull: ['$agency', null] },
+                    industry: { $ifNull: ['$industry', null] },
+                    bookings: { $ifNull: ['$totalBookings', 0] },
+                    revenue: { $ifNull: ['$totalRevenue', 0] },
+                    lastBookedDate: { $ifNull: ['$lastBookedDate', null] },
+                    category: { $ifNull: ['$category', null] },
+                    mediaType: { $ifNull: ['$mediaType', null] },
+                    city: { $ifNull: ['$city', null] },
+                    state: { $ifNull: ['$state', null] },
+                    price: { $ifNull: ['$price', null] }
+                  }
+                }
+              ],
+              meta: [
+                ...(agency ? [{ $match: { agency: { $regex: agency, $options: 'i' } } }] : []),
+                ...(industry ? [{ $match: { industry: { $regex: industry, $options: 'i' } } }] : []),
+                { $count: 'total' }
+              ]
+            }
+          },
+    
+          // Reshape facet result
+          {
+            $project: {
+              data: 1,
+              totalCount: { $ifNull: [{ $arrayElemAt: ['$meta.total', 0] }, 0] }
+            }
           }
-        }
-      ];
-  
-      if (agency) pipeline.push({ $match: { agency: { $regex: agency, $options: 'i' } } });
-      if (industry) pipeline.push({ $match: { industry: { $regex: industry, $options: 'i' } } });
-  
-      const sortKeyMap = {
-        name: 'spaceName',
-        type: 'spaceType',
-        agency: 'agency',
-        industry: 'industry',
-        bookings: 'totalBookings',
-        revenue: 'totalRevenue'
-      };
-      const backendSortKey = sortKeyMap[sortKey] || 'totalRevenue';
-      const sortOrder = (String(sortDirection).toLowerCase() === 'asc') ? 1 : -1;
-  
-      pipeline.push({ $sort: { [backendSortKey]: sortOrder, _id: 1 } });
-  
-      const countPipeline = pipeline
-        .filter(stage => !stage.$sort) // remove sort for count
-        .concat([{ $count: 'total' }]);
-  
-      pipeline.push(
-        { $skip: skip },
-        { $limit: lim },
-        {
-          $project: {
-            _id: 0,
-            id: { $toString: '$_id' },
-            name: '$spaceName',
-            type: { $ifNull: ['$spaceType', null] },
-            agency: { $ifNull: ['$agency', null] },
-            industry: { $ifNull: ['$industry', null] },
-            bookings: { $ifNull: ['$totalBookings', 0] },
-            revenue: { $ifNull: ['$totalRevenue', 0] },
-            lastBookedDate: { $ifNull: ['$lastBookedDate', null] },
-            category: { $ifNull: ['$category', null] },
-            mediaType: { $ifNull: ['$mediaType', null] },
-            city: { $ifNull: ['$city', null] },
-            state: { $ifNull: ['$state', null] },
-            price: { $ifNull: ['$price', null] }
+        ];
+    
+        // Run once with disk spill enabled for safety on big datasets
+        const result = await Space.aggregate(pipeline).option({ allowDiskUse: true });
+        const items = result[0]?.data || [];
+        const totalCount = result[0]?.totalCount || 0;
+        const totalPages = Math.ceil(totalCount / lim);
+    
+        res.json({
+          success: true,
+          data: items,
+          pagination: {
+            currentPage: parseInt(page, 10),
+            totalPages,
+            totalCount
           }
-        }
-      );
-  
-      const [items, countRes] = await Promise.all([
-        Space.aggregate(pipeline),
-        Space.aggregate(countPipeline)
-      ]);
-  
-      const totalCount = countRes[0]?.total || 0;
-      const totalPages = Math.ceil(totalCount / lim);
-  
-      res.json({
-        success: true,
-        data: items,
-        pagination: {
-          currentPage: parseInt(page, 10),
-          totalPages,
-          totalCount
-        }
-      });
-    } catch (err) {
-      console.error('Inventory Report Error:', err);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: err.message
-      });
+        });
+      } catch (err) {
+        console.error('Inventory Report Error:', err);
+        res.status(500).json({
+          success: false,
+          message: 'Internal server error',
+          error: err.message
+        });
     }
   });
   

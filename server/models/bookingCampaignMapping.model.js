@@ -11,6 +11,11 @@ const bookingCampaignSchema = new Schema({
   });
   
   bookingCampaignSchema.index({ bookingId: 1, campaignId: 1 }, { unique: true });
+
+  // Fast joins from either side + recency scans
+  bookingCampaignSchema.index({ bookingId: 1 });
+  bookingCampaignSchema.index({ campaignId: 1 });
+  bookingCampaignSchema.index({ createdAt: -1 });
   
   const BookingCampaign = model('BookingCampaign', bookingCampaignSchema);
   
