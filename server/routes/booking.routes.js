@@ -493,8 +493,8 @@ export const getFilteredBookings = async (req, res) => {
 
     // ----- Load the campaigns (NO spaces returned), but we read spaces.id internally to compute timelines -----
     const campaigns = await Campaign.find({ _id: { $in: allCampaignIds } })
-      .select('_id campaignName description industry isFOC startDate endDate inventoryCosts artwork pipeline spaces.id createdAt updatedAt __v')
-      .populate({ path: 'pipeline', model: 'Pipeline' })
+      .select('_id campaignName description industry isFOC startDate endDate  createdAt updatedAt __v')
+      // .populate({ path: 'pipeline', model: 'Pipeline' })
       .lean();
 
     // Build quick lookup
@@ -582,12 +582,12 @@ export const getFilteredBookings = async (req, res) => {
             isFOC: c.isFOC,
             startDate: c.startDate,
             endDate: c.endDate,
-            inventoryCosts: c.inventoryCosts || [],
-            artwork: c.artwork || { confirmed: false },
+            // inventoryCosts: c.inventoryCosts || [],
+            // artwork: c.artwork || { confirmed: false },
+            // pipeline: c.pipeline || undefined,
             createdAt: c.createdAt,
             updatedAt: c.updatedAt,
             __v: c.__v,
-            pipeline: c.pipeline || undefined,
             // NEW: timeline at campaign level; NO space data returned
             campaignDates: computeCampaignDates(c),
           };
@@ -618,278 +618,489 @@ export const getFilteredBookings = async (req, res) => {
   }
 };
 
-
-
 export const getAllBookings = async (req, res) => {
-try {
-const page = parseInt(req.query.page) || 1;
-const limit = parseInt(req.query.limit) || 10;
-const skip = (page - 1) * limit;
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-const {
-paymentStatus,
-poStatus,
-startDate,
-endDate,
-search,
-sortKey = 'createdAt',      // NEW
-sortDirection = 'desc'    // NEW
-} = req.query;
-const searchRegex = search ? new RegExp(search, 'i') : null;
+    const {
+      paymentStatus,
+      poStatus,
+      startDate,
+      endDate,
+      search,
+      sortKey = 'createdAt',
+      sortDirection = 'desc'
+    } = req.query;
 
-const start = startDate ? new Date(startDate) : null;
-const endDt = endDate ? new Date(endDate) : null;
-if (endDt) endDt.setHours(23, 59, 59, 999);
+    const searchRegex = search ? new RegExp(search, 'i') : null;
+    const start = startDate ? new Date(startDate) : null;
+    const endDt = endDate ? new Date(endDate) : null;
+    if (endDt) endDt.setHours(23, 59, 59, 999);
+    const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
 
-const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
+    const pipeline = [];
 
-
-const pipeline = [];
-
-if (searchRegex) {
-  pipeline.push({
-    $match: {
-      $or: [
-        { companyName: searchRegex },
-        { clientName: searchRegex },
-        { brandDisplayName: searchRegex }
-      ]
-    }
-  });
-}
-
-pipeline.push({
-  $lookup: {
-    from: 'campaigns',
-    localField: 'campaigns',
-    foreignField: '_id',
-    as: 'campaigns'
-  }
-});
-
-pipeline.push({
-    $addFields: {
-        campaigns: {
-            $map: {
-                input: '$campaigns',
-                as: 'camp',
-                in: {
-                    $mergeObjects: [
-                        '$$camp',
-                        {
-                            startDateObj: {
-                                $cond: {
-                                    if: { $and: [
-                                        { $ne: [{ $type: '$$camp.startDate' }, 'missing'] },
-                                        { $ne: ['$$camp.startDate', null] },
-                                        { $ne: ['$$camp.startDate', ""] }
-                                    ]},
-                                    then: {
-                                        $dateFromString: {
-                                            dateString: '$$camp.startDate',
-                                            format: '%Y-%m-%d',
-                                            onError: null
-                                        }
-                                    },
-                                    else: null
-                                }
-                            },
-                            endDateObj: {
-                                $cond: {
-                                    if: { $and: [
-                                        { $ne: [{ $type: '$$camp.endDate' }, 'missing'] },
-                                        { $ne: ['$$camp.endDate', null] },
-                                        { $ne: ['$$camp.endDate', ""] }
-                                    ]},
-                                    then: {
-                                        $dateFromString: {
-                                            dateString: '$$camp.endDate',
-                                            format: '%Y-%m-%d',
-                                            onError: null
-                                        }
-                                    },
-                                    else: null
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-    }
-});
-
-pipeline.push({
-  $lookup: {
-    from: 'pipelines',
-    localField: 'campaigns.pipeline',
-    foreignField: '_id',
-    as: 'pipelineDetails'
-  }
-});
-
-pipeline.push({
-  $addFields: {
-    campaigns: {
-      $map: {
-        input: '$campaigns',
-        as: 'camp',
-        in: {
-          $mergeObjects: [
-            '$$camp',
-            {
-              paymentSummary: {
-                totalDue: {
-                  $ifNull: [
-                    {
-                      $first: {
-                        $map: {
-                          input: '$pipelineDetails',
-                          as: 'pipe',
-                          in: '$$pipe.payment.finalAmountWithGST'
-                        }
-                      }
-                    },
-                    0
-                  ]
-                },
-                totalPaid: {
-                  $ifNull: [
-                    {
-                      $first: {
-                        $map: {
-                          input: '$pipelineDetails',
-                          as: 'pipe',
-                          in: '$$pipe.payment.totalPaid'
-                        }
-                      }
-                    },
-                    0
-                  ]
-                }
-              },
-              poConfirmed: {
-                $first: {
-                  $map: {
-                    input: '$pipelineDetails',
-                    as: 'pipe',
-                    in: '$$pipe.po.confirmed'
-                  }
-                }
-              }
-            }
+    // Search on booking fields
+    if (searchRegex) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { companyName: searchRegex },
+            { clientName: searchRegex },
+            { brandDisplayName: searchRegex }
           ]
         }
-      }
+      });
     }
-  }
-});
 
-pipeline.push({
-  $addFields: {
-    campaigns: {
-      $map: {
-        input: '$campaigns',
-        as: 'camp',
-        in: {
-          $mergeObjects: [
-            '$$camp',
-            {
-              paymentSummary: {
-                $mergeObjects: [
-                  '$$camp.paymentSummary',
-                  {
+    // Lookup BookingCampaigns for this booking
+    pipeline.push({
+      $lookup: {
+        from: 'bookingcampaigns',
+        localField: '_id',
+        foreignField: 'bookingId',
+        as: 'bookingCampaigns'
+      }
+    });
+
+    // Populate the Campaigns
+    pipeline.push({
+      $lookup: {
+        from: 'campaigns',
+        localField: 'bookingCampaigns.campaignId',
+        foreignField: '_id',
+        as: 'campaigns'
+      }
+    });
+
+    // Map campaigns to include startDateObj and endDateObj
+    pipeline.push({
+      $addFields: {
+        campaigns: {
+          $map: {
+            input: '$campaigns',
+            as: 'camp',
+            in: {
+              $mergeObjects: [
+                '$$camp',
+                {
+                  startDateObj: {
+                    $cond: [
+                      { $and: [{ $ne: ['$$camp.startDate', null] }, { $ne: ['$$camp.startDate', ''] }] },
+                      { $dateFromString: { dateString: '$$camp.startDate', format: '%Y-%m-%d', onError: null } },
+                      null
+                    ]
+                  },
+                  endDateObj: {
+                    $cond: [
+                      { $and: [{ $ne: ['$$camp.endDate', null] }, { $ne: ['$$camp.endDate', ''] }] },
+                      { $dateFromString: { dateString: '$$camp.endDate', format: '%Y-%m-%d', onError: null } },
+                      null
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    });
+
+    // Lookup pipeline details for payment summary
+    pipeline.push({
+      $lookup: {
+        from: 'pipelines',
+        localField: 'campaigns.pipeline',
+        foreignField: '_id',
+        as: 'pipelineDetails'
+      }
+    });
+
+    // Compute payment summary and PO status
+    pipeline.push({
+      $addFields: {
+        campaigns: {
+          $map: {
+            input: '$campaigns',
+            as: 'camp',
+            in: {
+              $mergeObjects: [
+                '$$camp',
+                {
+                  paymentSummary: {
+                    totalDue: {
+                      $ifNull: [
+                        {
+                          $first: {
+                            $map: {
+                              input: '$pipelineDetails',
+                              as: 'pipe',
+                              in: '$$pipe.payment.finalAmountWithGST'
+                            }
+                          }
+                        },
+                        0
+                      ]
+                    },
+                    totalPaid: {
+                      $ifNull: [
+                        {
+                          $first: {
+                            $map: {
+                              input: '$pipelineDetails',
+                              as: 'pipe',
+                              in: '$$pipe.payment.totalPaid'
+                            }
+                          }
+                        },
+                        0
+                      ]
+                    },
                     status: {
                       $switch: {
                         branches: [
-                         
                           {
-                            case: {
-                              $gte: [
-                                '$$camp.paymentSummary.totalPaid',
-                                '$$camp.paymentSummary.totalDue'
-                              ]
-                            },
+                            case: { $gte: [{ $first: '$pipelineDetails.payment.totalPaid' }, { $first: '$pipelineDetails.payment.finalAmountWithGST' }] },
                             then: 'Paid'
                           },
                           {
-                            case: {
-                              $gt: ['$$camp.paymentSummary.totalPaid', 0]
-                            },
+                            case: { $gt: [{ $first: '$pipelineDetails.payment.totalPaid' }, 0] },
                             then: 'Partial'
                           }
                         ],
                         default: 'Unpaid'
                       }
                     }
-                  }
-                ]
-              }
+                  },
+                  poConfirmed: { $first: '$pipelineDetails.po.confirmed' }
+                }
+              ]
             }
-          ]
+          }
         }
       }
+    });
+
+    // Compute overall start and end dates
+    pipeline.push({
+      $addFields: {
+        overallStartDate: { $min: '$campaigns.startDateObj' },
+        overallEndDate: { $max: '$campaigns.endDateObj' }
+      }
+    });
+
+    // Apply filters
+    const filters = {};
+    if (start && endDt) {
+      filters.overallStartDate = { $lte: endDt };
+      filters.overallEndDate = { $gte: start };
+    } else if (start) {
+      filters.overallEndDate = { $gte: start };
+    } else if (endDt) {
+      filters.overallStartDate = { $lte: endDt };
     }
+    if (paymentStatus) filters['campaigns.paymentSummary.status'] = paymentStatus;
+    if (poStatus === 'true' || poStatus === 'false') filters['campaigns.poConfirmed'] = poStatus === 'true';
+
+    if (Object.keys(filters).length > 0) pipeline.push({ $match: filters });
+
+    // Sort, paginate
+    pipeline.push(
+      { $sort: sortOptions },
+      { $facet: { bookings: [{ $skip: skip }, { $limit: limit }], totalCount: [{ $count: 'count' }] } }
+    );
+
+    const result = await Booking.aggregate(pipeline);
+    const bookings = result[0]?.bookings || [];
+    const totalCount = result[0]?.totalCount[0]?.count || 0;
+
+    return res.json({
+      bookings,
+      pagination: {
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+        totalCount
+      }
+    });
+  } catch (err) {
+    console.error('Error in getAllBookings:', err);
+    res.status(500).json({ message: 'Server Error' });
   }
-});
-
-pipeline.push({
-  $addFields: {
-    overallStartDate: { $min: '$campaigns.startDateObj' },
-    overallEndDate: { $max: '$campaigns.endDateObj' }
-  }
-});
-
-const filters = {};
-if (start && endDt) {
-  filters.overallStartDate = { $lte: endDt };
-  filters.overallEndDate = { $gte: start };
-} else if (start) {
-  filters.overallEndDate = { $gte: start };
-} else if (endDt) {
-  filters.overallStartDate = { $lte: endDt };
-}
-
-if (paymentStatus) {
-  filters['campaigns.paymentSummary.status'] = paymentStatus;
-}
-
-if (poStatus === 'true' || poStatus === 'false') {
-  filters['campaigns.poConfirmed'] = poStatus === 'true';
-}
-
-if (Object.keys(filters).length > 0) {
-  pipeline.push({ $match: filters });
-}
-
-pipeline.push(
-  { $sort: sortOptions },
-  {
-    $facet: {
-      bookings: [{ $skip: skip }, { $limit: limit }],
-      totalCount: [{ $count: 'count' }]
-    }
-  }
-);
-
-const result = await Booking.aggregate(pipeline);
-
-const bookings = result[0].bookings || [];
-const totalCount = result[0].totalCount[0]?.count || 0;
-
-return res.json({
-bookings,
-pagination: {
-totalPages: Math.ceil(totalCount / limit),
-currentPage: page,
-totalCount: totalCount,
-}
-});
-} catch (err) {
-console.error('Error in getAllBookings:', err);
-res.status(500).json({ message: 'Server Error' });
-}
 };
+
+
+// export const getAllBookings = async (req, res) => {
+// try {
+// const page = parseInt(req.query.page) || 1;
+// const limit = parseInt(req.query.limit) || 10;
+// const skip = (page - 1) * limit;
+
+// const {
+// paymentStatus,
+// poStatus,
+// startDate,
+// endDate,
+// search,
+// sortKey = 'createdAt',      // NEW
+// sortDirection = 'desc'    // NEW
+// } = req.query;
+// const searchRegex = search ? new RegExp(search, 'i') : null;
+
+// const start = startDate ? new Date(startDate) : null;
+// const endDt = endDate ? new Date(endDate) : null;
+// if (endDt) endDt.setHours(23, 59, 59, 999);
+
+// const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
+
+
+// const pipeline = [];
+
+// if (searchRegex) {
+//   pipeline.push({
+//     $match: {
+//       $or: [
+//         { companyName: searchRegex },
+//         { clientName: searchRegex },
+//         { brandDisplayName: searchRegex }
+//       ]
+//     }
+//   });
+// }
+
+// pipeline.push({
+//   $lookup: {
+//     from: 'campaigns',
+//     localField: 'campaigns',
+//     foreignField: '_id',
+//     as: 'campaigns'
+//   }
+// });
+
+// pipeline.push({
+//     $addFields: {
+//         campaigns: {
+//             $map: {
+//                 input: '$campaigns',
+//                 as: 'camp',
+//                 in: {
+//                     $mergeObjects: [
+//                         '$$camp',
+//                         {
+//                             startDateObj: {
+//                                 $cond: {
+//                                     if: { $and: [
+//                                         { $ne: [{ $type: '$$camp.startDate' }, 'missing'] },
+//                                         { $ne: ['$$camp.startDate', null] },
+//                                         { $ne: ['$$camp.startDate', ""] }
+//                                     ]},
+//                                     then: {
+//                                         $dateFromString: {
+//                                             dateString: '$$camp.startDate',
+//                                             format: '%Y-%m-%d',
+//                                             onError: null
+//                                         }
+//                                     },
+//                                     else: null
+//                                 }
+//                             },
+//                             endDateObj: {
+//                                 $cond: {
+//                                     if: { $and: [
+//                                         { $ne: [{ $type: '$$camp.endDate' }, 'missing'] },
+//                                         { $ne: ['$$camp.endDate', null] },
+//                                         { $ne: ['$$camp.endDate', ""] }
+//                                     ]},
+//                                     then: {
+//                                         $dateFromString: {
+//                                             dateString: '$$camp.endDate',
+//                                             format: '%Y-%m-%d',
+//                                             onError: null
+//                                         }
+//                                     },
+//                                     else: null
+//                                 }
+//                             }
+//                         }
+//                     ]
+//                 }
+//             }
+//         }
+//     }
+// });
+
+// pipeline.push({
+//   $lookup: {
+//     from: 'pipelines',
+//     localField: 'campaigns.pipeline',
+//     foreignField: '_id',
+//     as: 'pipelineDetails'
+//   }
+// });
+
+// pipeline.push({
+//   $addFields: {
+//     campaigns: {
+//       $map: {
+//         input: '$campaigns',
+//         as: 'camp',
+//         in: {
+//           $mergeObjects: [
+//             '$$camp',
+//             {
+//               paymentSummary: {
+//                 totalDue: {
+//                   $ifNull: [
+//                     {
+//                       $first: {
+//                         $map: {
+//                           input: '$pipelineDetails',
+//                           as: 'pipe',
+//                           in: '$$pipe.payment.finalAmountWithGST'
+//                         }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 },
+//                 totalPaid: {
+//                   $ifNull: [
+//                     {
+//                       $first: {
+//                         $map: {
+//                           input: '$pipelineDetails',
+//                           as: 'pipe',
+//                           in: '$$pipe.payment.totalPaid'
+//                         }
+//                       }
+//                     },
+//                     0
+//                   ]
+//                 }
+//               },
+//               poConfirmed: {
+//                 $first: {
+//                   $map: {
+//                     input: '$pipelineDetails',
+//                     as: 'pipe',
+//                     in: '$$pipe.po.confirmed'
+//                   }
+//                 }
+//               }
+//             }
+//           ]
+//         }
+//       }
+//     }
+//   }
+// });
+
+// pipeline.push({
+//   $addFields: {
+//     campaigns: {
+//       $map: {
+//         input: '$campaigns',
+//         as: 'camp',
+//         in: {
+//           $mergeObjects: [
+//             '$$camp',
+//             {
+//               paymentSummary: {
+//                 $mergeObjects: [
+//                   '$$camp.paymentSummary',
+//                   {
+//                     status: {
+//                       $switch: {
+//                         branches: [
+                         
+//                           {
+//                             case: {
+//                               $gte: [
+//                                 '$$camp.paymentSummary.totalPaid',
+//                                 '$$camp.paymentSummary.totalDue'
+//                               ]
+//                             },
+//                             then: 'Paid'
+//                           },
+//                           {
+//                             case: {
+//                               $gt: ['$$camp.paymentSummary.totalPaid', 0]
+//                             },
+//                             then: 'Partial'
+//                           }
+//                         ],
+//                         default: 'Unpaid'
+//                       }
+//                     }
+//                   }
+//                 ]
+//               }
+//             }
+//           ]
+//         }
+//       }
+//     }
+//   }
+// });
+
+// pipeline.push({
+//   $addFields: {
+//     overallStartDate: { $min: '$campaigns.startDateObj' },
+//     overallEndDate: { $max: '$campaigns.endDateObj' }
+//   }
+// });
+
+// const filters = {};
+// if (start && endDt) {
+//   filters.overallStartDate = { $lte: endDt };
+//   filters.overallEndDate = { $gte: start };
+// } else if (start) {
+//   filters.overallEndDate = { $gte: start };
+// } else if (endDt) {
+//   filters.overallStartDate = { $lte: endDt };
+// }
+
+// if (paymentStatus) {
+//   filters['campaigns.paymentSummary.status'] = paymentStatus;
+// }
+
+// if (poStatus === 'true' || poStatus === 'false') {
+//   filters['campaigns.poConfirmed'] = poStatus === 'true';
+// }
+
+// if (Object.keys(filters).length > 0) {
+//   pipeline.push({ $match: filters });
+// }
+
+// pipeline.push(
+//   { $sort: sortOptions },
+//   {
+//     $facet: {
+//       bookings: [{ $skip: skip }, { $limit: limit }],
+//       totalCount: [{ $count: 'count' }]
+//     }
+//   }
+// );
+
+// const result = await Booking.aggregate(pipeline);
+
+// const bookings = result[0].bookings || [];
+// const totalCount = result[0].totalCount[0]?.count || 0;
+
+// return res.json({
+// bookings,
+// pagination: {
+// totalPages: Math.ceil(totalCount / limit),
+// currentPage: page,
+// totalCount: totalCount,
+// }
+// });
+// } catch (err) {
+// console.error('Error in getAllBookings:', err);
+// res.status(500).json({ message: 'Server Error' });
+// }
+// };
 // --- END: CORRECTED FUNCTION ---
 export const getCampaignById = async (req, res) => {
 try {
@@ -1325,51 +1536,124 @@ console.error(error);
 return res.status(500).json({ error: error.message || 'Failed to update booking' });
 }
 };
+// export const deleteBooking = async (req, res) => {
+// const { id: bookingId } = req.params;
+// const session = await mongoose.startSession();
+// session.startTransaction();
+// try {
+// const booking = await Booking.findById(bookingId).populate('campaigns').session(session);
+// if (!booking) {
+// throw new Error('Booking not found');
+// }
+
+// for (const campaign of booking.campaigns) {
+//   for (const selected of campaign.spaces) {
+//     const space = await Space.findById(selected.id).session(session);
+//     if (!space) continue;
+
+//     space.occupiedUnits = Math.max(0, space.occupiedUnits - selected.selectedUnits);
+
+//     if (space.occupiedUnits >= space.unit) {
+//       space.availability = 'Completely booked';
+//     } else if (space.occupiedUnits === 0) {
+//       space.availability = 'Completely available';
+//     } else {
+//       space.availability = 'Partialy available';
+//     }
+//     space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
+//     await space.save({ session });
+//   }
+
+//   await Campaign.findByIdAndDelete(campaign._id).session(session);
+// }
+
+// await Booking.findByIdAndDelete(bookingId).session(session);
+
+// await session.commitTransaction();
+// session.endSession();
+
+// return res.status(200).json({ message: 'Booking deleted successfully' });
+// } catch (error) {
+// await session.abortTransaction();
+// session.endSession();
+// console.error(error);
+// return res.status(500).json({ error: error.message || 'Failed to delete booking' });
+// }
+// };
 export const deleteBooking = async (req, res) => {
-const { id: bookingId } = req.params;
-const session = await mongoose.startSession();
-session.startTransaction();
-try {
-const booking = await Booking.findById(bookingId).populate('campaigns').session(session);
-if (!booking) {
-throw new Error('Booking not found');
-}
+  const { id: bookingId } = req.params;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-for (const campaign of booking.campaigns) {
-  for (const selected of campaign.spaces) {
-    const space = await Space.findById(selected.id).session(session);
-    if (!space) continue;
+  try {
+    // 1️⃣ Fetch booking
+    const booking = await Booking.findById(bookingId).session(session);
+    if (!booking) throw new Error('Booking not found');
 
-    space.occupiedUnits = Math.max(0, space.occupiedUnits - selected.selectedUnits);
+    // 2️⃣ Fetch all BookingCampaigns linked to this booking
+    const bookingCampaigns = await BookingCampaign.find({ bookingId })
+      .populate('campaignId')
+      .session(session);
 
-    if (space.occupiedUnits >= space.unit) {
-      space.availability = 'Completely booked';
-    } else if (space.occupiedUnits === 0) {
-      space.availability = 'Completely available';
-    } else {
-      space.availability = 'Partialy available';
+    // 3️⃣ Loop through each BookingCampaign
+    for (const bc of bookingCampaigns) {
+      const campaign = bc.campaignId;
+      if (!campaign) continue;
+
+      // 4️⃣ Update spaces
+      for (const selected of campaign.spaces) {
+        const space = await Space.findById(selected.id).session(session);
+        if (!space) continue;
+
+        // Reduce occupied units
+        space.occupiedUnits = Math.max(0, space.occupiedUnits - selected.selectedUnits);
+
+        // Update availability based on type
+        const isDOOH = space.spaceType === 'DOOH';
+        const allUnitsBooked = space.occupiedUnits >= space.unit;
+        const noUnitsBooked = space.occupiedUnits === 0;
+
+        if (isDOOH) {
+          space.availability = allUnitsBooked
+            ? 'Completely booked'
+            : noUnitsBooked
+            ? 'Completely available'
+            : 'Partialy available';
+        } else {
+          if (space.overlappingBooking) {
+            space.availability = 'Overlapping booking';
+          } else {
+            space.availability = allUnitsBooked ? 'Booked' : 'Available';
+          }
+        }
+
+        // Decrement number of bookings
+        space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
+
+        await space.save({ session });
+      }
+
+      // 5️⃣ Delete the Campaign
+      await Campaign.findByIdAndDelete(campaign._id).session(session);
+
+      // 6️⃣ Delete the BookingCampaign
+      await BookingCampaign.findByIdAndDelete(bc._id).session(session);
     }
-    space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
-    await space.save({ session });
+
+    // 7️⃣ Delete the Booking itself
+    await Booking.findByIdAndDelete(bookingId).session(session);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({ message: 'Booking deleted successfully' });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error('Booking deletion error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to delete booking' });
   }
-
-  await Campaign.findByIdAndDelete(campaign._id).session(session);
-}
-
-await Booking.findByIdAndDelete(bookingId).session(session);
-
-await session.commitTransaction();
-session.endSession();
-
-return res.status(200).json({ message: 'Booking deleted successfully' });
-} catch (error) {
-await session.abortTransaction();
-session.endSession();
-console.error(error);
-return res.status(500).json({ error: error.message || 'Failed to delete booking' });
-}
 };
-
 export const getBookingById = async (req, res) => {
   const { id: bookingId } = req.params;
 

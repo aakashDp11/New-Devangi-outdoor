@@ -42,7 +42,7 @@ const bookingSchema = new Schema({
 bookingSchema.index({ createdAt: -1 });
 bookingSchema.index({ clientName: 1 });
 bookingSchema.index({ companyName: 1 });
-bookingSchema.index({ campaigns: 1 });
+// bookingSchema.index({ campaigns: 1 });
 
 const Booking = model('Booking', bookingSchema);
 
