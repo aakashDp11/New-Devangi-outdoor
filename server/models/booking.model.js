@@ -32,9 +32,9 @@ const bookingSchema = new Schema({
   campaignImages: [String],
   companyLogo: String,
   // Add the bookingCampaigns field here
-  bookingCampaigns: [
-    { type: mongoose.Schema.Types.ObjectId, ref: 'BookingCampaign' },
-  ],
+  // bookingCampaigns: [
+  //   { type: mongoose.Schema.Types.ObjectId, ref: 'BookingCampaign' },
+  // ],
 }, {
   timestamps: true
 });

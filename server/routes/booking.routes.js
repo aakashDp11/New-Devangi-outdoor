@@ -1679,6 +1679,7 @@ export const getBookingById = async (req, res) => {
 
     // Step 3: Prepare the response data exactly as the previous structure
     const result = {
+      _id:bookingId,
       companyName: booking.companyName,
       clientName: booking.clientName,
       clientEmail: booking.clientEmail,
@@ -2271,6 +2272,7 @@ const session = await mongoose.startSession();
 session.startTransaction();
 try {
 const { bookingId } = req.params;
+console.log("Booking id",bookingId);
 const campaignData = req.body;
 
 const [newCampaign] = await Campaign.create([campaignData], { session });
