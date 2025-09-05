@@ -1401,6 +1401,9 @@ export const getBookingById = async (req, res) => {
       clientContactNumber: booking.clientContactNumber,
       clientPanNumber: booking.clientPanNumber,
       brandDisplayName: booking.brandDisplayName,
+      clientGstNumber: booking.clientGstNumber,
+      bookingSource: booking.bookingSource,
+      bookingMode: booking.bookingMode,
       clientType: booking.clientType,
       createdAt: booking.createdAt,
       campaigns: bookingCampaigns.map(bc => ({
