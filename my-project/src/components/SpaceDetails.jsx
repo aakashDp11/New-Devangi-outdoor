@@ -21,16 +21,16 @@ const CampaignCard = ({ campaign, navigate, onEdit }) => (
     className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:bg-gray-100 hover:shadow-sm transition-all"
   >
     <div className="flex justify-between items-start text-sm w-full mb-3">
-      <div 
-        onClick={() => navigate(`/campaign-details/${campaign._id}`)} 
+      <div
+        onClick={() => navigate(`/campaign-details/${campaign._id}`)}
         className="cursor-pointer flex-grow pr-2"
       >
         <p className="text-xs text-gray-500 uppercase tracking-wider">Campaign Name</p>
         <p className="font-medium text-gray-800 break-words">{campaign.campaignName}</p>
       </div>
-      <button 
+      <button
         onClick={(e) => {
-          e.stopPropagation(); 
+          e.stopPropagation();
           onEdit(campaign);
         }}
         className="text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300 flex-shrink-0"
@@ -38,8 +38,8 @@ const CampaignCard = ({ campaign, navigate, onEdit }) => (
         Edit
       </button>
     </div>
-    <div 
-      onClick={() => navigate(`/campaign-details/${campaign._id}`)} 
+    <div
+      onClick={() => navigate(`/campaign-details/${campaign._id}`)}
       className="flex justify-between items-center text-sm w-full cursor-pointer"
     >
       <div className="text-left">
@@ -53,6 +53,31 @@ const CampaignCard = ({ campaign, navigate, onEdit }) => (
     </div>
   </div>
 );
+
+// New Image Preview Modal Component
+const ImagePreviewModal = ({ isOpen, imageUrl, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] p-4"
+      onClick={onClose} // Close when clicking outside the image
+    >
+      <div
+        className="relative bg-white rounded-lg shadow-xl overflow-hidden max-w-4xl max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the image itself
+      >
+        <button
+          className="absolute top-2 right-2 bg-black bg-opacity-50 text-white rounded-full p-2 text-lg hover:bg-opacity-75 z-10"
+          onClick={onClose}
+        >
+          &times;
+        </button>
+        <img src={imageUrl} alt="Preview" className="max-w-full max-h-[85vh] object-contain" />
+      </div>
+    </div>
+  );
+};
 
 
 export default function SpaceDetails() {
@@ -69,6 +94,10 @@ export default function SpaceDetails() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
 
+  // State for image preview
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [currentImage, setCurrentImage] = useState('');
+
   // Handlers for the modal
   const handleEditCampaign = (campaign) => {
     setSelectedCampaign(campaign);
@@ -76,9 +105,9 @@ export default function SpaceDetails() {
   };
 
   const handleCampaignUpdate = (updatedCampaign) => {
-    const updateList = (list) => 
+    const updateList = (list) =>
       list.map(c => c._id === updatedCampaign._id ? updatedCampaign : c);
-    
+
     setOngoingCampaigns(updateList);
     setUpcomingCampaigns(updateList);
     setPreviouslyEndedCampaigns(updateList);
@@ -117,6 +146,11 @@ export default function SpaceDetails() {
     }
   };
 
+  const openImagePreview = (imageUrl) => {
+    setCurrentImage(imageUrl);
+    setIsPreviewOpen(true);
+  };
+
   useEffect(() => {
     const fetchSpace = async () => {
       try {
@@ -136,9 +170,9 @@ export default function SpaceDetails() {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns/by-space/${id}`);
         if (!response.ok) throw new Error('Failed to fetch associated campaigns');
-        
+
         const campaigns = await response.json();
-        
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -149,7 +183,7 @@ export default function SpaceDetails() {
         campaigns.forEach(campaign => {
           const startDate = new Date(campaign.startDate);
           const endDate = new Date(campaign.endDate);
-          
+
           if (endDate < today) {
             ended.push(campaign);
           } else if (startDate <= today && endDate >= today) {
@@ -251,7 +285,7 @@ export default function SpaceDetails() {
               <DetailItem label="End Date" value={space.dates?.[1]} />
               <DetailItem label="Category" value={space.category} />
               <DetailItem label="Specification" value={space.specification} />
-              
+
               {space.spaceType === 'BQS' ||space.spaceType === 'DigitalBQS'|| space.spaceType === 'Transit' ? (
                 <>
                   <DetailItem label="Buying Price" value={space.buyingPrice ? `₹${space.buyingPrice.toLocaleString()}`: 'N/A'} />
@@ -300,14 +334,14 @@ export default function SpaceDetails() {
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{space.description}</p>
                 </div>
             )}
-            
+
             {space.latitude && space.longitude && !isNaN(parseFloat(space.latitude)) && !isNaN(parseFloat(space.longitude)) && (
               <div className="mt-2 mb-6">
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">Map Location</h2>
                 <div className="h-64 md:h-80 w-full rounded-lg overflow-hidden border">
-                  <MapPreview 
-                    latitude={parseFloat(space.latitude)} 
-                    longitude={parseFloat(space.longitude)} 
+                  <MapPreview
+                    latitude={parseFloat(space.latitude)}
+                    longitude={parseFloat(space.longitude)}
                     spaceName={space.spaceName}
                   />
                 </div>
@@ -320,10 +354,46 @@ export default function SpaceDetails() {
               <div className="lg:col-span-2">
                 <h2 className="text-xl font-semibold text-gray-700 mb-6">Space Images</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {space.mainPhoto && ( <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border"> <img src={space.mainPhoto} alt="Main" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/> </div> )}
-                  {space.longShot && ( <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border"> <img src={space.longShot} alt="Long Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/> </div> )}
-                  {space.closeShot && ( <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border"> <img src={space.closeShot} alt="Close Shot" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/> </div> )}
-                  {space.otherPhotos && space.otherPhotos.length > 0 && space.otherPhotos.map((photo, index) => ( <div key={index} className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border"> <img src={photo} alt={`Other ${index + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"/> </div> ))}
+                  {space.mainPhoto && (
+                    <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
+                      <img
+                        src={space.mainPhoto}
+                        alt="Main"
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => openImagePreview(space.mainPhoto)}
+                      />
+                    </div>
+                  )}
+                  {space.longShot && (
+                    <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
+                      <img
+                        src={space.longShot}
+                        alt="Long Shot"
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => openImagePreview(space.longShot)}
+                      />
+                    </div>
+                  )}
+                  {space.closeShot && (
+                    <div className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
+                      <img
+                        src={space.closeShot}
+                        alt="Close Shot"
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => openImagePreview(space.closeShot)}
+                      />
+                    </div>
+                  )}
+                  {space.otherPhotos && space.otherPhotos.length > 0 && space.otherPhotos.map((photo, index) => (
+                    <div key={index} className="aspect-square h-32 sm:h-36 md:h-32 lg:h-36 overflow-hidden rounded-lg bg-gray-100 border">
+                      <img
+                        src={photo}
+                        alt={`Other ${index + 1}`}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => openImagePreview(photo)}
+                      />
+                    </div>
+                  ))}
                   {!space.mainPhoto && !space.longShot && !space.closeShot && (!space.otherPhotos || space.otherPhotos.length === 0) && ( <div className="col-span-full aspect-video flex items-center justify-center text-gray-500 text-sm bg-gray-50 rounded-lg border border-dashed p-8"> No images have been uploaded for this space. </div> )}
                 </div>
               </div>
@@ -346,14 +416,14 @@ export default function SpaceDetails() {
                 <div>
                   <h2 className="text-xl font-semibold text-gray-700 mb-4">Previously Ended Campaigns</h2>
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                    {previouslyEndedCampaigns.length > 0 ? ( 
-                        previouslyEndedCampaigns.map((campaign) => ( 
-                            <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} onEdit={handleEditCampaign} /> 
-                        )) 
-                    ) : ( 
-                        <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4"> 
-                            <p className="text-sm text-gray-500">No previously ended campaigns for this space.</p> 
-                        </div> 
+                    {previouslyEndedCampaigns.length > 0 ? (
+                        previouslyEndedCampaigns.map((campaign) => (
+                            <CampaignCard key={campaign._id} campaign={campaign} navigate={navigate} onEdit={handleEditCampaign} />
+                        ))
+                    ) : (
+                        <div className="flex items-center justify-center text-center h-24 bg-gray-50 rounded-lg border border-dashed p-4">
+                            <p className="text-sm text-gray-500">No previously ended campaigns for this space.</p>
+                        </div>
                     )}
                   </div>
                 </div>
@@ -392,6 +462,12 @@ export default function SpaceDetails() {
           spaceId={id}
         />
       )}
+
+      <ImagePreviewModal
+        isOpen={isPreviewOpen}
+        imageUrl={currentImage}
+        onClose={() => setIsPreviewOpen(false)}
+      />
     </div>
   );
 }

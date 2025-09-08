@@ -4,6 +4,7 @@ import Navbar from "./Navbar";
 import { toast } from "sonner";
 import { useSidebar } from "../context/SidebarContext";
 import Select from "react-select";
+import { FaTimes } from 'react-icons/fa';
 
 // Helper functions for date formatting
 const toInputDate = (dateStr) => {
@@ -20,6 +21,22 @@ const toDisplayDate = (dateStr) => {
   if (!dateStr) return null;
   const [year, month, day] = dateStr.split('-');
   return `${day}-${month}-${year}`;
+};
+
+// Image Preview Modal Component
+const ImagePreviewModal = ({ imageUrl, onClose }) => {
+  if (!imageUrl) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]" onClick={onClose}>
+      <div className="relative p-4 rounded-lg shadow-lg max-w-screen-lg max-h-screen-lg" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-2 right-2 text-white text-2xl bg-gray-800 rounded-full p-1 cursor-pointer">
+          <FaTimes />
+        </button>
+        <img src={imageUrl} alt="Preview" className="max-w-full max-h-[90vh] object-contain rounded-lg" />
+      </div>
+    </div>
+  );
 };
 
 // Multi-select component for Audience
@@ -79,7 +96,6 @@ function MultiAudienceSelect({ label, name, value, onChange, options }) {
   );
 }
 
-
 export default function EditSpace() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -88,6 +104,9 @@ export default function EditSpace() {
   const [selectedFiles, setSelectedFiles] = useState({
     mainPhoto: null, longShot: null, closeShot: null, otherPhotos: [],
   });
+  
+  // State for image preview
+  const [previewImageUrl, setPreviewImageUrl] = useState(null);
 
   const ownershipOptions = ["Owned", "Leased", "Traded"];
   const illuminationOptions = ["Front Lit", "Back Lit", "Non Lit"];
@@ -236,9 +255,13 @@ export default function EditSpace() {
             <SelectField label="Category" name="category" value={space.category || ""} onChange={handleChange} options={categoryOptions} />
             <SelectField label="Specification" name="specification" value={space.specification || ""} onChange={handleChange} options={specificationOptions} />
             <SelectField label="Media Type" name="mediaType" value={space.mediaType || ""} onChange={handleChange} options={mediaTypeOptions} />
-            <SelectField label="Illumination" name="illumination" value={space.illumination || ""} onChange={handleChange} options={illuminationOptions} />
             
-            {space.spaceType === 'BQS' || space.spaceType === 'DgitalBQS' || space.spaceType === 'Transit' ? (
+            {/* Conditional rendering for Illumination */}
+            {space.spaceType !== 'DOOH' && (
+              <SelectField label="Illumination" name="illumination" value={space.illumination || ""} onChange={handleChange} options={illuminationOptions} />
+            )}
+            
+            {space.spaceType === 'BQS' || space.spaceType === 'DigitalBQS' || space.spaceType === 'Transit' ? (
               <>
                 <InputField label="Buying Price" name="buyingPrice" type="number" value={space.buyingPrice || ""} onChange={handleChange} />
               </>
@@ -269,9 +292,9 @@ export default function EditSpace() {
             <InputField label="Additional Tags" name="additionalTags" value={space.additionalTags || ""} onChange={handleChange} />
             <div className="col-span-1 md:col-span-2 lg:col-span-3"><TextareaField label="Description" name="description" value={space.description || ""} onChange={handleChange} /></div>
             <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FileUploadField label="Main Photo" name="mainPhoto" onChange={handleFileChange} currentImage={space.mainPhoto} />
-              <FileUploadField label="Long Shot" name="longShot" onChange={handleFileChange} currentImage={space.longShot} />
-              <FileUploadField label="Close Shot" name="closeShot" onChange={handleFileChange} currentImage={space.closeShot} />
+              <FileUploadField label="Main Photo" name="mainPhoto" onChange={handleFileChange} currentImage={space.mainPhoto} onImageClick={setPreviewImageUrl} />
+              <FileUploadField label="Long Shot" name="longShot" onChange={handleFileChange} currentImage={space.longShot} onImageClick={setPreviewImageUrl} />
+              <FileUploadField label="Close Shot" name="closeShot" onChange={handleFileChange} currentImage={space.closeShot} onImageClick={setPreviewImageUrl} />
             </div>
           </div>
           <div className="mt-8 flex gap-4">
@@ -281,11 +304,84 @@ export default function EditSpace() {
           </div>
         </div>
       </main>
+      
+      {/* Image Preview Modal */}
+      <ImagePreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
     </div>
   );
 }
 
-const InputField = ({ label, name, value, onChange, placeholder, type = "text" }) => ( <div className="flex flex-col gap-1"> <label htmlFor={name} className="font-medium text-sm text-gray-700">{label}</label> <input id={name} name={name} type={type} value={value} onChange={onChange} placeholder={placeholder} className="border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" /> </div> );
-const SelectField = ({ label, name, value, onChange, options, placeholder = "Select..." }) => ( <div className="flex flex-col gap-1"> <label htmlFor={name} className="font-medium text-sm text-gray-700">{label}</label> <select id={name} name={name} value={value} onChange={onChange} className="border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">{placeholder}</option> {options.map(opt => <option key={opt} value={opt}>{opt}</option>)} </select> </div> );
-const TextareaField = ({ label, name, value, onChange, placeholder, rows = 4 }) => ( <div className="flex flex-col gap-1"> <label htmlFor={name} className="font-medium text-sm text-gray-700">{label}</label> <textarea id={name} name={name} value={value} onChange={onChange} placeholder={placeholder} rows={rows} className="border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" /> </div> );
-const FileUploadField = ({ label, name, onChange, currentImage }) => { const [previewUrl, setPreviewUrl] = useState(null); const handleFileChange = (e) => { const file = e.target.files[0]; if (file) { const url = URL.createObjectURL(file); setPreviewUrl(url); onChange(e); } else { setPreviewUrl(null); } }; return ( <div className="flex flex-col gap-2"> <label className="font-medium text-sm text-gray-700">{label}</label> {previewUrl ? <div className="relative"><img src={previewUrl} alt="Preview" className="w-32 h-32 object-cover rounded-md border"/></div> : currentImage ? <div className="relative"><img src={currentImage} alt={label} className="w-32 h-32 object-cover rounded-md border"/></div> : <div className="w-32 h-32 border-2 border-dashed rounded-md flex items-center justify-center text-gray-400"><span>No image</span></div>} <input type="file" name={name} onChange={handleFileChange} className="text-sm" accept="image/*"/> </div> ); };
+const InputField = ({ label, name, value, onChange, placeholder, type = "text" }) => ( 
+  <div className="flex flex-col gap-1"> 
+    <label htmlFor={name} className="font-medium text-sm text-gray-700">{label}</label> 
+    <input id={name} name={name} type={type} value={value} onChange={onChange} placeholder={placeholder} className="border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" /> 
+  </div> 
+);
+
+const SelectField = ({ label, name, value, onChange, options, placeholder = "Select..." }) => ( 
+  <div className="flex flex-col gap-1"> 
+    <label htmlFor={name} className="font-medium text-sm text-gray-700">{label}</label> 
+    <select id={name} name={name} value={value} onChange={onChange} className="border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"> 
+      <option value="">{placeholder}</option> 
+      {options.map(opt => <option key={opt} value={opt}>{opt}</option>)} 
+    </select> 
+  </div> 
+);
+
+const TextareaField = ({ label, name, value, onChange, placeholder, rows = 4 }) => ( 
+  <div className="flex flex-col gap-1"> 
+    <label htmlFor={name} className="font-medium text-sm text-gray-700">{label}</label> 
+    <textarea id={name} name={name} value={value} onChange={onChange} placeholder={placeholder} rows={rows} className="border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500" /> 
+  </div> 
+);
+
+const FileUploadField = ({ label, name, onChange, currentImage, onImageClick }) => { 
+  const [previewUrl, setPreviewUrl] = useState(null); 
+  
+  const handleFileChange = (e) => { 
+    const file = e.target.files[0]; 
+    if (file) { 
+      const url = URL.createObjectURL(file); 
+      setPreviewUrl(url); 
+      onChange(e); 
+    } else { 
+      setPreviewUrl(null); 
+    } 
+  }; 
+
+  const handleImageClick = (imageUrl) => {
+    if (imageUrl) {
+      onImageClick(imageUrl);
+    }
+  };
+
+  return ( 
+    <div className="flex flex-col gap-2"> 
+      <label className="font-medium text-sm text-gray-700">{label}</label> 
+      {previewUrl ? (
+        <div className="relative">
+          <img 
+            src={previewUrl} 
+            alt="Preview" 
+            className="w-32 h-32 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity" 
+            onClick={() => handleImageClick(previewUrl)}
+          />
+        </div>
+      ) : currentImage ? (
+        <div className="relative">
+          <img 
+            src={currentImage} 
+            alt={label} 
+            className="w-32 h-32 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity" 
+            onClick={() => handleImageClick(currentImage)}
+          />
+        </div>
+      ) : (
+        <div className="w-32 h-32 border-2 border-dashed rounded-md flex items-center justify-center text-gray-400">
+          <span>No image</span>
+        </div>
+      )} 
+      <input type="file" name={name} onChange={handleFileChange} className="text-sm" accept="image/*"/> 
+    </div> 
+  ); 
+};

@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
@@ -14,7 +11,7 @@ import 'leaflet/dist/leaflet.css';
 import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
-import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+import { FaArrowLeft, FaArrowRight, FaTimes } from 'react-icons/fa'; // Import FaTimes for close button
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -75,18 +72,40 @@ const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
   );
 };
 
+// New Image Preview Modal Component
+const ImagePreviewModal = ({ imageUrl, onClose }) => {
+  if (!imageUrl) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]" onClick={onClose}>
+      <div className="relative p-4 rounded-lg shadow-lg max-w-screen-lg max-h-screen-lg" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-2 right-2 text-white text-2xl bg-gray-800 rounded-full p-1 cursor-pointer">
+          <FaTimes />
+        </button>
+        <img src={imageUrl} alt="Preview" className="max-w-full max-h-[90vh] object-contain rounded-lg" />
+      </div>
+    </div>
+  );
+};
+
+
 // --- VIEW COMPONENTS ---
-const InventoryGridView = ({ data, onTagUpdate, navigate }) => {
+const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => { // Added onImageClick prop
   if (!data || data.length === 0) return null;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 text-xs gap-5">
       {data.map((item) => {
         const tags = Array.isArray(item.tags) ? item.tags : String(item.tags || '').split(',').filter(tag => tag.trim() !== '');
         return (
-          <div key={item._id} className="bg-white border border-gray-200 shadow-sm rounded-lg text-xs hover:shadow-md cursor-pointer transition-shadow flex flex-col" onClick={() => navigate(`/space/${item._id}`)}>
-            <img src={item.mainPhoto || 'https://via.placeholder.com/300x200'} alt="Space" className="w-full h-40 object-cover rounded-t-lg bg-gray-100" />
+          <div key={item._id} className="bg-white border border-gray-200 shadow-sm rounded-lg text-xs hover:shadow-md cursor-pointer transition-shadow flex flex-col"> {/* Removed onClick here */}
+            <img 
+              src={item.mainPhoto || 'https://via.placeholder.com/300x200'} 
+              alt="Space" 
+              className="w-full h-40 object-cover rounded-t-lg bg-gray-100 cursor-pointer" 
+              onClick={(e) => { e.stopPropagation(); onImageClick(item.mainPhoto || 'https://via.placeholder.com/300x200'); }} // Image click handler
+            />
             <div className="p-4 flex flex-col flex-grow">
-              <div className="flex-grow">
+              <div className="flex-grow" onClick={() => navigate(`/space/${item._id}`)}> {/* Added onClick here for rest of the card */}
                 <div className="flex justify-between items-start gap-2">
                   <h3 className="font-semibold text-gray-800 leading-tight">{item.spaceName}</h3>
                   <div className="flex-shrink-0"><AvailabilityBadge availabilityStatus={item.availability} /></div>
@@ -110,7 +129,7 @@ const InventoryGridView = ({ data, onTagUpdate, navigate }) => {
     </div>
   );
 };
-const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, setSortConfig }) => {
+const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, setSortConfig, onImageClick }) => {
   if (!data || data.length === 0) return null;
   return (
     <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
@@ -128,14 +147,30 @@ const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, se
         </thead>
         <tbody>
           {data.map((item, index) => (
-            <tr key={item._id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/space/${item._id}`)}>
-              <td className="px-6 py-4 text-gray-500">{(currentPage - 1) * limit + index + 1}</td>
-              <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap"><div className="flex items-center gap-3"><img src={item.mainPhoto || 'https://via.placeholder.com/40'} alt={item.spaceName} className="w-10 h-10 object-cover rounded-md bg-gray-100" /><div><div className="font-semibold text-gray-800">{item.spaceName}</div><div className="text-gray-500 text-xs">{item.address}</div></div></div></td>
-              <td className="px-6 py-4">{item.city}</td>
-              <td className="px-6 py-4">{item.spaceType}</td>
-              <td className="px-6 py-4"><AvailabilityBadge availabilityStatus={item.availability} /></td>
-              <td className="px-6 py-4">{item.ownershipType}</td>
-              <td className="px-6 py-4 font-mono text-xs text-gray-500">{item.inventoryId || item._id.slice(-8).toUpperCase()}</td>
+            <tr key={item._id} className="bg-white border-b hover:bg-gray-50">
+              <td className="px-6 py-4 text-gray-500 cursor-pointer" onClick={() => navigate(`/space/${item._id}`)}>{(currentPage - 1) * limit + index + 1}</td>
+              <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={item.mainPhoto || 'https://via.placeholder.com/40'} 
+                    alt={item.spaceName} 
+                    className="w-10 h-10 object-cover rounded-md bg-gray-100 cursor-pointer hover:opacity-80 transition-opacity" 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      onImageClick(item.mainPhoto || 'https://via.placeholder.com/40'); 
+                    }}
+                  />
+                  <div className="cursor-pointer" onClick={() => navigate(`/space/${item._id}`)}>
+                    <div className="font-semibold text-gray-800">{item.spaceName}</div>
+                    <div className="text-gray-500 text-xs">{item.address}</div>
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4 cursor-pointer" onClick={() => navigate(`/space/${item._id}`)}>{item.city}</td>
+              <td className="px-6 py-4 cursor-pointer" onClick={() => navigate(`/space/${item._id}`)}>{item.spaceType}</td>
+              <td className="px-6 py-4 cursor-pointer" onClick={() => navigate(`/space/${item._id}`)}><AvailabilityBadge availabilityStatus={item.availability} /></td>
+              <td className="px-6 py-4 cursor-pointer" onClick={() => navigate(`/space/${item._id}`)}>{item.ownershipType}</td>
+              <td className="px-6 py-4 font-mono text-xs text-gray-500 cursor-pointer" onClick={() => navigate(`/space/${item._id}`)}>{item.inventoryId || item._id.slice(-8).toUpperCase()}</td>
             </tr>
           ))}
         </tbody>
@@ -204,6 +239,9 @@ export default function InventoryDashboard() {
   const [dateRange, setDateRange] = useState([{ startDate: null, endDate: null, key: 'selection' }]);
   const [tempDateRange, setTempDateRange] = useState([{ startDate: null, endDate: null, key: 'selection' }]);
   const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
+
+  // State for image preview
+  const [previewImageUrl, setPreviewImageUrl] = useState(null);
 
   // Fetch paginated data for table and grid
   const fetchSpaces = useCallback(async () => {
@@ -407,8 +445,8 @@ const handleConfirmUpload = async () => {
         </div>
 
         <div className="mt-6">
-          {viewMode === 'table' && <InventoryTableView data={sortedSpaces} currentPage={currentPage} limit={limit} navigate={navigate} sortConfig={sortConfig} setSortConfig={setSortConfig} />}
-          {viewMode === 'grid' && <InventoryGridView data={spaces} onTagUpdate={handleTagUpdate} navigate={navigate} />}
+          {viewMode === 'table' && <InventoryTableView data={sortedSpaces} currentPage={currentPage} limit={limit} navigate={navigate} sortConfig={sortConfig} setSortConfig={setSortConfig} onImageClick={setPreviewImageUrl} />}
+          {viewMode === 'grid' && <InventoryGridView data={spaces} onTagUpdate={handleTagUpdate} navigate={navigate} onImageClick={setPreviewImageUrl} />}
           {viewMode === 'map' && <InventoryMapView spaces={mapSpaces} navigate={navigate} />}
         </div>
         
@@ -434,6 +472,9 @@ const handleConfirmUpload = async () => {
             </div>
           </div>
         )}
+
+        {/* Image Preview Modal */}
+        <ImagePreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
       </main>
     </div>
   );
