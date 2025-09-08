@@ -77,11 +77,11 @@ const campaignSchema = new Schema({
   toObject: { virtuals: true } 
 });
 
-campaignSchema.virtual('campaignSpaces', {
-  ref: 'CampaignSpace',
-  localField: '_id',
-  foreignField: 'campaignId'
-});
+// campaignSchema.virtual('campaignSpaces', {
+//   ref: 'CampaignSpace',
+//   localField: '_id',
+//   foreignField: 'campaignId'
+// });
 
 campaignSchema.index({ startDate: 1, endDate: 1 });
 campaignSchema.index({ pipeline: 1 }, { unique: true, sparse: true });

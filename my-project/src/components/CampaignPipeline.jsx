@@ -84,20 +84,7 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
     }
   };
 
-  // const isNodeCompleted = (nodeId, space = null) => {
-  //   if (nodeId === 'booking') return pipelineData?.bookingStatus?.confirmed;
-  //   if (nodeId === 'po') return pipelineData?.po?.confirmed;
-  //   if (nodeId === 'artwork') return pipelineData?.artwork?.confirmed;
-  //   if (nodeId === 'invoice') {
-  //     return Array.isArray(pipelineData?.invoice) && pipelineData.invoice.length > 0 && pipelineData.invoice.some(inv => inv.invoiceNumber);
-  //   }
-  //   if (nodeId === 'payment') return pipelineData?.payment?.payments?.length > 0;
-  //   if (nodeId.startsWith('print-')) return space?.printingStatus?.confirmed;
-  //   if (nodeId.startsWith('mount-')) return space?.mountingStatus?.confirmed;
-  //   if (nodeId.startsWith('digital-')) return space?.digitalStatus?.confirmed;
-  //   if (nodeId.startsWith('live-')) return space?.digitalStatus?.isLive;
-  //   return false;
-  // };
+ 
 
   const isNodeCompleted = (nodeId, space = null) => {
     if (nodeId === 'booking') return pipelineData?.bookingStatus?.confirmed;
@@ -113,12 +100,7 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
     if (nodeId.startsWith('mount-')) return space?.mountingStatus?.confirmed;
   
  
-    // if (nodeId.startsWith('digital-')) {
-    //   const ds = campaignDigital?.[space?._id];
-    //   if (Array.isArray(ds)) return ds.some(u => u?.confirmed);
-    //   if (ds && typeof ds === 'object') return !!ds.confirmed;
-    //   return false; // do NOT fall back to space.digitalStatus
-    // }
+  
     if (nodeId.startsWith('digital-')) {
       const ds = campaignDigital?.[space?._id];
       const currentCampaignId = String(pipelineData?.campaign?._id || '');
@@ -132,12 +114,7 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
       return false;
     }
     
-    // if (nodeId.startsWith('live-')) {
-    //   const ds = campaignDigital?.[space?._id];
-    //   if (Array.isArray(ds)) return ds.some(u => u?.isLive);
-    //   if (ds && typeof ds === 'object') return !!ds.isLive;
-    //   return false;
-    // }
+
     if (nodeId.startsWith('live-')) {
       const ds = campaignDigital?.[space?._id];
       const currentCampaignId = String(pipelineData?.campaign?._id || '');
@@ -207,24 +184,7 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
       fetchCampaignDigital();
     }
   }, [CampaignId, pipelineData?.spaces?.length, refreshKey]);
-  // useEffect(() => {
-  //   const fetchCampaignDigital = async () => {
-  //     try {
-  //       // Optional endpoint you can implement: returns
-  //       // { [spaceId]: DigitalStatus | DigitalStatus[] }
-  //       const res = await axios.get(
-  //         `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}/digital-status`
-  //       );
-  //       setCampaignDigital(res.data || {});
-  //     } catch (err) {
-  //       // If endpoint not implemented yet, we just keep it empty
-  //       setCampaignDigital({});
-  //     }
-  //   };
-  //   if (CampaignId && pipelineData?.spaces?.length) {
-  //     fetchCampaignDigital();
-  //   }
-  // }, [CampaignId, pipelineData?.spaces?.length,refreshKey]);
+  
   
   useEffect(() => {
     const fetchSpaces = async () => {
