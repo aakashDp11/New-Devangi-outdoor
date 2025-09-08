@@ -577,9 +577,9 @@ export const getFilteredBookings = async (req, res) => {
           return {
             _id: c._id,
             campaignName: c.campaignName || '',
-            description: c.description || '',
-            industry: c.industry,
-            isFOC: c.isFOC,
+            // description: c.description || '',
+            // industry: c.industry,
+            // isFOC: c.isFOC,
             startDate: c.startDate,
             endDate: c.endDate,
             // inventoryCosts: c.inventoryCosts || [],
@@ -589,7 +589,7 @@ export const getFilteredBookings = async (req, res) => {
             updatedAt: c.updatedAt,
             __v: c.__v,
             // NEW: timeline at campaign level; NO space data returned
-            campaignDates: computeCampaignDates(c),
+            // campaignDates: computeCampaignDates(c),
           };
         });
 

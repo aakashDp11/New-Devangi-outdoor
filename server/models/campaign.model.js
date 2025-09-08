@@ -1,27 +1,4 @@
-// const { Schema, model } = mongoose;
 
-// const campaignSchema = new Schema({
-
-//   campaignName: { type: String },
-//   campaignImages: [String],
-//   description: { type: String },
-
-//   spaces: [{
-//     id: { type: mongoose.Schema.Types.ObjectId, ref: 'Space', required: true },
-//     selectedUnits: { type: Number, required: true, min: 1 }
-//   }]
-// ,  
-//   campaignImages: [String],
-
-
-
-// }, {
-//   timestamps: true
-// });
-
-// const Campaign = model('Campaign', bookingSchema);
-
-// export default Booking;
 
 import mongoose from 'mongoose';
 
