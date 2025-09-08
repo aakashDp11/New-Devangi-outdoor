@@ -443,20 +443,32 @@ export default function AddSpaceForm() {
 
 function Input({ mandatory, label, ...props }) {
   return (
-    <div>
-      <label className="text-sm">{label}</label>
-      {mandatory === "true" && <span className="ml-1 text-red-500">*</span>}
-      <input {...props} className="w-3/4 block border px-2 py-1 rounded mt-1" />
+    <div className="mb-4">
+      <label className="text-sm font-medium text-gray-700">
+        {label}
+        {mandatory === "true" && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      <input
+        {...props}
+        className="w-3/4 block border border-gray-300 px-3 py-2 rounded-lg shadow-sm mt-1 
+                   focus:ring-2 focus:ring-black focus:border-black text-sm"
+      />
     </div>
   );
 }
 
 function Select1({ mandatory, label, children, ...props }) {
   return (
-    <div>
-      <label className="text-sm">{label}</label>
-      {mandatory === "true" && <span className="ml-1 text-red-500">*</span>}
-      <select {...props} className="w-3/4 block border px-1 py-1 rounded mt-1">
+    <div className="mb-4">
+      <label className="text-sm font-medium text-gray-700">
+        {label}
+        {mandatory === "true" && <span className="ml-1 text-red-500">*</span>}
+      </label>
+      <select
+        {...props}
+        className="w-3/4 block border border-gray-300 px-3 py-2 rounded-lg shadow-sm mt-1 
+                   focus:ring-2 focus:ring-black focus:border-black text-sm"
+      >
         {children}
       </select>
     </div>
@@ -469,17 +481,43 @@ function ImageUpload({ label, name, multiple = false }) {
     const files = multiple ? Array.from(e.target.files) : e.target.files[0];
     setForm((prev) => ({ ...prev, [name]: files }));
   };
-  const preview = multiple && Array.isArray(form[name]) ? form[name].map((file, i) => URL.createObjectURL(file)) : form[name] ? URL.createObjectURL(form[name]) : null;
+  const preview =
+    multiple && Array.isArray(form[name])
+      ? form[name].map((file, i) => URL.createObjectURL(file))
+      : form[name]
+      ? URL.createObjectURL(form[name])
+      : null;
 
   return (
-    <div className="border border-dashed border-gray-300 rounded-lg p-4 h-48 relative bg-white flex flex-col items-center justify-center text-center">
-      <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-sm text-gray-500">
+    <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 h-48 
+                    relative bg-gray-50 flex flex-col items-center justify-center text-center 
+                    hover:border-black transition">
+      <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-sm text-gray-600">
         {label || "Upload Image"}
-        <input type="file" accept="image/*" onChange={handleFileChange} multiple={multiple} className="hidden" />
-        {preview && !multiple && <img src={preview} alt="Preview" className="mt-2 h-20 object-contain" />}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          multiple={multiple}
+          className="hidden"
+        />
+        {preview && !multiple && (
+          <img
+            src={preview}
+            alt="Preview"
+            className="mt-3 h-24 object-cover rounded-lg shadow-sm"
+          />
+        )}
         {preview && multiple && (
-          <div className="flex gap-2 mt-2 overflow-x-auto">
-            {preview.map((src, idx) => <img key={idx} src={src} alt={`Preview ${idx}`} className="h-20 object-contain" />)}
+          <div className="flex gap-2 mt-3 overflow-x-auto">
+            {preview.map((src, idx) => (
+              <img
+                key={idx}
+                src={src}
+                alt={`Preview ${idx}`}
+                className="h-20 w-20 object-cover rounded-lg shadow-sm"
+              />
+            ))}
           </div>
         )}
       </label>
@@ -490,18 +528,30 @@ function ImageUpload({ label, name, multiple = false }) {
 export function CustomSelect({ mandatory, label, value, onChange, name, options }) {
   const formattedValue = options.find((option) => option.value === value);
   return (
-    <div className="mb-2">
-      <label className="text-sm block mb-1">
+    <div className="mb-4">
+      <label className="text-sm font-medium text-gray-700 block mb-1">
         {label}
         {mandatory === "true" && <span className="ml-1 text-red-500">*</span>}
       </label>
       <Select
-        className="w-3/4 h-[3%]"
+        className="w-3/4 text-sm"
         name={name}
         options={options}
         value={formattedValue}
-        onChange={(selectedOption) => onChange({ target: { name, value: selectedOption?.value || "" } })}
+        onChange={(selectedOption) =>
+          onChange({ target: { name, value: selectedOption?.value || "" } })
+        }
         isSearchable
+        styles={{
+          control: (base) => ({
+            ...base,
+            borderRadius: "0.5rem",
+            borderColor: "#d1d5db",
+            padding: "2px",
+            boxShadow: "none",
+            "&:hover": { borderColor: "#000" },
+          }),
+        }}
       />
     </div>
   );

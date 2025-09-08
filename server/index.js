@@ -31,8 +31,8 @@ dotenv.config();
 const app = express();
 const port = 3000;
 // MongoDB URI and DB name
-const MONGO_URI ='mongodb+srv://UserSukumar:ioadjnJ41516568@cluster0.vqpaxl6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0' ;
-const DB_NAME = 'testdb';
+const MONGO_URI ='mongodb+srv://UserSukumar:ioadjnJ41516568@cluster0.vqpaxl6.mongodb.net/Sukumar_DB1?retryWrites=true&w=majority&appName=Cluster0' ;
+const DB_NAME = 'Sukumar_DB1';
 // app.use('/uploads', express.static('uploads'));
 app.get('/uploads/:filename', (req, res) => {
   const __filename = fileURLToPath(import.meta.url);
