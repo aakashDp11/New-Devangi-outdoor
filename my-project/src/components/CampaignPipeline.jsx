@@ -172,6 +172,7 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
       } catch (err) {
         if (err.response?.status === 404) {
           const createRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}`);
+          console.log("Pipeline data", createRes.data);
           setPipelineData(createRes.data);
         } else {
           console.error('Error fetching/creating pipeline:', err);

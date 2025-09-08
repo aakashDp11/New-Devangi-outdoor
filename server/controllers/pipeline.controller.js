@@ -3,53 +3,189 @@ import Campaign from '../models/campaign.model.js';
 import Space from '../models/space.model.js';
 import mongoose from 'mongoose';
 import { uploadToS3 } from '../utils/s3uploader.js';
+import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
 const { Types } = mongoose;
+// export const getPipelineByCampaignId = async (req, res) => {
+//   const { campaignId } = req.params;
+//   try {
+//     const pipeline = await Pipeline.findOne({ campaign: campaignId })
+//       .populate('spaces')
+//       .populate({
+//         path: 'campaign',
+//         select: 'inventoryCosts isFOC',
+//       });
+//     if (!pipeline) {
+//       return res.status(404).json({ error: 'Pipeline not found' });
+//     }
+//     res.json(pipeline);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
+//   }
+// };
+
 export const getPipelineByCampaignId = async (req, res) => {
   const { campaignId } = req.params;
   try {
+    // 1) Load pipeline and campaign header
     const pipeline = await Pipeline.findOne({ campaign: campaignId })
-      .populate('spaces')
       .populate({
         path: 'campaign',
-        select: 'inventoryCosts isFOC',
-      });
+        select: 'campaignName isFOC startDate endDate', // no inventoryCosts anymore
+      })
+      .lean();
+
     if (!pipeline) {
       return res.status(404).json({ error: 'Pipeline not found' });
     }
-    res.json(pipeline);
+
+    // 2) Load mappings for this campaign and join to Space
+    const mappings = await CampaignInventoryMapping.find({ campaignId })
+      .populate({
+        path: 'spaceId',
+        select: 'spaceName city state spaceType unit availability width height',
+      })
+      .lean();
+
+    // 3) Shape response: attach mappings as pipeline.inventory (or whatever your UI expects)
+    const inventory = mappings.map(m => ({
+      mappingId: m._id,
+      space: m.spaceId,                // populated Space doc (limited fields)
+      unitIds: m.unitIds,              // which units are booked
+      startDate: m.startDate,
+      endDate: m.endDate,
+      displayCost: m.displayCost,
+      buyingPrice: m.buyingPrice,
+      sellingPrice: m.sellingPrice,
+      invoiceNo: m.invoiceNo,
+      printingCostPerSquareFeet: m.printingCostPerSquareFeet,
+      mountingCostPerSquareFeet: m.mountingCostPerSquareFeet,
+      area: m.area,
+      printingConfirmedAt: m.printingConfirmedAt,
+      mountingConfirmedAt: m.mountingConfirmedAt,
+      digitalStatus: m.digitalStatus,  // per-unit status (if you added it)
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+    }));
+
+    // Optional: keep legacy shape for backward compatibility
+    // e.g., pipeline.spaces = inventory.map(i => i.space);
+
+    return res.json({
+      ...pipeline,
+      inventory, // new normalized list
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
+    return res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
   }
 };
+// export const createPipelineForCampaign = async (req, res) => {
+//   const { campaignId } = req.params;
+//   try {
+//     console.log("Campaign id is",campaignId);
+//     const campaign = await Campaign.findById(campaignId);
+//     console.log("Campaign is",campaign);
+//     if (!campaign) {
+//       return res.status(404).json({ error: 'Campaign not found' });
+//     }
+//     let existingPipeline = await Pipeline.findOne({ campaign: campaignId });
+//     console.log("Existing pipeline is",existingPipeline);
+//     if (existingPipeline) {
+//       if (!campaign.pipeline) {
+//         campaign.pipeline = existingPipeline._id;
+//         await campaign.save();
+//       }
+//       return res.status(200).json(existingPipeline);
+//     }
+//     const newPipeline = new Pipeline({
+//       campaign: campaignId,
+//       spaces: campaign.spaces.map(s => s.id),
+//     });
+//     console.log("New Pipeline is",newPipeline);
+//     await newPipeline.save();
+//     campaign.pipeline = newPipeline._id;
+//     await campaign.save();
+//     // console.log("New Pipeline is",newPipeline);
+//     res.status(201).json(newPipeline);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message || 'Failed to create pipeline' });
+//   }
+// };
+
 
 export const createPipelineForCampaign = async (req, res) => {
   const { campaignId } = req.params;
   try {
-    const campaign = await Campaign.findById(campaignId);
-    if (!campaign) {
-      return res.status(404).json({ error: 'Campaign not found' });
+    if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+      return res.status(400).json({ error: 'Invalid campaign ID' });
     }
-    let existingPipeline = await Pipeline.findOne({ campaign: campaignId });
-    if (existingPipeline) {
-      if (!campaign.pipeline) {
-        campaign.pipeline = existingPipeline._id;
-        await campaign.save();
+
+    // 1) Load campaign header
+    const campaign = await Campaign.findById(campaignId).lean();
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    // 2) Collect spaces from mappings (dedupe)
+    const mappings = await CampaignInventoryMapping.find(
+      { campaignId },
+      { spaceId: 1 }
+    ).lean();
+
+    const spaceIdStrings = [...new Set(mappings.map(m => String(m.spaceId)))];
+    const spaceIds = spaceIdStrings.map(id => new mongoose.Types.ObjectId(id));
+
+    // 3) ONE atomic upsert (prevents E11000 under concurrency)
+    // - If pipeline exists: add any missing spaces
+    // - If not: create it with spaces
+    const pipeline = await Pipeline.findOneAndUpdate(
+      { campaign: campaignId },
+      {
+        $setOnInsert: { campaign: campaignId },
+        ...(spaceIds.length
+          ? { $addToSet: { spaces: { $each: spaceIds } } }
+          : {}), // skip if no spaces
+      },
+      { upsert: true, new: true }  // <- atomic
+    );
+
+    // 4) Ensure Campaign.pipeline is linked
+    if (!campaign.pipeline || String(campaign.pipeline) !== String(pipeline._id)) {
+      await Campaign.updateOne(
+        { _id: campaignId },
+        { $set: { pipeline: pipeline._id } }
+      );
+    }
+
+    return res.status(201).json(pipeline);
+  } catch (err) {
+    // If a race still slipped through, recover by reading the winner
+    if (err?.code === 11000) {
+      const existing = await Pipeline.findOne({ campaign: campaignId });
+      if (existing) {
+        // Optionally merge spaces now that we have the winner
+        const mappings = await CampaignInventoryMapping.find(
+          { campaignId },
+          { spaceId: 1 }
+        ).lean();
+        const spaceIdStrings = [...new Set(mappings.map(m => String(m.spaceId)))];
+        const spaceIds = spaceIdStrings.map(id => new mongoose.Types.ObjectId(id));
+        if (spaceIds.length) {
+          await Pipeline.updateOne(
+            { _id: existing._id },
+            { $addToSet: { spaces: { $each: spaceIds } } }
+          );
+        }
+        // Link campaign → pipeline
+        await Campaign.updateOne(
+          { _id: campaignId },
+          { $set: { pipeline: existing._id } }
+        );
+        return res.status(200).json(await Pipeline.findById(existing._id));
       }
-      return res.status(200).json(existingPipeline);
     }
-    const newPipeline = new Pipeline({
-      campaign: campaignId,
-      spaces: campaign.spaces.map(s => s.id),
-    });
-    await newPipeline.save();
-    campaign.pipeline = newPipeline._id;
-    await campaign.save();
-    res.status(201).json(newPipeline);
-  } catch (error) {
-    res.status(500).json({ error: error.message || 'Failed to create pipeline' });
+
+    console.error('createPipelineForCampaign error:', err);
+    return res.status(500).json({ error: err.message || 'Failed to create pipeline' });
   }
 };
-
 export const updateBookingStatus = async (req, res) => {
   const { campaignId } = req.params;
   const { confirmed, reference, bookingDate } = req.body;

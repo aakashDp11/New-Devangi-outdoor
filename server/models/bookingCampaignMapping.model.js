@@ -6,7 +6,7 @@ const bookingCampaignSchema = new Schema({
     campaignId: { type: Schema.Types.ObjectId, ref: 'Campaign', required: true },
   
     // Optional: metadata specific to this booking-campaign link
-    assignedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    assignedBy: { type: Schema.Types.ObjectId, ref: 'User' },  //No need to have this
     createdAt: { type: Date, default: Date.now }
   });
   

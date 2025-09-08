@@ -14,12 +14,13 @@ const bookingSchema = new Schema({
   clientGstNumber: { type: String },
   clientContactNumber: { type: Number },
   brandDisplayName: { type: String },
+  companyLogo: String,
   clientType: { type: String },
   bookingMode: { type: String },
   bookingSource: { type: String },
   agencyName: { type: String },
   reminderTimeline: { type: Number },
-  isFOCBooking: { type: Boolean, default: false },
+  isFOCBooking: { type: Boolean, default: false },  // Remove this, as migrated to Campaign
   industry: {
     type: String,
     default: 'Other',
@@ -30,7 +31,6 @@ const bookingSchema = new Schema({
     required: true, // optional: if every booking must have a user
   },
   campaignImages: [String],
-  companyLogo: String,
   // Add the bookingCampaigns field here
   // bookingCampaigns: [
   //   { type: mongoose.Schema.Types.ObjectId, ref: 'BookingCampaign' },

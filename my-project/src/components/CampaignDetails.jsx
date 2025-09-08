@@ -131,6 +131,7 @@ export default function CampaignDetails() {
             const res = await fetch(
               `${import.meta.env.VITE_API_BASE_URL}/api/spaces/${space.id}`
             );
+            console.log("Response data is",res);
             if (!res.ok) {
               console.error(`Failed to fetch space ${space.id}: ${res.status}`);
               return null;
@@ -155,6 +156,7 @@ export default function CampaignDetails() {
     const fetchPipelineData = async () => {
       try {
         setPipelineError(false);
+        console.log("Create pipeline started");
         const token = localStorage.getItem("accessToken");
         const headers = {
           "Content-Type": "application/json",
@@ -164,6 +166,7 @@ export default function CampaignDetails() {
           `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${id}`,
           { method: "GET", headers }
         );
+        console.log("Pipeline creation data is",res);
         if (!res.ok) {
           if (res.status === 404) {
             setPipelineData({
