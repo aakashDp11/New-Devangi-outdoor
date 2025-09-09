@@ -83,7 +83,7 @@ export default function Navbar() {
 
       {/* Sidebar */}
       <aside
-        className={`bg-base-100 text-base-content fixed top-0 h-full z-30 border-r border-base-300 shadow-lg flex flex-col transition-all duration-300 ease-in-out overflow-x-hidden
+        className={`bg-base-200 text-base-content fixed top-0 h-full z-30 border-r border-base-300 shadow-lg flex flex-col transition-all duration-300 ease-in-out overflow-x-hidden
           ${isCollapsed ? "w-0 md:w-24" : "w-64"}
           ${isCollapsed ? "overflow-y-hidden" : "overflow-y-auto"}
           ${isCollapsed ? "left-[-100%] md:left-0" : "left-0"}
@@ -91,7 +91,7 @@ export default function Navbar() {
       >
         {/* Header */}
         <div
-          className={`flex items-center p-4 border-b border-base-300 transition-all duration-300 relative
+          className={`flex items-center p-4 border-b border-base-300 bg-neutral text-neutral-content transition-all duration-300 relative
             ${isCollapsed ? "h-20 justify-center" : "h-24 justify-between"}
           `}
         >
@@ -122,7 +122,7 @@ export default function Navbar() {
                 className={`cursor-pointer transition-colors duration-200 mx-0 ${
                   isActive
                     ? "bg-primary text-primary-content"
-                    : "hover:bg-primary hover:text-primary-content"
+                    : "hover:bg-base-300"
                 }`}
                 title={item.label}
               >
@@ -200,14 +200,14 @@ export default function Navbar() {
               >
                 Privacy Policy
               </span>
-              <span className="mx-1 text-gray-400">|</span>
+              <span className="mx-1 opacity-50">|</span>
               <span
                 onClick={() => navigate("/disclaimer-policy")}
                 className="cursor-pointer hover:text-primary"
               >
                 Disclaimer Policy
               </span>
-              <span className="mx-1 text-gray-400">|</span>
+              <span className="mx-1 opacity-50">|</span>
               <span
                 onClick={handleLogout}
                 className="cursor-pointer hover:text-primary"
@@ -222,7 +222,7 @@ export default function Navbar() {
       {/* Hamburger Toggle for Mobile */}
       <button
         onClick={handleToggle}
-        className="md:hidden fixed top-4 left-4 z-40 bg-base-100 text-base-content border border-base-300 p-2 rounded shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-40 bg-neutral text-neutral-content border border-base-300 p-2 rounded shadow-lg"
       >
         ☰
       </button>
