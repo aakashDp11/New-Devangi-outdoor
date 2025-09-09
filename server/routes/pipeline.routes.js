@@ -20,41 +20,6 @@ import mongoose from 'mongoose';
 import Space from '../models/space.model.js';
 router.get('/campaign/:campaignId', getPipelineByCampaignId);
 const { Types } = mongoose;
-// router.get('/finance', async (req, res) => {
-//   try {
-//     const pipelines = await Pipeline.find({}).select('po invoice createdAt');
-
-//     const grouped = {};
-
-//     pipelines.forEach((p) => {
-//       const createdAt = moment(p.createdAt);
-//       const year = createdAt.year();
-//       const month = createdAt.format('MMMM');
-
-//       if (!grouped[year]) grouped[year] = {};
-//       if (!grouped[year][month]) grouped[year][month] = { purchaseOrders: [], invoices: [] };
-
-//       if (p.po?.documentUrl) {
-//         grouped[year][month].purchaseOrders.push({
-//           documentName: p.po.reference || 'PO Document',
-//           fileUrl: p.po.documentUrl,
-//         });
-//       }
-
-//       if (p.invoice?.invoiceNumber) {
-//         grouped[year][month].invoices.push({
-//           documentName: 'Invoice Document',         //p.invoice.invoiceNumber
-//           fileUrl: p.invoice.documentUrl || null,
-//         });
-//       }
-//     });
-
-//     res.json(grouped);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Failed to fetch finance data' });
-//   }
-// });
 
 
 router.get('/finance', async (req, res) => {

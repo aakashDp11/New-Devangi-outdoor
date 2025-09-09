@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/authenticate.middleware.js';
 import Booking from '../models/booking.model.js';
 import mongoose from 'mongoose';
 import Pipeline from '../models/pipeline.model.js';
+import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
 const router = express.Router();
 
 // ===================================================================
@@ -20,14 +21,14 @@ router.get('/', async (req, res) => {
   try {
     const campaigns = await Campaign.find({})
       .select('campaignName startDate endDate pipeline spaces')
-      .populate({
-        path: 'pipeline',
-        select: 'bookingStatus artwork po invoice'
-      })
-      .populate({
-        path: 'spaces.id',
-        select: 'spaceName spaceType price printingStatus mountingStatus'
-      });
+    //   .populate({
+    //     path: 'pipeline',
+    //     select: 'bookingStatus artwork po invoice'
+    //   })
+    //   .populate({
+    //     path: 'spaces.id',
+    //     select: 'spaceName spaceType price printingStatus mountingStatus'
+    //   });
 
     res.status(200).json({ campaigns });
     
@@ -42,19 +43,56 @@ router.get('/', async (req, res) => {
  * @desc    Get all campaigns that include a specific space ID
  * @access  Public
  */
+// router.get('/by-space/:spaceId', async (req, res) => {
+//   try {
+//     const { spaceId } = req.params;
+
+//     const campaigns = await Campaign.find({ 'spaces.id': spaceId })
+//       .select('campaignName startDate endDate');
+
+//     res.status(200).json(campaigns);
+//   } catch (err) {
+//     console.error('Error fetching campaigns by space:', err);
+//     res.status(500).json({ message: 'Server error, could not fetch campaigns by space.' });
+//   }
+// });
 router.get('/by-space/:spaceId', async (req, res) => {
-  try {
-    const { spaceId } = req.params;
-
-    const campaigns = await Campaign.find({ 'spaces.id': spaceId })
-      .select('campaignName startDate endDate');
-
-    res.status(200).json(campaigns);
-  } catch (err) {
-    console.error('Error fetching campaigns by space:', err);
-    res.status(500).json({ message: 'Server error, could not fetch campaigns by space.' });
-  }
-});
+    try {
+      const { spaceId } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(spaceId)) {
+        return res.status(400).json({ message: 'Invalid spaceId' });
+      }
+  
+      // Optional overlap filtering (?from=YYYY-MM-DD&to=YYYY-MM-DD)
+      const { from, to } = req.query;
+      const match = { spaceId: new mongoose.Types.ObjectId(spaceId) };
+      if (from && to) {
+        match.startDate = { $lte: to };
+        match.endDate   = { $gte: from };
+      }
+  
+      // 1) find mappings for this space
+      const mappings = await CampaignInventoryMapping.find(match, { campaignId: 1 }).lean();
+  
+      // 2) distinct campaign ids
+      const campaignIds = [...new Set(mappings.map(m => m.campaignId?.toString()))]
+        .filter(Boolean)
+        .map(id => new mongoose.Types.ObjectId(id));
+  
+      if (!campaignIds.length) return res.status(200).json([]);
+  
+      // 3) fetch campaigns (header fields only)
+      const campaigns = await Campaign.find(
+        { _id: { $in: campaignIds } },
+        { campaignName: 1, startDate: 1, endDate: 1 }
+      ).lean();
+  
+      return res.status(200).json(campaigns);
+    } catch (err) {
+      console.error('Error fetching campaigns by space:', err);
+      res.status(500).json({ message: 'Server error, could not fetch campaigns by space.' });
+    }
+  });
 router.post('/check-availability', authenticate, async (req, res) => {
     try {
         const { spaceIds, startDate, endDate, campaignIdToIgnore } = req.body;

@@ -150,7 +150,7 @@ const pipelineSchema = new Schema({
     gstValue: Number,
     finalAmountWithGST: Number,
     modeOfPayment: { type: String, enum: ['cash', 'cheque', 'pdc', 'rtgs', 'neft'], default: undefined },
-    cashMemoNo: Number,
+    cashMemoNo: Number,   // Convert this to string
     payments: [PaymentItemSchema],
     totalPaid: Number,
     paymentDue: Number,

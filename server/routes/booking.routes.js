@@ -9,6 +9,7 @@ import Campaign from '../models/campaign.model.js';
 import { uploadToS3 } from '../utils/s3uploader.js';
 import { authenticate } from '../middleware/authenticate.middleware.js';
 import BookingCampaign from '../models/bookingCampaignMapping.model.js';
+import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
 const router = express.Router();
 export const updateCampaign = async (req, res) => {
 const { id } = req.params;
@@ -577,9 +578,9 @@ export const getFilteredBookings = async (req, res) => {
           return {
             _id: c._id,
             campaignName: c.campaignName || '',
-            description: c.description || '',
-            industry: c.industry,
-            isFOC: c.isFOC,
+            // description: c.description || '',
+            // industry: c.industry,
+            // isFOC: c.isFOC,
             startDate: c.startDate,
             endDate: c.endDate,
             // inventoryCosts: c.inventoryCosts || [],
@@ -589,7 +590,7 @@ export const getFilteredBookings = async (req, res) => {
             updatedAt: c.updatedAt,
             __v: c.__v,
             // NEW: timeline at campaign level; NO space data returned
-            campaignDates: computeCampaignDates(c),
+            // campaignDates: computeCampaignDates(c),
           };
         });
 
@@ -831,466 +832,170 @@ export const getAllBookings = async (req, res) => {
 };
 
 
-// export const getAllBookings = async (req, res) => {
-// try {
-// const page = parseInt(req.query.page) || 1;
-// const limit = parseInt(req.query.limit) || 10;
-// const skip = (page - 1) * limit;
-
-// const {
-// paymentStatus,
-// poStatus,
-// startDate,
-// endDate,
-// search,
-// sortKey = 'createdAt',      // NEW
-// sortDirection = 'desc'    // NEW
-// } = req.query;
-// const searchRegex = search ? new RegExp(search, 'i') : null;
-
-// const start = startDate ? new Date(startDate) : null;
-// const endDt = endDate ? new Date(endDate) : null;
-// if (endDt) endDt.setHours(23, 59, 59, 999);
-
-// const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
 
 
-// const pipeline = [];
-
-// if (searchRegex) {
-//   pipeline.push({
-//     $match: {
-//       $or: [
-//         { companyName: searchRegex },
-//         { clientName: searchRegex },
-//         { brandDisplayName: searchRegex }
-//       ]
+// export const getCampaignById = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     if (!mongoose.Types.ObjectId.isValid(id)) {
+//       return res.status(400).json({ error: 'Invalid campaign ID' });
 //     }
-//   });
-// }
 
-// pipeline.push({
-//   $lookup: {
-//     from: 'campaigns',
-//     localField: 'campaigns',
-//     foreignField: '_id',
-//     as: 'campaigns'
-//   }
-// });
-
-// pipeline.push({
-//     $addFields: {
-//         campaigns: {
-//             $map: {
-//                 input: '$campaigns',
-//                 as: 'camp',
-//                 in: {
-//                     $mergeObjects: [
-//                         '$$camp',
-//                         {
-//                             startDateObj: {
-//                                 $cond: {
-//                                     if: { $and: [
-//                                         { $ne: [{ $type: '$$camp.startDate' }, 'missing'] },
-//                                         { $ne: ['$$camp.startDate', null] },
-//                                         { $ne: ['$$camp.startDate', ""] }
-//                                     ]},
-//                                     then: {
-//                                         $dateFromString: {
-//                                             dateString: '$$camp.startDate',
-//                                             format: '%Y-%m-%d',
-//                                             onError: null
-//                                         }
-//                                     },
-//                                     else: null
-//                                 }
-//                             },
-//                             endDateObj: {
-//                                 $cond: {
-//                                     if: { $and: [
-//                                         { $ne: [{ $type: '$$camp.endDate' }, 'missing'] },
-//                                         { $ne: ['$$camp.endDate', null] },
-//                                         { $ne: ['$$camp.endDate', ""] }
-//                                     ]},
-//                                     then: {
-//                                         $dateFromString: {
-//                                             dateString: '$$camp.endDate',
-//                                             format: '%Y-%m-%d',
-//                                             onError: null
-//                                         }
-//                                     },
-//                                     else: null
-//                                 }
-//                             }
-//                         }
-//                     ]
-//                 }
-//             }
-//         }
+//     // Find the campaign itself
+//     const campaign = await Campaign.findById(id).lean();
+//     if (!campaign) {
+//       return res.status(404).json({ error: 'Campaign not found' });
 //     }
-// });
 
-// pipeline.push({
-//   $lookup: {
-//     from: 'pipelines',
-//     localField: 'campaigns.pipeline',
-//     foreignField: '_id',
-//     as: 'pipelineDetails'
+//     // Find all mappings for this campaign
+//     const mappings = await CampaignInventoryMapping.find({ campaignId: id }).lean();
+
+//     // Optionally join with Space for names, city, etc.
+//     const spaceIds = mappings.map(m => m.spaceId);
+//     const spaces = await Space.find({ _id: { $in: spaceIds } }).lean();
+//     const spaceMap = Object.fromEntries(spaces.map(s => [s._id.toString(), s]));
+
+//     // Merge mapping + space info
+//     const inventory = mappings.map(m => ({
+//       ...m,
+//       space: spaceMap[m.spaceId.toString()] || null
+//     }));
+
+//     return res.status(200).json({
+//       ...campaign,
+//       inventory // all spaces, units, digital status, costs, etc.
+//     });
+//   } catch (error) {
+//     console.error('Error fetching campaign by ID:', error);
+//     return res.status(500).json({ error: 'Server error' });
 //   }
-// });
-
-// pipeline.push({
-//   $addFields: {
-//     campaigns: {
-//       $map: {
-//         input: '$campaigns',
-//         as: 'camp',
-//         in: {
-//           $mergeObjects: [
-//             '$$camp',
-//             {
-//               paymentSummary: {
-//                 totalDue: {
-//                   $ifNull: [
-//                     {
-//                       $first: {
-//                         $map: {
-//                           input: '$pipelineDetails',
-//                           as: 'pipe',
-//                           in: '$$pipe.payment.finalAmountWithGST'
-//                         }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 },
-//                 totalPaid: {
-//                   $ifNull: [
-//                     {
-//                       $first: {
-//                         $map: {
-//                           input: '$pipelineDetails',
-//                           as: 'pipe',
-//                           in: '$$pipe.payment.totalPaid'
-//                         }
-//                       }
-//                     },
-//                     0
-//                   ]
-//                 }
-//               },
-//               poConfirmed: {
-//                 $first: {
-//                   $map: {
-//                     input: '$pipelineDetails',
-//                     as: 'pipe',
-//                     in: '$$pipe.po.confirmed'
-//                   }
-//                 }
-//               }
-//             }
-//           ]
-//         }
-//       }
-//     }
-//   }
-// });
-
-// pipeline.push({
-//   $addFields: {
-//     campaigns: {
-//       $map: {
-//         input: '$campaigns',
-//         as: 'camp',
-//         in: {
-//           $mergeObjects: [
-//             '$$camp',
-//             {
-//               paymentSummary: {
-//                 $mergeObjects: [
-//                   '$$camp.paymentSummary',
-//                   {
-//                     status: {
-//                       $switch: {
-//                         branches: [
-                         
-//                           {
-//                             case: {
-//                               $gte: [
-//                                 '$$camp.paymentSummary.totalPaid',
-//                                 '$$camp.paymentSummary.totalDue'
-//                               ]
-//                             },
-//                             then: 'Paid'
-//                           },
-//                           {
-//                             case: {
-//                               $gt: ['$$camp.paymentSummary.totalPaid', 0]
-//                             },
-//                             then: 'Partial'
-//                           }
-//                         ],
-//                         default: 'Unpaid'
-//                       }
-//                     }
-//                   }
-//                 ]
-//               }
-//             }
-//           ]
-//         }
-//       }
-//     }
-//   }
-// });
-
-// pipeline.push({
-//   $addFields: {
-//     overallStartDate: { $min: '$campaigns.startDateObj' },
-//     overallEndDate: { $max: '$campaigns.endDateObj' }
-//   }
-// });
-
-// const filters = {};
-// if (start && endDt) {
-//   filters.overallStartDate = { $lte: endDt };
-//   filters.overallEndDate = { $gte: start };
-// } else if (start) {
-//   filters.overallEndDate = { $gte: start };
-// } else if (endDt) {
-//   filters.overallStartDate = { $lte: endDt };
-// }
-
-// if (paymentStatus) {
-//   filters['campaigns.paymentSummary.status'] = paymentStatus;
-// }
-
-// if (poStatus === 'true' || poStatus === 'false') {
-//   filters['campaigns.poConfirmed'] = poStatus === 'true';
-// }
-
-// if (Object.keys(filters).length > 0) {
-//   pipeline.push({ $match: filters });
-// }
-
-// pipeline.push(
-//   { $sort: sortOptions },
-//   {
-//     $facet: {
-//       bookings: [{ $skip: skip }, { $limit: limit }],
-//       totalCount: [{ $count: 'count' }]
-//     }
-//   }
-// );
-
-// const result = await Booking.aggregate(pipeline);
-
-// const bookings = result[0].bookings || [];
-// const totalCount = result[0].totalCount[0]?.count || 0;
-
-// return res.json({
-// bookings,
-// pagination: {
-// totalPages: Math.ceil(totalCount / limit),
-// currentPage: page,
-// totalCount: totalCount,
-// }
-// });
-// } catch (err) {
-// console.error('Error in getAllBookings:', err);
-// res.status(500).json({ message: 'Server Error' });
-// }
 // };
-// --- END: CORRECTED FUNCTION ---
-export const getCampaignById = async (req, res) => {
-try {
-const { id } = req.params;
-console.log('id of campaign is', id);
 
-if (!mongoose.Types.ObjectId.isValid(id)) {
-  return res.status(400).json({ error: 'Invalid campaign ID' });
-}
 
-const campaign = await Campaign.findById(id).lean();
-if (!campaign) {
-  return res.status(404).json({ error: 'Campaign not found' });
-}
 
-// const booking = await Booking.findOne({ campaigns: id }).lean();
-// if (!booking) {
-//   return res.status(404).json({ error: 'Campaign is not linked to any booking' });
+// export const getCampaignById = async (req, res) => {
+// try {
+// const { id } = req.params;
+// console.log('id of campaign is', id);
+
+// if (!mongoose.Types.ObjectId.isValid(id)) {
+//   return res.status(400).json({ error: 'Invalid campaign ID' });
 // }
 
-return res.status(200).json(campaign);
-} catch (error) {
-console.error('Error fetching campaign by ID:', error);
-return res.status(500).json({ error: 'Server error' });
-}
-};
-// export const createBooking = async (req, res) => {
-// console.log("BACKEND (LOG 1): Raw request body received:", JSON.stringify(req.body, null, 2));
+// const campaign = await Campaign.findById(id).lean();
+// if (!campaign) {
+//   return res.status(404).json({ error: 'Campaign not found' });
+// }
 
-// const session = await mongoose.startSession();
-// session.startTransaction();
 
-// try {
-//   const {
-//     companyName,
-//     clientName,
-//     clientEmail,
-//     clientPan,
-//     clientGst,
-//     clientContact,
-//     brandName,
-//     clientType,
-//     bookingMode,
-//     bookingSource,
-//     agencyName,
-//     campaigns = [],
-//     user: userId,
-//     isFOCBooking = false,
-//   } = req.body;
 
-//   if (!companyName) throw new Error('Company Name is required');
-//   if (!userId) throw new Error('Assigned User is required');
-//   if (!clientType) throw new Error('Client Type is required');
-//   if (!bookingMode) throw new Error('Booking Mode/Type is required');
-//   if (!bookingSource) throw new Error('Booking Source is required');
-//   if (bookingSource === "Agency" && !agencyName) throw new Error('Agency name is required when the booking source is Agency!');
-
-//   const user = await User.findById(userId);
-//   if (!user) throw new Error('Invalid user assigned to booking');
-
-//   const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
-  
-//   console.log("BACKEND (LOG 2): Parsed campaigns array:", JSON.stringify(parsedCampaigns, null, 2));
-
-//   let companyLogo = '';
-//   if (req.file?.path) {
-//     try {
-//       companyLogo = await uploadToS3(req.file.path, req.file.filename);
-//     } catch (uploadErr) {
-//       throw new Error(`Logo upload failed: ${uploadErr.message}`);
-//     }
-//   }
-
-//   const newBooking = new Booking({
-//     companyName,
-//     clientName,
-//     clientEmail,
-//     clientPanNumber: clientPan,
-//     clientGstNumber: clientGst,
-//     clientContactNumber: clientContact,
-//     brandDisplayName: brandName,
-//     clientType,
-//     companyLogo,
-//     isFOCBooking,
-//     bookingMode,
-//     bookingSource,
-//     agencyName: agencyName ?? null,
-//     campaigns: [],
-//     user: userId
-//   });
-
-//   await newBooking.save({ session });
-
-//   const createdCampaigns = [];
-
-//   for (const campaignData of parsedCampaigns) {
-//     const {
-//       campaignName,
-//       industry,
-//       description,
-//       selectedSpaces = [],
-//       campaignImages = [],
-//       startDate,
-//       endDate,
-//       isFOC
-//     } = campaignData;
-
-//     const campaignToCreate = {
-//       campaignName,
-//       description,
-//       industry,
-//       campaignImages,
-//       isFOC,
-//       spaces: selectedSpaces.map(s => ({
-//         id: s.id,
-//         selectedUnits: s.selectedUnits
-//       })),
-//       startDate,
-//       endDate
-//     };
-
-//     console.log("BACKEND (LOG 3): Object being saved to Campaign collection:", JSON.stringify(campaignToCreate, null, 2));
-    
-//     const newCampaign = new Campaign(campaignToCreate);
-
-//     for (const selected of selectedSpaces) {
-//       const space = await Space.findById(selected.id).session(session);
-//       if (!space) throw new Error(`Space not found: ${selected.id}`);
-//       const availableUnitsBeforeBooking = space.unit - space.occupiedUnits;
-//       if (selected.selectedUnits > availableUnitsBeforeBooking) {
-//         if (!space.overlappingBooking) {
-//           space.overlappingBooking = true;
-//           console.warn(`Proceeding with overlapping booking for space: ${space.spaceName}`);
-//         } else {
-//           throw new Error(`Not enough units for space: ${space.spaceName} and overlapping is not allowed`);
-//         }
-//       }
-//       space.occupiedUnits += selected.selectedUnits;
-//       const isDOOH = space.spaceType === 'DOOH';
-//       const allUnitsBooked = space.occupiedUnits >= space.unit;
-//       const noUnitsBooked = space.occupiedUnits === 0;
-//       if (isDOOH) {
-//         space.availability = allUnitsBooked ? 'Completely booked' : noUnitsBooked ? 'Completely available' : 'Partialy available';
-//       } else {
-//         if (space.overlappingBooking) {
-//           space.availability = 'Overlapping booking';
-//         } else {
-//           space.availability = allUnitsBooked ? 'Booked' : 'Available';
-//         }
-//       }
-//       if (!Array.isArray(space.campaignDates)) {
-//         space.campaignDates = [];
-//       }
-//       for (let i = 0; i < selected.selectedUnits; i++) {
-//         space.campaignDates.push({
-//           campaignId: newCampaign._id,
-//           startDate,
-//           endDate,
-//         });
-//       }
-//       space.numberOfBookings += 1;
-//       await space.save({ session });
-//     }
-    
-//     await newCampaign.save({ session });
-//     createdCampaigns.push(newCampaign._id);
-//   }
-
-//   newBooking.campaigns = createdCampaigns;
-//   await newBooking.save({ session });
-
-//   await session.commitTransaction();
-//   session.endSession();
-
-//   return res.status(201).json({
-//     message: 'Booking created successfully',
-//     bookingId: newBooking._id
-//   });
-
+// return res.status(200).json(campaign);
 // } catch (error) {
-//   await session.abortTransaction();
-//   session.endSession();
-//   console.error("Booking creation error:", error);
-//   return res.status(500).json({ error: error.message || 'Failed to create booking' });
+// console.error('Error fetching campaign by ID:', error);
+// return res.status(500).json({ error: 'Server error' });
 // }
 // };
+
+export const getCampaignById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid campaign ID' });
+    }
+
+    // 1. Get campaign header
+    const campaign = await Campaign.findById(id).lean();
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    // 2. Get all mappings for this campaign
+    const mappings = await CampaignInventoryMapping.find({ campaignId: id }).lean();
+
+    // 3. Join with Space for optional metadata
+    const spaceIds = mappings.map(m => m.spaceId);
+    const spaces = await Space.find({ _id: { $in: spaceIds } }).lean();
+    const spaceMap = Object.fromEntries(spaces.map(s => [s._id.toString(), s]));
+
+    // 4. Convert mappings → legacy spaces[] & inventoryCosts[] arrays
+    const spacesArr = mappings.map(m => ({
+      id: m.spaceId.toString(),
+      selectedUnits: m.unitIds?.length || 1,
+      _id: new mongoose.Types.ObjectId() // generate unique _id for array element
+    }));
+
+    const inventoryCostsArr = mappings.map(m => ({
+      id: m.spaceId.toString(),
+      displayCost: m.displayCost,
+      buyingPrice: m.buyingPrice,
+      sellingPrice: m.sellingPrice,
+      invoiceNo: m.invoiceNo,
+      printingcostpersquareFeet: m.printingCostPerSquareFeet,
+      mountingcostpersquareFeet: m.mountingCostPerSquareFeet,
+      area: m.area,
+      _id: new mongoose.Types.ObjectId()
+    }));
+
+    // 5. Return merged campaign data
+    return res.status(200).json({
+      _id: campaign._id,
+      campaignName: campaign.campaignName,
+      description: campaign.description || '',
+      spaces: spacesArr,
+      industry: campaign.industry || '',
+      isFOC: campaign.isFOC || false,
+      artwork: campaign.artwork || { confirmed: false },
+      startDate: campaign.startDate,
+      endDate: campaign.endDate,
+      inventoryCosts: inventoryCostsArr,
+      createdAt: campaign.createdAt,
+      updatedAt: campaign.updatedAt,
+      __v: campaign.__v,
+      pipeline: campaign.pipeline || null
+    });
+
+  } catch (error) {
+    console.error('Error fetching campaign by ID:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+function overlaps(aStart, aEnd, bStart, bEnd) {
+  return aStart <= bEnd && aEnd >= bStart; // strings (ISO-like) work if same format; you’re storing strings
+}
+
+async function assertNoUnitConflicts({ session, spaceId, unitIds, startDate, endDate, excludeId = null }) {
+  const q = {
+    spaceId,
+    unitIds: { $in: unitIds },
+    startDate: { $lte: endDate },
+    endDate:   { $gte: startDate },
+  };
+  if (excludeId) q._id = { $ne: excludeId };
+  const conflict = await CampaignInventoryMapping.exists(q).session(session);
+  return Boolean(conflict);
+}
+
+// Best-effort allocator when client passes only `selectedUnits`
+async function allocateUnitIds({ session, space, startDate, endDate, need }) {
+  const maxUnits = Math.max(1, Number(space.unit || 1));
+  const allUnitIds = Array.from({ length: maxUnits }, (_, i) => i + 1);
+
+  // Find currently booked unitIds for overlapping windows
+  const curs = CampaignInventoryMapping.find({
+    spaceId: space._id,
+    startDate: { $lte: endDate },
+    endDate:   { $gte: startDate },
+  }, { unitIds: 1 }).session(session).lean();
+
+  const booked = new Set();
+  for await (const m of curs) for (const u of (m.unitIds || [])) booked.add(u);
+
+  const free = allUnitIds.filter(u => !booked.has(u));
+  if (free.length < need) return null; // not enough free units
+  return free.slice(0, need);
+}
 
 export const createBooking = async (req, res) => {
-  console.log("BACKEND (LOG 1): Raw request body received:", JSON.stringify(req.body, null, 2));
-
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -1317,25 +1022,21 @@ export const createBooking = async (req, res) => {
     if (!clientType) throw new Error('Client Type is required');
     if (!bookingMode) throw new Error('Booking Mode/Type is required');
     if (!bookingSource) throw new Error('Booking Source is required');
-    if (bookingSource === "Agency" && !agencyName) throw new Error('Agency name is required when the booking source is Agency!');
+    if (bookingSource === 'Agency' && !agencyName) throw new Error('Agency name is required when the booking source is Agency');
 
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).session(session);
     if (!user) throw new Error('Invalid user assigned to booking');
 
     const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
-    console.log("BACKEND (LOG 2): Parsed campaigns array:", JSON.stringify(parsedCampaigns, null, 2));
 
+    // Optional logo upload
     let companyLogo = '';
     if (req.file?.path) {
-      try {
-        companyLogo = await uploadToS3(req.file.path, req.file.filename);
-      } catch (uploadErr) {
-        throw new Error(`Logo upload failed: ${uploadErr.message}`);
-      }
+      companyLogo = await uploadToS3(req.file.path, req.file.filename);
     }
 
-    // Create the booking first
-    const newBooking = new Booking({
+    // Create booking header
+    const booking = await new Booking({
       companyName,
       clientName,
       clientEmail,
@@ -1350,86 +1051,127 @@ export const createBooking = async (req, res) => {
       bookingSource,
       agencyName: agencyName ?? null,
       user: userId
-    });
+    }).save({ session });
 
-    await newBooking.save({ session });
-
-    // Loop through campaigns and create them
+    // Process each campaign
     for (const campaignData of parsedCampaigns) {
       const {
         campaignName,
         industry,
         description,
         selectedSpaces = [],
-        campaignImages = [],
+        campaignImages = [], // ignored by model unless you added it
         startDate,
         endDate,
         isFOC
       } = campaignData;
 
-      const campaignToCreate = {
+      // Create campaign header ONLY (no spaces[], no inventoryCosts[])
+      const campaign = await new Campaign({
         campaignName,
         description,
         industry,
-        campaignImages,
         isFOC,
-        spaces: selectedSpaces.map(s => ({ id: s.id, selectedUnits: s.selectedUnits })),
         startDate,
         endDate
-      };
+      }).save({ session });
 
-      const newCampaign = new Campaign(campaignToCreate);
-      await newCampaign.save({ session });
+      // Link booking ↔ campaign
+      await new BookingCampaign({
+        bookingId: booking._id,
+        campaignId: campaign._id
+      }).save({ session });
 
-      // Create BookingCampaign link
-      const newBookingCampaign = new BookingCampaign({
-        bookingId: newBooking._id,
-        campaignId: newCampaign._id
-      });
-      await newBookingCampaign.save({ session });
-
-      // Update Space availability and campaign dates
-      for (const selected of selectedSpaces) {
-        const space = await Space.findById(selected.id).session(session);
-        if (!space) throw new Error(`Space not found: ${selected.id}`);
-
-        const availableUnitsBeforeBooking = space.unit - space.occupiedUnits;
-        if (selected.selectedUnits > availableUnitsBeforeBooking) {
-          if (!space.overlappingBooking) {
-            space.overlappingBooking = true;
-            console.warn(`Proceeding with overlapping booking for space: ${space.spaceName}`);
-          } else {
-            throw new Error(`Not enough units for space: ${space.spaceName} and overlapping is not allowed`);
-          }
-        }
-
-        space.occupiedUnits += selected.selectedUnits;
+      // For each selected space, create a CampaignInventoryMapping
+      for (const sel of selectedSpaces) {
+        const space = await Space.findById(sel.id).session(session);
+        if (!space) throw new Error(`Space not found: ${sel.id}`);
 
         const isDOOH = space.spaceType === 'DOOH';
-        const allUnitsBooked = space.occupiedUnits >= space.unit;
-        const noUnitsBooked = space.occupiedUnits === 0;
+        const maxUnits = Math.max(1, Number(space.unit || 1));
 
-        if (isDOOH) {
-          space.availability = allUnitsBooked ? 'Completely booked' : noUnitsBooked ? 'Completely available' : 'Partially available';
-        } else {
-          if (space.overlappingBooking) {
-            space.availability = 'Overlapping booking';
+        // Determine unitIds
+        let unitIds = Array.isArray(sel.unitIds) && sel.unitIds.length
+          ? [...new Set(sel.unitIds.map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= maxUnits))]
+          : null;
+
+        // Fallback: allocate from selectedUnits
+        if (!unitIds) {
+          const need = Math.max(1, Number(sel.selectedUnits || 1));
+          if (!isDOOH) {
+            // Non-DOOH must be [1]
+            if (need !== 1) throw new Error(`Space ${space.spaceName} is not DOOH; selectedUnits must be 1`);
+            unitIds = [1];
           } else {
-            space.availability = allUnitsBooked ? 'Booked' : 'Available';
+            const allocated = await allocateUnitIds({ session, space, startDate, endDate, need });
+            if (!allocated) {
+              if (space.overlappingBooking) {
+                // allow overlap; pick first N anyway
+                unitIds = Array.from({ length: Math.min(need, maxUnits) }, (_, i) => i + 1);
+              } else {
+                throw new Error(`Not enough free units for space: ${space.spaceName} in ${startDate}..${endDate}`);
+              }
+            } else {
+              unitIds = allocated;
+            }
           }
         }
 
-        if (!Array.isArray(space.campaignDates)) space.campaignDates = [];
-
-        for (let i = 0; i < selected.selectedUnits; i++) {
-          space.campaignDates.push({
-            campaignId: newCampaign._id,
+        // Conflict check unless overlappingBooking=true
+        if (!space.overlappingBooking) {
+          const hasConflict = await assertNoUnitConflicts({
+            session,
+            spaceId: space._id,
+            unitIds,
             startDate,
             endDate
           });
+          if (hasConflict) {
+            throw new Error(`Unit conflict for space ${space.spaceName}: some unit(s) already reserved in this window`);
+          }
         }
 
-        space.numberOfBookings += 1;
+        // Mapping financials (coerce numbers / defaults)
+        const mappingDoc = {
+          campaignId: campaign._id,
+          spaceId: space._id,
+          unitIds,
+          startDate,
+          endDate,
+          displayCost: Number(sel.displayCost || 0),
+          buyingPrice: Number(sel.buyingPrice || 0),
+          sellingPrice: Number(sel.sellingPrice || 0),
+          invoiceNo: sel.invoiceNo || '',
+          printingCostPerSquareFeet: Number(sel.printingCostPerSquareFeet || 0),
+          mountingCostPerSquareFeet: Number(sel.mountingCostPerSquareFeet || 0),
+          area: Number(sel.area || (Number(space.width || 0) * Number(space.height || 0)) || 0),
+
+          // initialize per-unit digital status aligned to unitIds
+          digitalStatus: unitIds.map(u => ({ unitId: u }))
+        };
+
+        await new CampaignInventoryMapping(mappingDoc).save({ session });
+
+        // Update space occupancy + availability snapshot (optional, if you keep these counters)
+        const bookedCount = unitIds.length;
+        space.occupiedUnits = Math.max(0, Number(space.occupiedUnits || 0)) + bookedCount;
+
+        if (isDOOH) {
+          if (space.overlappingBooking) {
+            space.availability = 'Overlapping booking';
+          } else if (space.occupiedUnits >= maxUnits) {
+            space.availability = 'Completely booked';
+          } else if (space.occupiedUnits === 0) {
+            space.availability = 'Completely available';
+          } else {
+            space.availability = 'Partially available';
+          }
+        } else {
+          space.availability = space.overlappingBooking ? 'Overlapping booking'
+            : (space.occupiedUnits >= 1 ? 'Booked' : 'Available');
+        }
+
+        space.numberOfBookings = Math.max(0, Number(space.numberOfBookings || 0)) + 1;
         await space.save({ session });
       }
     }
@@ -1439,16 +1181,176 @@ export const createBooking = async (req, res) => {
 
     return res.status(201).json({
       message: 'Booking created successfully',
-      bookingId: newBooking._id
+      bookingId: booking._id
     });
-
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    console.error("Booking creation error:", error);
+    console.error('Booking creation error:', error);
     return res.status(500).json({ error: error.message || 'Failed to create booking' });
   }
 };
+// export const createBooking = async (req, res) => {
+//   console.log("BACKEND (LOG 1): Raw request body received:", JSON.stringify(req.body, null, 2));
+
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+
+//   try {
+//     const {
+//       companyName,
+//       clientName,
+//       clientEmail,
+//       clientPan,
+//       clientGst,
+//       clientContact,
+//       brandName,
+//       clientType,
+//       bookingMode,
+//       bookingSource,
+//       agencyName,
+//       campaigns = [],
+//       user: userId,
+//       isFOCBooking = false,
+//     } = req.body;
+
+//     if (!companyName) throw new Error('Company Name is required');
+//     if (!userId) throw new Error('Assigned User is required');
+//     if (!clientType) throw new Error('Client Type is required');
+//     if (!bookingMode) throw new Error('Booking Mode/Type is required');
+//     if (!bookingSource) throw new Error('Booking Source is required');
+//     if (bookingSource === "Agency" && !agencyName) throw new Error('Agency name is required when the booking source is Agency!');
+
+//     const user = await User.findById(userId);
+//     if (!user) throw new Error('Invalid user assigned to booking');
+
+//     const parsedCampaigns = typeof campaigns === 'string' ? JSON.parse(campaigns) : campaigns;
+//     console.log("BACKEND (LOG 2): Parsed campaigns array:", JSON.stringify(parsedCampaigns, null, 2));
+
+//     let companyLogo = '';
+//     if (req.file?.path) {
+//       try {
+//         companyLogo = await uploadToS3(req.file.path, req.file.filename);
+//       } catch (uploadErr) {
+//         throw new Error(`Logo upload failed: ${uploadErr.message}`);
+//       }
+//     }
+
+//     // Create the booking first
+//     const newBooking = new Booking({
+//       companyName,
+//       clientName,
+//       clientEmail,
+//       clientPanNumber: clientPan,
+//       clientGstNumber: clientGst,
+//       clientContactNumber: clientContact,
+//       brandDisplayName: brandName,
+//       clientType,
+//       companyLogo,
+//       isFOCBooking,
+//       bookingMode,
+//       bookingSource,
+//       agencyName: agencyName ?? null,
+//       user: userId
+//     });
+
+//     await newBooking.save({ session });
+
+//     // Loop through campaigns and create them
+//     for (const campaignData of parsedCampaigns) {
+//       const {
+//         campaignName,
+//         industry,
+//         description,
+//         selectedSpaces = [],
+//         campaignImages = [],
+//         startDate,
+//         endDate,
+//         isFOC
+//       } = campaignData;
+
+//       const campaignToCreate = {
+//         campaignName,
+//         description,
+//         industry,
+//         campaignImages,
+//         isFOC,
+//         spaces: selectedSpaces.map(s => ({ id: s.id, selectedUnits: s.selectedUnits })),
+//         startDate,
+//         endDate
+//       };
+
+//       const newCampaign = new Campaign(campaignToCreate);
+//       await newCampaign.save({ session });
+
+//       // Create BookingCampaign link
+//       const newBookingCampaign = new BookingCampaign({
+//         bookingId: newBooking._id,
+//         campaignId: newCampaign._id
+//       });
+//       await newBookingCampaign.save({ session });
+
+//       // Update Space availability and campaign dates
+//       for (const selected of selectedSpaces) {
+//         const space = await Space.findById(selected.id).session(session);
+//         if (!space) throw new Error(`Space not found: ${selected.id}`);
+
+//         const availableUnitsBeforeBooking = space.unit - space.occupiedUnits;
+//         if (selected.selectedUnits > availableUnitsBeforeBooking) {
+//           if (!space.overlappingBooking) {
+//             space.overlappingBooking = true;
+//             console.warn(`Proceeding with overlapping booking for space: ${space.spaceName}`);
+//           } else {
+//             throw new Error(`Not enough units for space: ${space.spaceName} and overlapping is not allowed`);
+//           }
+//         }
+
+//         space.occupiedUnits += selected.selectedUnits;
+
+//         const isDOOH = space.spaceType === 'DOOH';
+//         const allUnitsBooked = space.occupiedUnits >= space.unit;
+//         const noUnitsBooked = space.occupiedUnits === 0;
+
+//         if (isDOOH) {
+//           space.availability = allUnitsBooked ? 'Completely booked' : noUnitsBooked ? 'Completely available' : 'Partially available';
+//         } else {
+//           if (space.overlappingBooking) {
+//             space.availability = 'Overlapping booking';
+//           } else {
+//             space.availability = allUnitsBooked ? 'Booked' : 'Available';
+//           }
+//         }
+
+//         if (!Array.isArray(space.campaignDates)) space.campaignDates = [];
+
+//         for (let i = 0; i < selected.selectedUnits; i++) {
+//           space.campaignDates.push({
+//             campaignId: newCampaign._id,
+//             startDate,
+//             endDate
+//           });
+//         }
+
+//         space.numberOfBookings += 1;
+//         await space.save({ session });
+//       }
+//     }
+
+//     await session.commitTransaction();
+//     session.endSession();
+
+//     return res.status(201).json({
+//       message: 'Booking created successfully',
+//       bookingId: newBooking._id
+//     });
+
+//   } catch (error) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     console.error("Booking creation error:", error);
+//     return res.status(500).json({ error: error.message || 'Failed to create booking' });
+//   }
+// };
 
 export const updateBooking = async (req, res) => {
 const { id: bookingId } = req.params;
@@ -1536,50 +1438,6 @@ console.error(error);
 return res.status(500).json({ error: error.message || 'Failed to update booking' });
 }
 };
-// export const deleteBooking = async (req, res) => {
-// const { id: bookingId } = req.params;
-// const session = await mongoose.startSession();
-// session.startTransaction();
-// try {
-// const booking = await Booking.findById(bookingId).populate('campaigns').session(session);
-// if (!booking) {
-// throw new Error('Booking not found');
-// }
-
-// for (const campaign of booking.campaigns) {
-//   for (const selected of campaign.spaces) {
-//     const space = await Space.findById(selected.id).session(session);
-//     if (!space) continue;
-
-//     space.occupiedUnits = Math.max(0, space.occupiedUnits - selected.selectedUnits);
-
-//     if (space.occupiedUnits >= space.unit) {
-//       space.availability = 'Completely booked';
-//     } else if (space.occupiedUnits === 0) {
-//       space.availability = 'Completely available';
-//     } else {
-//       space.availability = 'Partialy available';
-//     }
-//     space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
-//     await space.save({ session });
-//   }
-
-//   await Campaign.findByIdAndDelete(campaign._id).session(session);
-// }
-
-// await Booking.findByIdAndDelete(bookingId).session(session);
-
-// await session.commitTransaction();
-// session.endSession();
-
-// return res.status(200).json({ message: 'Booking deleted successfully' });
-// } catch (error) {
-// await session.abortTransaction();
-// session.endSession();
-// console.error(error);
-// return res.status(500).json({ error: error.message || 'Failed to delete booking' });
-// }
-// };
 export const deleteBooking = async (req, res) => {
   const { id: bookingId } = req.params;
   const session = await mongoose.startSession();
