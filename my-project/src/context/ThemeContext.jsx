@@ -1,28 +1,33 @@
-// src/ThemeContext.js
 import { createContext, useContext, useState, useEffect } from "react";
 
 const ThemeContext = createContext();
 
+// ✅ Must match tailwind.config.js daisyui.themes
 const themes = [
   "light",
   "dark",
-  "dim",
-  "sepia",
-  "high-contrast",
-  "solarized-dark",
-  "solarized-light",
+  "cupcake",
+  "corporate",
+  "forest",
+  "dracula",
+  "autumn",
+  "lofi",
+  "pastel",
+  "fantasy",
 ];
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState("light");
 
-  // Load saved theme from localStorage (optional)
+  // Load theme from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("theme");
-    if (saved) setTheme(saved);
+    if (saved && themes.includes(saved)) {
+      setTheme(saved);
+    }
   }, []);
 
-  // Apply theme to <html> and save to localStorage
+  // Apply theme to <html> and persist
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);

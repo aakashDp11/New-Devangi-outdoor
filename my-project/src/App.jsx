@@ -49,9 +49,8 @@ export default function App() {
   return (
     <AuthProvider>
       <SidebarProvider>
-        {/* ✅ Global Theme Wrapper */}
-        <div className="bg-theme text-theme min-h-screen flex flex-col">
-          {/* Global Toaster */}
+        {/* ✅ DaisyUI applies theme via data-theme */}
+          <div className="min-h-screen flex flex-col bg-base-100 text-base-content">
           <Toaster position="top-right" />
 
           <Routes>

@@ -20,8 +20,6 @@ import {
   FaExclamationCircle,
   FaBell,
 } from "react-icons/fa";
-
-// ✅ Import ThemeSwitcher
 import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Navbar() {
@@ -59,7 +57,6 @@ export default function Navbar() {
         console.error("Failed to fetch unread notification count:", error);
       }
     };
-
     fetchCount();
   }, [location.pathname]);
 
@@ -71,10 +68,7 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    const closeSidebarOnMobile = () => {
-      if (window.innerWidth < 768) setIsCollapsed(true);
-    };
-    closeSidebarOnMobile();
+    if (window.innerWidth < 768) setIsCollapsed(true);
   }, [location.pathname, setIsCollapsed]);
 
   return (
@@ -89,7 +83,7 @@ export default function Navbar() {
 
       {/* Sidebar */}
       <aside
-        className={`bg-theme text-theme fixed top-0 h-full z-30 border-r border-theme shadow-lg flex flex-col transition-all duration-300 ease-in-out overflow-x-hidden
+        className={`bg-base-100 text-base-content fixed top-0 h-full z-30 border-r border-base-300 shadow-lg flex flex-col transition-all duration-300 ease-in-out overflow-x-hidden
           ${isCollapsed ? "w-0 md:w-24" : "w-64"}
           ${isCollapsed ? "overflow-y-hidden" : "overflow-y-auto"}
           ${isCollapsed ? "left-[-100%] md:left-0" : "left-0"}
@@ -97,16 +91,14 @@ export default function Navbar() {
       >
         {/* Header */}
         <div
-          className={`flex items-center p-4 border-b border-theme transition-all duration-300 relative
+          className={`flex items-center p-4 border-b border-base-300 transition-all duration-300 relative
             ${isCollapsed ? "h-20 justify-center" : "h-24 justify-between"}
           `}
         >
           {!isCollapsed && <img src={logo1} alt="Logo" className="w-40" />}
           <button
             onClick={handleToggle}
-            className={`p-2 rounded-full text-theme hover:bg-primary-theme focus:outline-none 
-              ${isCollapsed ? "" : "absolute top-5 right-4"}
-            `}
+            className="p-2 rounded-full hover:bg-primary focus:outline-none"
             aria-label="Toggle sidebar"
           >
             {isCollapsed ? <FaArrowRight size={16} /> : <FaArrowLeft size={16} />}
@@ -129,8 +121,8 @@ export default function Navbar() {
                 }}
                 className={`cursor-pointer transition-colors duration-200 mx-0 ${
                   isActive
-                    ? "bg-primary-theme text-white"
-                    : "text-theme hover:bg-primary-theme hover:text-white"
+                    ? "bg-primary text-primary-content"
+                    : "hover:bg-primary hover:text-primary-content"
                 }`}
                 title={item.label}
               >
@@ -172,53 +164,53 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* ✅ Theme Switcher Section */}
-        <div className="border-t border-theme py-4 px-2 flex justify-center">
+        {/* Theme Switcher */}
+        <div className="border-t border-base-300 py-4 px-2 flex justify-center">
           <ThemeSwitcher />
         </div>
 
-        {/* Footer Links */}
-        <div className="border-t border-theme pt-4 pb-4">
+        {/* Footer */}
+        <div className="border-t border-base-300 pt-4 pb-4">
           {isCollapsed ? (
             <div className="flex flex-col items-center space-y-1 py-1">
               <FaShieldAlt
                 onClick={() => navigate("/privacy-policy")}
-                className="cursor-pointer text-theme hover:text-primary-theme"
+                className="cursor-pointer hover:text-primary"
                 size={16}
                 title="Privacy Policy"
               />
               <FaExclamationCircle
                 onClick={() => navigate("/disclaimer-policy")}
-                className="cursor-pointer text-theme hover:text-primary-theme"
+                className="cursor-pointer hover:text-primary"
                 size={16}
                 title="Disclaimer Policy"
               />
               <FaSignOutAlt
                 onClick={handleLogout}
-                className="cursor-pointer text-theme hover:text-primary-theme"
+                className="cursor-pointer hover:text-primary"
                 size={16}
                 title="Logout"
               />
             </div>
           ) : (
-            <div className="px-2 py-3 text-center text-xs font-medium text-theme whitespace-nowrap">
+            <div className="px-2 py-3 text-center text-xs font-medium whitespace-nowrap">
               <span
                 onClick={() => navigate("/privacy-policy")}
-                className="cursor-pointer hover:text-primary-theme"
+                className="cursor-pointer hover:text-primary"
               >
                 Privacy Policy
               </span>
               <span className="mx-1 text-gray-400">|</span>
               <span
                 onClick={() => navigate("/disclaimer-policy")}
-                className="cursor-pointer hover:text-primary-theme"
+                className="cursor-pointer hover:text-primary"
               >
                 Disclaimer Policy
               </span>
               <span className="mx-1 text-gray-400">|</span>
               <span
                 onClick={handleLogout}
-                className="cursor-pointer hover:text-primary-theme"
+                className="cursor-pointer hover:text-primary"
               >
                 Logout
               </span>
@@ -230,7 +222,7 @@ export default function Navbar() {
       {/* Hamburger Toggle for Mobile */}
       <button
         onClick={handleToggle}
-        className="md:hidden fixed top-4 left-4 z-40 bg-theme text-theme border border-theme p-2 rounded shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-40 bg-base-100 text-base-content border border-base-300 p-2 rounded shadow-lg"
       >
         ☰
       </button>

@@ -150,33 +150,7 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
     };
     if (CampaignId) fetchOrCreatePipeline();
   }, [CampaignId, refreshKey, setPipelineData]);
-  // useEffect(() => {
-  //   const fetchCampaignDigital = async () => {
-  //     try {
-  //       const url = `${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${CampaignId}/digital-status`;
-  //       const res = await axios.get(url);
-  //       const payload = res.data || {};
-  //       console.log("PAyload data is",payload);
-  //       // Only replace if server returned something meaningful
-  //       const hasAny = payload && Object.values(payload).some(v => (Array.isArray(v) ? v.length : !!v));
-  //       if (hasAny) {
-  //         setCampaignDigital(payload);
-  //       } else if (pipelineData?.spaces?.length) {
-  //         setCampaignDigital(buildCampaignDigitalFromPipeline(pipelineData, CampaignId));
-  //       }
-  //     } catch {
-  //       if (pipelineData?.spaces?.length) {
-  //         setCampaignDigital(buildCampaignDigitalFromPipeline(pipelineData, CampaignId));
-  //       } else {
-  //         setCampaignDigital({});
-  //       }
-  //     }
-  //   };
-  
-  //   if (CampaignId && pipelineData?.spaces?.length) {
-  //     fetchCampaignDigital();
-  //   }
-  // }, [CampaignId, pipelineData?.spaces?.length, refreshKey]);
+ 
   useEffect(() => {
     const fetchCampaignDigital = async () => {
       try {
@@ -288,103 +262,8 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
     }
 
     if (pipelineData.artwork?.confirmed && pipelineData.spaces.length > 0) {
-//       pipelineData.spaces.forEach((space, index) => {
-//         const inventoryId = `inventory-${space._id}`;
-//         const printId = `print-${space._id}`;
-//         const mountId = `mount-${space._id}`;
-//         const digitalId = `digital-${space._id}`;
-//         const liveId = `live-${space._id}`;
 
-//         dynamicNodes.push({
-//           id: inventoryId,
-//           data: { label: space.spaceName },
-//           position: { x: 650, y: 100 + index * 200 },
-//           style: getNodeStyle(true),
-//         });
-    
-//         dynamicEdges.push({ id: `e-artwork-${space._id}`, source: 'artwork', target: inventoryId, markerEnd: 'arrowclosed' });
-    
-        
-// if (space.spaceType === 'DOOH') {
-//   const ds = campaignDigital?.[space._id];
-// console.log("DS for dooh is",ds);
-//   dynamicNodes.push(
-//     {
-//       id: digitalId,
-//       data: {
-//         label: (
-//           <NodeLabel
-//             title="Digital Agency"
-//             timestamp={formatTimestamp(
-//               Array.isArray(ds)
-//                 ? ds.find(x => x?.confirmed)?.completedAt
-//                 : ds?.completedAt
-//             )}
-//           />
-//         )
-//       },
-//       position: { x: 850, y: 100 + index * 200 },
-//       style: getNodeStyle(isNodeCompleted(digitalId, space)),
-//     },
-//     {
-//       id: liveId,
-//       data: {
-//         label: (
-//           <NodeLabel
-//             title="Is Live"
-//             timestamp={formatTimestamp(
-//               Array.isArray(ds)
-//                 ? ds.find(x => x?.isLive)?.liveCompletedAt
-//                 : ds?.liveCompletedAt
-//             )}
-//           />
-//         )
-//       },
-//       position: { x: 1050, y: 100 + index * 200 },
-//       style: getNodeStyle(isNodeCompleted(liveId, space)),
-//     }
-//   );
 
-//   dynamicEdges.push({
-//     id: `e-${space._id}-digital`,
-//     source: inventoryId,
-//     target: digitalId,
-//     markerEnd: 'arrowclosed'
-//   });
-
-//   // Edge from Digital → Live if any unit confirmed (campaign-scoped)
-//   const hasConfirmed = Array.isArray(ds) ? ds.some(x => x?.confirmed) : !!ds?.confirmed;
-//   if (hasConfirmed) {
-//     dynamicEdges.push({
-//       id: `e-digital-${space._id}-live`,
-//       source: digitalId,
-//       target: liveId,
-//       markerEnd: 'arrowclosed'
-//     });
-//   }
-// }
-
-//         else {
-//           dynamicNodes.push(
-//             {
-//               id: printId,
-//               data: { label: <NodeLabel title="Printing Status" timestamp={formatTimestamp(space.printingStatus?.completedAt)} /> },
-//               position: { x: 850, y: 100 + index * 200 },
-//               style: getNodeStyle(isNodeCompleted(printId, space)),
-//             },
-//             {
-//               id: mountId,
-//               data: { label: <NodeLabel title="Mounting Status" timestamp={formatTimestamp(space.mountingStatus?.completedAt)} /> },
-//               position: { x: 1050, y: 100 + index * 200 },
-//               style: getNodeStyle(isNodeCompleted(mountId, space)),
-//             }
-//           );
-//           dynamicEdges.push({ id: `e-${space._id}-print`, source: inventoryId, target: printId, markerEnd: 'arrowclosed' });
-//           if (space.printingStatus?.confirmed) {
-//             dynamicEdges.push({ id: `e-print-${space._id}-mount`, source: printId, target: mountId, markerEnd: 'arrowclosed' });
-//           }
-//         }
-//       });
 pipelineData.spaces.forEach((space, index) => {
   const inventoryId = `inventory-${space._id}`;
   const printId = `print-${space._id}`;
@@ -401,71 +280,7 @@ pipelineData.spaces.forEach((space, index) => {
 
   dynamicEdges.push({ id: `e-artwork-${space._id}`, source: 'artwork', target: inventoryId, markerEnd: 'arrowclosed' });
 
-//   if (space.spaceType === 'DOOH') {
-//     console.log("Campaign digital is", campaignDigital);
-//     console.log("Type of campaignDigital:", typeof campaignDigital);
-// console.log("Is campaignDigital an array?", Array.isArray(campaignDigital));
-//     // const ds = campaignDigital?.[space._id];  
-//     if (Array.isArray(campaignDigital)) {
-//       const ds = campaignDigital.find(x => x.unitId === 1); 
-    
-    
-//     console.log("Ds is",ds);
-//     dynamicNodes.push(
-//       {
-//         id: digitalId,
-//         data: {
-//           label: (
-//             <NodeLabel
-//               title="Digital Agency"
-//               timestamp={formatTimestamp(
-//                 Array.isArray(ds)
-//                   ? ds.find(x => x?.confirmed)?.completedAt  // Handle the array if `ds` is an array
-//                   : ds?.completedAt  // If `ds` is a single object
-//               )}
-//             />
-//           )
-//         },
-//         position: { x: 850, y: 100 + index * 200 },
-//         style: getNodeStyle(isNodeCompleted(digitalId, space)),
-//       },
-//       {
-//         id: liveId,
-//         data: {
-//           label: (
-//             <NodeLabel
-//               title="Is Live"
-//               timestamp={formatTimestamp(
-//                 Array.isArray(ds)
-//                   ? ds.find(x => x?.isLive)?.liveCompletedAt  // Check for `isLive` in the array
-//                   : ds?.liveCompletedAt  // If `ds` is a single object, use `liveCompletedAt`
-//               )}
-//             />
-//           )
-//         },
-//         position: { x: 1050, y: 100 + index * 200 },
-//         style: getNodeStyle(isNodeCompleted(liveId, space)),
-//       }
-//     );
-  
-//     dynamicEdges.push({
-//       id: `e-${space._id}-digital`,
-//       source: inventoryId,
-//       target: digitalId,
-//       markerEnd: 'arrowclosed'
-//     });
-  
-//     const hasConfirmed = Array.isArray(ds) ? ds.some(x => x?.confirmed) : !!ds?.confirmed; // Check if any unit is confirmed
-//     if (hasConfirmed) {
-//       dynamicEdges.push({
-//         id: `e-digital-${space._id}-live`,
-//         source: digitalId,
-//         target: liveId,
-//         markerEnd: 'arrowclosed'
-//       });
-//     }
-//   }
-// }
+
 if (space.spaceType === 'DOOH') {
   console.log("Campaign Digital:", campaignDigital);
 
@@ -522,6 +337,27 @@ if (space.spaceType === 'DOOH') {
     }
   }
 }
+else{
+  dynamicNodes.push(
+    {
+      id: printId,
+      data: { label: <NodeLabel title="Printing Status" timestamp={formatTimestamp(space.printingStatus?.completedAt)} /> },
+      position: { x: 850, y: 100 + index * 200 },
+      style: getNodeStyle(isNodeCompleted(printId)),
+    },
+    {
+      id: mountId,
+      data: { label: <NodeLabel title="Mounting Status" timestamp={formatTimestamp(space.mountingStatus?.completedAt)} /> },
+      position: { x: 1050, y: 100 + index * 200 },
+      style: getNodeStyle(isNodeCompleted(mountId)),
+    }
+  );
+
+  dynamicEdges.push(
+    { id: `e-${space._id}-print`, source: inventoryId, target: printId, markerEnd: 'arrowclosed' },
+    { id: `e-${space._id}-mount`, source: printId, target: mountId, markerEnd: 'arrowclosed' }
+  );
+}
 
 });
     
@@ -559,34 +395,9 @@ if (space.spaceType === 'DOOH') {
 
   if (!pipelineData) return <div>Loading Campaign Pipeline Data...</div>;
 
-  // MODIFICATION 1: ADD THIS HELPER FUNCTION TO FIND THE CORRECT DATA
-  // const getExistingDataForSelectedNode = () => {
-  //   if (!selectedNode || !pipelineData) return null;
 
-  //   const { id } = selectedNode;
-  //   const spaceId = id.split('-')[1];
-
-  //   if (id === 'booking') return pipelineData.bookingStatus;
-  //   if (id === 'po') return pipelineData.po;
-  //   if (id === 'artwork') return pipelineData.artwork;
-  //   if (id === 'invoice') return pipelineData.invoice;
-  //   if (id === 'payment') return pipelineData.payment;
-
-  //   const space = pipelineData.spaces.find(s => s._id === spaceId);
-  //   if (!space) return null;
-
-  //   if (id.startsWith('print-')) return space.printingStatus;
-  //   if (id.startsWith('mount-')) return space.mountingStatus;
-  //   // if (id.startsWith('digital-')) return space.digitalStatus;
-  //   if (id.startsWith('digital-')) {
-  //     // campaign-scoped digital status per space
-  //     return campaignDigital?.[spaceId] || null;
-  //   }
-    
-
-  //   return null;
-  // };
   const getExistingDataForSelectedNode = () => {
+    console.log("Pipeline Data ",pipelineData);
     if (!selectedNode || !pipelineData) return null;
   
     const { id } = selectedNode;
@@ -622,55 +433,6 @@ const inRange = (d, start, end) => !!(d && start && end && d >= start && d <= en
  * from the raw pipeline payload (no backend changes needed).
  */
 
-// function buildCampaignDigitalFromPipeline(pipeline, campaignId) {
-//   if (!pipeline?.spaces?.length) return {};
-
-//   const cid = String(campaignId);
-//   const out = {};
-
-//   for (const sp of pipeline.spaces) {
-//     const dsList = Array.isArray(sp.digitalStatus)
-//       ? sp.digitalStatus
-//       : sp.digitalStatus
-//         ? [sp.digitalStatus]
-//         : [];
-
-//     // 1) If campaignId exists on items, just filter (best case)
-//     let filtered = dsList.filter(d => d?.campaignId && String(d.campaignId) === cid);
-
-//     if (filtered.length === 0) {
-//       // 2) Heuristic by campaignDates window for this campaign
-//       const win = (sp.campaignDates || []).find(cd => String(cd.campaignId) === cid);
-//       const start = toDate(win?.startDate);
-//       const end   = toDate(win?.endDate);
-
-//       if (start && end) {
-//         filtered = dsList.filter(d => {
-//           const gl  = toDate(d?.goLiveDate);
-//           const upd = toDate(d?.updatedAt) || toDate(d?.createdAt);
-//           return inRange(gl, start, end) || inRange(upd, start, end);
-//         });
-//       }
-
-//       // 3) Fallback (no overlap & no campaignId): if this space doesn’t allow overlapping bookings,
-//       // take the latest record per unit as "ours" (prevents false positives in common single-campaign setups)
-//       if (filtered.length === 0 && sp.overlappingBooking === false && dsList.length) {
-//         const latestByUnit = new Map();
-//         for (const d of dsList) {
-//           const key = Number(d?.unitId);
-//           const t = toDate(d?.updatedAt) || toDate(d?.createdAt) || new Date(0);
-//           const prev = latestByUnit.get(key);
-//           if (!prev || t > prev._t) latestByUnit.set(key, { _t: t, item: d });
-//         }
-//         filtered = Array.from(latestByUnit.values()).map(v => v.item);
-//       }
-//     }
-
-//     out[sp._id] = filtered;
-//   }
-
-//   return out;
-// }
 function buildCampaignDigitalFromPipeline(pipeline, campaignId) {
   if (!pipeline?.spaces?.length) return {};
 
@@ -753,17 +515,7 @@ console.log("dsList is",dsList);
             {selectedNode.id.startsWith('print-') && <PrintingStatus existingData={existingData} campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
             {selectedNode.id.startsWith('mount-') && <MountingStatus existingData={existingData} campaignId={CampaignId} spaceId={selectedNode.id.split('-')[1]} onClose={() => setSelectedNode(null)} onConfirm={() => { setSelectedNode(null); triggerRefresh(); }} />}
             
-           
-{/* {selectedNode.id.startsWith('digital-') && (
-  <DigitalStatusForm
-    existingData={campaignDigital?.[selectedNode.id.split('-')[1]] || []}  // 👈 campaign-scoped
-    spaceId={selectedNode.id.split('-')[1]}
-    campaignId={CampaignId}
-    unit={pipelineData.spaces.find(s => s._id === selectedNode.id.split('-')[1])?.unit}
-    onClose={() => setSelectedNode(null)}
-    onConfirm={() => { setSelectedNode(null); triggerRefresh(); }}
-  />
-)} */}
+
 {selectedNode.id.startsWith('digital-') && (
   <DigitalStatusForm
     existingData={campaignDigital|| []}  // 👈 campaign-scoped, passed as array

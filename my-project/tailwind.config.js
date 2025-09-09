@@ -12,9 +12,9 @@ export default {
   plugins: [daisyui],
   daisyui: {
     themes: [
-      "light",        // default
-      "dark",         // dark
-      "cupcake",      // optional extras
+      "light",
+      "dark",
+      "cupcake",
       "corporate",
       "forest",
       "dracula",
