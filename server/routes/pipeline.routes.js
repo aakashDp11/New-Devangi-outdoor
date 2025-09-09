@@ -14,6 +14,7 @@ const router = express.Router();
 import Pipeline from '../models/pipeline.model.js';
 import ChangeLog from '../models/changelog.model.js';
 import Booking from '../models/booking.model.js';
+import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
 import moment from 'moment';
 import mongoose from 'mongoose';
 // import { assertUnitAvailableOrThrow } from '../controllers/pipeline.controller.js';
@@ -262,26 +263,48 @@ router.post('/campaign/:campaignId/invoice/upload', upload.array('files'), uploa
 router.post('/campaign/:campaignId/cash-memo/upload', upload.array('files'), uploadCashMemo);
 router.post('/campaign/:campaignId/credit-note/upload', upload.array('files'), uploadCreditNote)
 router.put('/campaign/:campaignId/invoice', updateInvoice);
-// GET /api/pipeline/campaign/:campaignId/digital-status
+
 // router.get('/campaign/:campaignId/digital-status', async (req, res) => {
 //   try {
 //     const { campaignId } = req.params;
 
-//     // Only fetch allocations; no snapshot fallback here
+//     // Pull allocations + spaces in one shot
 //     const pipe = await Pipeline.findOne({ campaign: campaignId })
-//       .populate('allocations.space', '_id') // optional
+//       .populate('allocations.space', '_id spaceType unit') // OK
+//       .populate({
+//         path: 'spaces',                // legacy flattened spaces array on Pipeline
+//         select: '_id spaceType digitalStatus' 
+//       })
 //       .lean();
 
 //     if (!pipe) return res.json({});
 
 //     const map = {};
+
+//     // Primary source: campaign-scoped units
 //     for (const a of (pipe.allocations || [])) {
+//       const units = Array.isArray(a.units) ? a.units : [];
+//       if (!units.length) continue;
+
 //       const spaceId =
 //         a.space && typeof a.space === 'object' && a.space._id
 //           ? String(a.space._id)
 //           : String(a.space);
-//       const units = Array.isArray(a.units) ? a.units : [];
-//       if (units.length) map[spaceId] = units; // only campaign-owned units
+
+//       map[spaceId] = units;
+//     }
+
+//     // Optional fallback: if a space has no units in allocations yet,
+//     // use Space snapshot so the UI can still show status
+//     // (Remove this block if you ONLY want to use campaign-scoped data.)
+//     if (pipe.spaces?.length) {
+//       for (const s of pipe.spaces) {
+//         const sid = String(s._id);
+//         if (map[sid]) continue; // already have campaign-scoped units
+//         if (s.spaceType === 'DOOH' && Array.isArray(s.digitalStatus) && s.digitalStatus.length) {
+//           map[sid] = s.digitalStatus; // snapshot fallback
+//         }
+//       }
 //     }
 
 //     return res.json(map);
@@ -294,117 +317,168 @@ router.put('/campaign/:campaignId/invoice', updateInvoice);
 router.get('/campaign/:campaignId/digital-status', async (req, res) => {
   try {
     const { campaignId } = req.params;
+    const { from, to } = req.query; // optional date overlap filters (YYYY-MM-DD)
 
-    // Pull allocations + spaces in one shot
-    const pipe = await Pipeline.findOne({ campaign: campaignId })
-      .populate('allocations.space', '_id spaceType unit') // OK
-      .populate({
-        path: 'spaces',                // legacy flattened spaces array on Pipeline
-        select: '_id spaceType digitalStatus' 
-      })
-      .lean();
-
-    if (!pipe) return res.json({});
-
-    const map = {};
-
-    // Primary source: campaign-scoped units
-    for (const a of (pipe.allocations || [])) {
-      const units = Array.isArray(a.units) ? a.units : [];
-      if (!units.length) continue;
-
-      const spaceId =
-        a.space && typeof a.space === 'object' && a.space._id
-          ? String(a.space._id)
-          : String(a.space);
-
-      map[spaceId] = units;
+    if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+      return res.status(400).json({ message: 'Invalid campaign ID' });
     }
 
-    // Optional fallback: if a space has no units in allocations yet,
-    // use Space snapshot so the UI can still show status
-    // (Remove this block if you ONLY want to use campaign-scoped data.)
-    if (pipe.spaces?.length) {
-      for (const s of pipe.spaces) {
-        const sid = String(s._id);
-        if (map[sid]) continue; // already have campaign-scoped units
-        if (s.spaceType === 'DOOH' && Array.isArray(s.digitalStatus) && s.digitalStatus.length) {
-          map[sid] = s.digitalStatus; // snapshot fallback
-        }
+    const match = { campaignId: new mongoose.Types.ObjectId(campaignId) };
+
+    // Optional: restrict to mappings that overlap a given window
+    if (from && to) {
+      match.startDate = { $lte: to };
+      match.endDate   = { $gte: from };
+    }
+
+    // Pull all mappings for the campaign
+    const mappings = await CampaignInventoryMapping.find(match, {
+      spaceId: 1,
+      unitIds: 1,
+      digitalStatus: 1
+    })
+    .populate({ path: 'spaceId', select: 'spaceType unit' })
+    .lean();
+
+    // Build the result in the same format as the old route
+    const result = [];
+
+    for (const m of mappings) {
+      const space = m.spaceId;
+      const isDOOH = space?.spaceType === 'DOOH';
+
+      // Prefer stored per-unit digitalStatus; if missing, synthesize from unitIds
+      let statuses = Array.isArray(m.digitalStatus) && m.digitalStatus.length
+        ? m.digitalStatus
+        : (Array.isArray(m.unitIds) ? m.unitIds.map(u => ({
+            unitId: u,
+            confirmed: false,
+            isLive: false,
+            goLiveDate: '',
+            note: '',
+            completedAt: '',
+            liveCompletedAt: ''
+          })) : [{ unitId: 1, confirmed: false, isLive: false, goLiveDate: '', note: '', completedAt: '', liveCompletedAt: '' }]);
+
+      // For non-DOOH, force a single unit (1)
+      if (!isDOOH) {
+        const existing = statuses.find(s => s.unitId === 1);
+        statuses = existing ? [existing] : [{
+          unitId: 1,
+          confirmed: false,
+          isLive: false,
+          goLiveDate: '',
+          note: '',
+          completedAt: '',
+          liveCompletedAt: ''
+        }];
       }
+
+      // Flatten the result to match the previous response format
+      console.log("M is",m);
+      result.push(...statuses.map(s => ({
+        _id: space._id,  // Include spaceId (_id of space document)
+        spaceName: space.spaceName, // Include spaceName
+        unitId: s.unitId,
+        confirmed: s.confirmed,
+        isLive: s.isLive,
+        goLiveDate: s.goLiveDate || '',
+        note: s.note || '',
+        completedAt: s.completedAt || '',
+        liveCompletedAt: s.liveCompletedAt || '',
+        campaignId: campaignId
+      })));
     }
 
-    return res.json(map);
+    return res.json(result); // Return as an array like in the old response format
   } catch (e) {
     console.error(e);
-    res.status(500).json({ message: 'Failed to fetch digital status' });
+    return res.status(500).json({ message: 'Failed to fetch digital status' });
   }
 });
 
 
-export async function findAvailableUnits({ campaignId, spaceId }) {
-  const camp = await Campaign.findById(campaignId).lean();
-  if (!camp) throw new Error('Campaign not found');
+// export async function findAvailableUnits({ campaignId, spaceId }) {
+//   const camp = await Campaign.findById(campaignId).lean();
+//   if (!camp) throw new Error('Campaign not found');
 
-  const space = await Space.findById(spaceId).lean();
-  if (!space) throw new Error('Space not found');
+//   const space = await Space.findById(spaceId).lean();
+//   if (!space) throw new Error('Space not found');
 
-  const totalUnits = Math.max(1, Number(space.unit || 1));
-  const curStart = camp.startDate || null; // 'YYYY-MM-DD'
-  const curEnd = camp.endDate || null;
-  const sid = new mongoose.Types.ObjectId(spaceId);
+//   const totalUnits = Math.max(1, Number(space.unit || 1));
+//   const curStart = camp.startDate || null; // 'YYYY-MM-DD'
+//   const curEnd = camp.endDate || null;
+//   const sid = new mongoose.Types.ObjectId(spaceId);
 
-  // 1) Taken units from other pipelines (campaign-scoped truth)
-  const others = await Pipeline.aggregate([
-    { $match: { campaign: { $ne: camp._id } } },
-    { $match: { 'allocations.space': sid } },
-    { $unwind: '$allocations' },
-    { $match: { 'allocations.space': sid } },
-    { $unwind: { path: '$allocations.units', preserveNullAndEmptyArrays: false } },
-    {
-      $lookup: {
-        from: 'campaigns',
-        localField: 'campaign',
-        foreignField: '_id',
-        as: 'c'
-      }
-    },
-    { $unwind: '$c' },
-    // overlap: startA <= endB && startB <= endA (null = open range)
-    {
-      $match: {
-        $expr: {
-          $and: [
-            { $or: [{ $eq: ['$c.startDate', null] }, { $eq: [curEnd, null] }, { $lte: ['$c.startDate', curEnd] }] },
-            { $or: [{ $eq: ['$c.endDate', null] }, { $eq: [curStart, null] }, { $gte: ['$c.endDate', curStart] }] },
-          ]
-        }
-      }
-    },
-    { $group: { _id: null, taken: { $addToSet: '$allocations.units.unitId' } } }
-  ]);
+//   // 1) Taken units from other pipelines (campaign-scoped truth)
+//   const others = await Pipeline.aggregate([
+//     { $match: { campaign: { $ne: camp._id } } },
+//     { $match: { 'allocations.space': sid } },
+//     { $unwind: '$allocations' },
+//     { $match: { 'allocations.space': sid } },
+//     { $unwind: { path: '$allocations.units', preserveNullAndEmptyArrays: false } },
+//     {
+//       $lookup: {
+//         from: 'campaigns',
+//         localField: 'campaign',
+//         foreignField: '_id',
+//         as: 'c'
+//       }
+//     },
+//     { $unwind: '$c' },
+//     // overlap: startA <= endB && startB <= endA (null = open range)
+//     {
+//       $match: {
+//         $expr: {
+//           $and: [
+//             { $or: [{ $eq: ['$c.startDate', null] }, { $eq: [curEnd, null] }, { $lte: ['$c.startDate', curEnd] }] },
+//             { $or: [{ $eq: ['$c.endDate', null] }, { $eq: [curStart, null] }, { $gte: ['$c.endDate', curStart] }] },
+//           ]
+//         }
+//       }
+//     },
+//     { $group: { _id: null, taken: { $addToSet: '$allocations.units.unitId' } } }
+//   ]);
 
-  const takenFromPipelines = new Set(others?.[0]?.taken || []);
+//   const takenFromPipelines = new Set(others?.[0]?.taken || []);
 
-  // 2) ALSO treat Space snapshot as taken (for legacy writes)
-  //    Any unit with confirmed OR isLive is physically occupied.
-  const takenFromSnapshot = new Set(
-    (Array.isArray(space.digitalStatus) ? space.digitalStatus : [])
-      .filter(u => u && (u.confirmed === true || u.isLive === true))
-      .map(u => Number(u.unitId))
-      .filter(Number.isFinite)
-  );
+//   // 2) ALSO treat Space snapshot as taken (for legacy writes)
+//   //    Any unit with confirmed OR isLive is physically occupied.
+//   const takenFromSnapshot = new Set(
+//     (Array.isArray(space.digitalStatus) ? space.digitalStatus : [])
+//       .filter(u => u && (u.confirmed === true || u.isLive === true))
+//       .map(u => Number(u.unitId))
+//       .filter(Number.isFinite)
+//   );
 
-  // Union
-  const taken = new Set([...takenFromPipelines, ...takenFromSnapshot]);
+//   // Union
+//   const taken = new Set([...takenFromPipelines, ...takenFromSnapshot]);
 
-  const free = [];
-  for (let u = 1; u <= totalUnits; u++) {
-    if (!taken.has(u)) free.push(u);
-  }
+//   const free = [];
+//   for (let u = 1; u <= totalUnits; u++) {
+//     if (!taken.has(u)) free.push(u);
+//   }
 
-  return { totalUnits, free, taken: Array.from(taken).sort((a, b) => a - b) };
-}
+//   return { totalUnits, free, taken: Array.from(taken).sort((a, b) => a - b) };
+// }
+// router.get('/campaign/:campaignId/availability/:spaceId', async (req, res) => {
+//   try {
+//     const { totalUnits, free, taken } = await findAvailableUnits(req.params);
+//     res.json({ totalUnits, free, taken });
+//   } catch (e) {
+//     res.status(400).json({ message: e.message || 'Failed to compute availability' });
+//   }
+// });
+
+// router.get('/campaign/:campaignId/availability/:spaceId', async (req, res) => {
+//   try {
+//     const { totalUnits, free, taken } = await findAvailableUnits(req.params);
+//     res.json({ totalUnits, free, taken });
+//   } catch (e) {
+//     res.status(400).json({ message: e.message || 'Failed to compute availability' });
+//   }
+// });
+
 router.get('/campaign/:campaignId/availability/:spaceId', async (req, res) => {
   try {
     const { totalUnits, free, taken } = await findAvailableUnits(req.params);
@@ -414,63 +488,103 @@ router.get('/campaign/:campaignId/availability/:spaceId', async (req, res) => {
   }
 });
 
+async function findAvailableUnits({ campaignId, spaceId }) {
+  if (!mongoose.Types.ObjectId.isValid(campaignId) || !mongoose.Types.ObjectId.isValid(spaceId)) {
+    throw new Error('Invalid campaign/space id');
+  }
+
+  // Load campaign and space data
+  const [camp, space] = await Promise.all([
+    Campaign.findById(campaignId).lean(),
+    Space.findById(spaceId).lean()
+  ]);
+  
+  if (!camp) throw new Error('Campaign not found');
+  if (!space) throw new Error('Space not found');
+
+  // Define physical units (DOOH vs non-DOOH logic)
+  const isDOOH = space.spaceType === 'DOOH';
+  const totalUnits = isDOOH ? Math.max(1, Number(space.unit || 1)) : 1;
+
+  // Define the current date range for the campaign
+  const curStart = camp.startDate || '0001-01-01';
+  const curEnd = camp.endDate || '9999-12-31';
+  console.log('Space ID:', space._id);
+  console.log('Campaign ID:', camp._id);
 
 
-// router.put('/campaign/:campaignId/digital-status/:spaceId/:unitId', async (req, res) => {
-//   const session = await mongoose.startSession();
-//   try {
-//     const { campaignId, spaceId, unitId } = req.params;
-//     const patch = req.body || {};
+  // Fetch all `CampaignInventoryMapping` entries for this space that overlap with the current campaign date range
+  // const mappings = await CampaignInventoryMapping.find(
+  //   {
+  //     spaceId: space._id,
+  //     campaignId: { $ne: camp._id }, // Ensure we're looking at other campaigns
+  //     // startDate: { $lte: curEnd },
+  //     // endDate: { $gte: curStart }
+  //   },
+  //   { unitIds: 1, digitalStatus: 1 } // Only fetch unitIds and digitalStatus
+  // ).lean();
+  const mappings = await CampaignInventoryMapping.find({
+    campaignId: campaignId,
+    spaceId: spaceId,
+     startDate: { $lte: curEnd },
+  endDate: { $gte: curStart }
+  }).lean();
+  console.log(mappings);
+  
+  console.log('Mappings:', mappings);  // Log the fetched mappings
 
-//     await session.withTransaction(async () => {
-//       // 1) Guard: unit not double-booked
-//       await assertUnitAvailableOrThrow({ campaignId, spaceId, unitId });
+  // Prepare a set of taken units from the overlapping campaigns and digital status
+  const takenSet = new Set();
 
-//       // 2) Update Pipeline (authoritative)
-//       const pipe = await Pipeline.findOne({ campaign: campaignId }).session(session);
-//       if (!pipe) throw new Error('Pipeline not found');
+  if (isDOOH) {
+    // For DOOH, we have multiple units, so we collect the unitIds that are already taken
+    for (const m of mappings) {
+      console.log('Mapping UnitIds:', m.unitIds);  // Debug: Log the unitIds
 
-//       pipe.upsertUnitStatus(spaceId, Number(unitId), patch);
-//       await pipe.save({ session });
+      // Mark units from `unitIds`
+      for (const u of (m.unitIds || [])) {
+        const unitNum = Number(u);
+        if (unitNum >= 1 && unitNum <= totalUnits) {
+          takenSet.add(unitNum);
+        }
+      }
 
-//       // 3) Mirror into Space snapshot (optional but requested)
-//       const space = await Space.findById(spaceId).session(session);
-//       if (space && space.spaceType === 'DOOH') {
-//         // Ensure an entry exists for this unit (Space has hooks that re-shape on save)
-//         if (!Array.isArray(space.digitalStatus)) space.digitalStatus = [];
-//         let entry = space.digitalStatus.find(u => Number(u.unitId) === Number(unitId));
-//         if (!entry) {
-//           // stub – Space hooks will rebuild/validate 1..unit on save
-//           space.digitalStatus.push({ unitId: Number(unitId) });
-//           entry = space.digitalStatus.find(u => Number(u.unitId) === Number(unitId));
-//         }
+      // Debug: Log digitalStatus for the current mapping
+      console.log('Mapping Digital Status:', m.digitalStatus);
 
-//         // Mirror only the snapshot fields you care about
-//         if (typeof patch.confirmed === 'boolean') entry.confirmed = patch.confirmed;
-//         if (typeof patch.isLive === 'boolean') entry.isLive = patch.isLive;
-//         if (typeof patch.assignedAgency === 'string') entry.assignedAgency = patch.assignedAgency;
-//         if (typeof patch.assignedPerson === 'string') entry.assignedPerson = patch.assignedPerson;
-//         if (typeof patch.goLiveDate === 'string') entry.goLiveDate = patch.goLiveDate;
-//         if (typeof patch.note === 'string') entry.note = patch.note;
+      // Mark units from `digitalStatus`
+      if (Array.isArray(m.digitalStatus)) {
+        for (const ds of m.digitalStatus) {
+          if (ds?.unitId && ds?.confirmed) {
+            console.log('Taking unit from digitalStatus:', ds.unitId);  // Debug: Log taken units
+            takenSet.add(ds.unitId);
+          }
+        }
+      }
+    }
+  } else {
+    // For non-DOOH, we just have a single unit (unit 1) so we check if any campaigns overlap
+    if (mappings.length > 0) takenSet.add(1);
+  }
 
-//         // Let Space's pre('save') set completedAt/liveCompletedAt
-//         space.markModified('digitalStatus');
-//         await space.save({ session });
-//       }
-//     });
+  // Now calculate the free units (those not in the takenSet)
+  const free = [];
+  for (let u = 1; u <= totalUnits; u++) {
+    if (!takenSet.has(u)) free.push(u);
+  }
 
-//     // 4) Return the pipeline view (what the FE expects)
-//     const updated = await Pipeline.findOne({ campaign: req.params.campaignId });
-//     const alloc = updated.getAllocation(req.params.spaceId);
-//     return res.json({ spaceId: req.params.spaceId, units: alloc?.units || [] });
-//   } catch (e) {
-//     console.error(e);
-//     res.status(400).json({ message: e.message || 'Failed to update digital status' });
-//   } finally {
-//     session.endSession();
-//   }
-// });
-// 1) helper: ignore entries without campaignId
+  console.log('Taken Units:', Array.from(takenSet)); // Debug: Log the taken units
+  console.log('Free Units:', free); // Debug: Log the free units
+
+  return { totalUnits, free, taken: Array.from(takenSet).sort((a, b) => a - b) };
+}
+
+
+
+
+
+
+
 async function assertUnitAvailableOrThrow({ campaignObjId, spaceObjId, unitNum, session }) {
   const conflict = await Space.findOne(
     {
@@ -488,76 +602,162 @@ async function assertUnitAvailableOrThrow({ campaignObjId, spaceObjId, unitNum, 
   if (conflict) throw new Error(`Unit ${unitNum} is already allocated to another campaign.`);
 }
 
-// routes/pipeline.js
+
+// router.put('/campaign/:campaignId/digital-status/:spaceId/:unitId', async (req, res) => {
+//   const session = await mongoose.startSession();
+//   try {
+//     const { campaignId, spaceId, unitId } = req.params;
+//     const unitNum = Number(unitId);
+//     const patch = req.body || {};
+
+//     if (!mongoose.Types.ObjectId.isValid(campaignId) ||
+//         !mongoose.Types.ObjectId.isValid(spaceId) ||
+//         !Number.isInteger(unitNum) || unitNum < 1) {
+//       return res.status(400).json({ message: 'Invalid campaign/space/unit' });
+//     }
+
+//     await session.withTransaction(async () => {
+//       // 1) Validate space and unit bounds
+//       const space = await Space.findById(spaceId).session(session);
+//       if (!space) throw new Error('Space not found');
+
+//       const isDOOH = space.spaceType === 'DOOH';
+//       const maxUnits = Math.max(1, Number(space.unit || 1));
+//       if (!isDOOH && unitNum !== 1) throw new Error('Non-DOOH spaces only support unit 1');
+//       if (unitNum > maxUnits) throw new Error(`unitId out of range 1..${maxUnits}`);
+
+//       // 2) Load mapping (campaign ↔ space)
+//       const mapping = await CampaignInventoryMapping.findOne({
+//         campaignId,
+//         spaceId
+//       }).session(session);
+
+//       if (!mapping) throw new Error('No mapping for this campaign and space');
+
+//       // Ensure this unit is actually allocated to the campaign
+//       if (!Array.isArray(mapping.unitIds) || !mapping.unitIds.includes(unitNum)) {
+//         throw new Error(`Unit ${unitNum} is not allocated to this campaign for the given space`);
+//       }
+
+//       // 3) Upsert per-unit digital status
+//       if (!Array.isArray(mapping.digitalStatus)) mapping.digitalStatus = [];
+//       let row = mapping.digitalStatus.find(d => Number(d.unitId) === unitNum);
+//       if (!row) {
+//         row = { unitId: unitNum };
+//         mapping.digitalStatus.push(row);
+//       }
+
+//       if (typeof patch.confirmed === 'boolean') row.confirmed = patch.confirmed;
+//       if (typeof patch.isLive === 'boolean')     row.isLive   = patch.isLive;
+//       if (typeof patch.goLiveDate === 'string')  row.goLiveDate = patch.goLiveDate || '';
+//       if (typeof patch.assignedPerson === 'string') row.assignedPerson = patch.assignedPerson || '';
+//       if (typeof patch.assignedAgency === 'string') row.assignedAgency = patch.assignedAgency || '';
+//       if (typeof patch.note === 'string')        row.note = patch.note || '';
+
+//       // Timestamps as strings (per your constraint)
+//       if (row.confirmed && !row.completedAt)       row.completedAt = new Date().toISOString();
+//       if (row.isLive && !row.liveCompletedAt)      row.liveCompletedAt = new Date().toISOString();
+
+//       await mapping.save({ session });
+
+//       // 4) Return the full per-unit status list for this space in this campaign
+//       const digitalStatus = mapping.digitalStatus
+//         .map(s => ({
+//           unitId: Number(s.unitId),
+//           confirmed: !!s.confirmed,
+//           isLive: !!s.isLive,
+//           goLiveDate: s.goLiveDate || '',
+//           note: s.note || '',
+//           assignedPerson: s.assignedPerson || '',
+//           assignedAgency: s.assignedAgency || '',
+//           completedAt: s.completedAt || '',
+//           liveCompletedAt: s.liveCompletedAt || ''
+//         }))
+//         .sort((a, b) => a.unitId - b.unitId);
+
+//       res.json({
+//         campaignId: String(mapping.campaignId),
+//         spaceId: String(mapping.spaceId),
+//         digitalStatus
+//       });
+//     });
+//   } catch (e) {
+//     console.error(e);
+//     res.status(400).json({ message: e.message || 'Failed to update digital status' });
+//   } finally {
+//     session.endSession();
+//   }
+// });
+
 router.put('/campaign/:campaignId/digital-status/:spaceId/:unitId', async (req, res) => {
   const session = await mongoose.startSession();
   try {
     const { campaignId, spaceId, unitId } = req.params;
-    console.log('campaignId recieved', campaignId);
+    const patch = req.body || {};
+
     const campaignObjId = new mongoose.Types.ObjectId(campaignId);
     const spaceObjId = new mongoose.Types.ObjectId(spaceId);
     const unitNum = Number(unitId);
-    const patch = req.body || {};
 
     await session.withTransaction(async () => {
-      // 1) Load space
+      // 1) Load the campaign and space
+      const campaign = await Campaign.findById(campaignObjId).session(session);
+      if (!campaign) throw new Error('Campaign not found');
+
       const space = await Space.findById(spaceObjId).session(session);
       if (!space) throw new Error('Space not found');
-      if (space.spaceType !== 'DOOH') throw new Error('Digital status only applies to DOOH spaces');
 
-      if (!Array.isArray(space.digitalStatus)) space.digitalStatus = [];
+      // 2) Find the mapping for this campaign/space
+      const mapping = await CampaignInventoryMapping.findOne({
+        campaignId: campaignObjId,
+        spaceId: spaceObjId
+      }).session(session);
 
-      // 2) Conflict: is this unit owned by a different campaign?
-      const conflict = space.digitalStatus.find(
-        r => Number(r.unitId) === unitNum &&
-             r.campaignId && String(r.campaignId) !== String(campaignObjId)
-      );
-      if (conflict) {
-        throw new Error(`Unit ${unitNum} is already allocated to another campaign.`);
+      if (!mapping) throw new Error('No mapping found for this campaign and space');
+
+      // 3) Check if this unitId is part of the allocated unitIds
+      if (!mapping.unitIds.includes(unitNum)) {
+        throw new Error(`Unit ${unitNum} is not allocated to this space in this campaign`);
       }
 
-      // 3) Find row for this (unit, campaign) or create one
-      let row = space.digitalStatus.find(
-        r => Number(r.unitId) === unitNum &&
-             String(r.campaignId || '') === String(campaignObjId)
-      );
-      if (!row) {
-        row = space.digitalStatus.create({ unitId: unitNum, campaignId: campaignObjId });
-        space.digitalStatus.push(row);
+      // 4) Update the digital status
+      let statusRow = mapping.digitalStatus.find(status => status.unitId === unitNum);
+      if (!statusRow) {
+        statusRow = { unitId: unitNum };  // If not found, create a new entry
+        mapping.digitalStatus.push(statusRow);
       }
-      row.campaignId = campaignObjId;
-      // 4) Apply updates
-      if (typeof patch.confirmed === 'boolean') row.confirmed = patch.confirmed;
-      if (typeof patch.isLive === 'boolean') row.isLive = patch.isLive;
-      if (typeof patch.goLiveDate === 'string') row.goLiveDate = patch.goLiveDate || '';
-      if (typeof patch.assignedPerson === 'string') row.assignedPerson = patch.assignedPerson || '';
-      if (typeof patch.assignedAgency === 'string') row.assignedAgency = patch.assignedAgency || '';
-      if (typeof patch.note === 'string') row.note = patch.note || '';
 
-      if (row.confirmed && !row.completedAt) row.completedAt = new Date();
-      if (row.isLive && !row.liveCompletedAt) row.liveCompletedAt = new Date();
+      // Apply patch updates
+      if (typeof patch.confirmed === 'boolean') statusRow.confirmed = patch.confirmed;
+      if (typeof patch.isLive === 'boolean') statusRow.isLive = patch.isLive;
+      if (typeof patch.goLiveDate === 'string') statusRow.goLiveDate = patch.goLiveDate || '';
+      if (typeof patch.assignedPerson === 'string') statusRow.assignedPerson = patch.assignedPerson || '';
+      if (typeof patch.assignedAgency === 'string') statusRow.assignedAgency = patch.assignedAgency || '';
+      if (typeof patch.note === 'string') statusRow.note = patch.note || '';
 
-      // 5) Save space (timestamps handled by schema)
-      space.markModified('digitalStatus');
-      await space.save({ session });
+      // Timestamps when confirmed or isLive
+      if (statusRow.confirmed && !statusRow.completedAt) statusRow.completedAt = new Date().toISOString();
+      if (statusRow.isLive && !statusRow.liveCompletedAt) statusRow.liveCompletedAt = new Date().toISOString();
 
-      // 6) Update Pipeline (campaign-scoped, your helper)
-      const pipe = await Pipeline.findOne({ campaign: campaignObjId }).session(session);
-      if (!pipe) throw new Error('Pipeline not found');
-      pipe.upsertUnitStatus(String(spaceObjId), unitNum, patch);
-      await pipe.save({ session });
+      // 5) Save the mapping (updates digital status)
+      await mapping.save({ session });
+
+      // 6) Respond with updated status
+      res.json({
+        campaignId: mapping.campaignId,
+        spaceId: mapping.spaceId,
+        unitId: statusRow.unitId,
+        digitalStatus: statusRow
+      });
     });
-
-    const updated = await Pipeline.findOne({ campaign: campaignId });
-    const alloc = updated.getAllocation(spaceId);
-    res.json({ spaceId, units: alloc?.units || [] });
   } catch (e) {
-    console.error(e);
+    console.error('Error updating digital status:', e);
     res.status(400).json({ message: e.message || 'Failed to update digital status' });
   } finally {
     session.endSession();
   }
 });
+
 
 
 router.put('/campaign/:id/update-costs', async (req, res) => {

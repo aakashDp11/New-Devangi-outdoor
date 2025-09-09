@@ -596,7 +596,7 @@ export const confirmPoStatus = async (req, res) => {
 
 
 
-// export const deletePipelineAndCleanup = async (req, res) => {
+
 //   const { campaignId } = req.params;
 
 //   try {
@@ -665,6 +665,137 @@ export const confirmPoStatus = async (req, res) => {
 //     return res.status(500).json({ error: 'Server error during pipeline deletion' });
 //   }
 // };
+// export const deletePipelineAndCleanup = async (req, res) => {
+//   const { campaignId } = req.params;
+
+//   try {
+//     const pipeline = await Pipeline.findOne({ campaign: campaignId });
+//     if (!pipeline) {
+//       return res.status(404).json({ error: 'Pipeline not found' });
+//     }
+
+//     const campId = Types.ObjectId.createFromHexString(String(campaignId));
+
+//     // Prefer allocations for exact unit-level info; fall back to spaces if needed
+//     const allocations = Array.isArray(pipeline.allocations) ? pipeline.allocations : [];
+//     const bulkOps = [];
+
+//     // 1) For each space in allocations, free the exact unitIds for this campaign
+//     for (const alloc of allocations) {
+//       if (!alloc?.space) continue;
+//       const spaceId = alloc.space;
+//       const unitIds = (alloc.units || []).map(u => Number(u.unitId)).filter(Number.isInteger);
+
+//       if (unitIds.length === 0) continue;
+
+//       // a) UNSET + RESET only matching digitalStatus elements for this campaign + unitIds
+//       bulkOps.push({
+//         updateOne: {
+//           filter: { _id: spaceId, spaceType: 'DOOH' },
+//           update: {
+//             $unset: {
+//               'digitalStatus.$[d].isLive': 1,
+//               'digitalStatus.$[d].completedAt': 1,
+//               'digitalStatus.$[d].liveCompletedAt': 1,
+//               'digitalStatus.$[d].campaignId': 1   // free the unit
+//             },
+//             $set: {
+//               'digitalStatus.$[d].confirmed': false,
+//               'digitalStatus.$[d].note': null,
+//               'digitalStatus.$[d].assignedAgency': '',
+//               'digitalStatus.$[d].assignedPerson': '',
+//               'digitalStatus.$[d].goLiveDate': ''
+//             },
+//             $inc: {
+//               // decrease occupied units by the number this pipeline had booked
+//               occupiedUnits: -unitIds.length
+//             },
+//             $pull: {
+//               // remove campaignDates entry for this campaign
+//               campaignDates: { campaignId: campId }
+//             }
+//           },
+//           arrayFilters: [
+//             { 'd.campaignId': campId, 'd.unitId': { $in: unitIds } }
+//           ]
+//         }
+//       });
+//     }
+
+//     // If there were no allocations (legacy data), fall back to flatten `spaces`:
+//     if (bulkOps.length === 0 && Array.isArray(pipeline.spaces) && pipeline.spaces.length) {
+//       // We don't know which unitIds to free—so just clear campaign-scoped entries
+//       bulkOps.push({
+//         updateMany: {
+//           filter: { _id: { $in: pipeline.spaces }, spaceType: 'DOOH' },
+//           update: {
+//             $unset: {
+//               'digitalStatus.$[d].isLive': 1,
+//               'digitalStatus.$[d].completedAt': 1,
+//               'digitalStatus.$[d].liveCompletedAt': 1,
+//               'digitalStatus.$[d].campaignId': 1
+//             },
+//             $set: {
+//               'digitalStatus.$[d].confirmed': false,
+//               'digitalStatus.$[d].note': null,
+//               'digitalStatus.$[d].assignedAgency': '',
+//               'digitalStatus.$[d].assignedPerson': '',
+//               'digitalStatus.$[d].goLiveDate': ''
+//             },
+//             $pull: {
+//               campaignDates: { campaignId: campId }
+//             }
+//           },
+//           arrayFilters: [{ 'd.campaignId': campId }]
+//         }
+//       });
+//     }
+
+//     if (bulkOps.length) {
+//       await Space.bulkWrite(bulkOps);
+//       // clamp occupiedUnits >= 0 (in case of inconsistencies)
+//       const impactedSpaceIds = allocations.map(a => a.space).filter(Boolean);
+//       const clampFilter = impactedSpaceIds.length
+//         ? { _id: { $in: impactedSpaceIds }, occupiedUnits: { $lt: 0 } }
+//         : { occupiedUnits: { $lt: 0 } };
+
+//       await Space.updateMany(clampFilter, { $set: { occupiedUnits: 0 } });
+
+//       // recompute availability based on occupiedUnits vs unit
+//       const availFilter = impactedSpaceIds.length
+//         ? { _id: { $in: impactedSpaceIds } }
+//         : {};
+
+//       await Space.updateMany(
+//         availFilter,
+//         [
+//           {
+//             $set: {
+//               availability: {
+//                 $switch: {
+//                   branches: [
+//                     { case: { $eq: ['$occupiedUnits', 0] }, then: 'Completely available' },
+//                     { case: { $lt: ['$occupiedUnits', '$unit'] }, then: 'Partially available' }
+//                   ],
+//                   default: 'Completely occupied'
+//                 }
+//               }
+//             }
+//           }
+//         ]
+//       );
+//     }
+
+//     // 2) As before: remove Pipeline
+//     await Pipeline.deleteOne({ _id: pipeline._id });
+
+//     return res.status(200).json({ message: 'Pipeline deleted & DOOH units freed' });
+//   } catch (err) {
+//     console.error('Error deleting pipeline:', err);
+//     return res.status(500).json({ error: 'Server error during pipeline deletion' });
+//   }
+// };
+
 export const deletePipelineAndCleanup = async (req, res) => {
   const { campaignId } = req.params;
 
@@ -691,7 +822,7 @@ export const deletePipelineAndCleanup = async (req, res) => {
       // a) UNSET + RESET only matching digitalStatus elements for this campaign + unitIds
       bulkOps.push({
         updateOne: {
-          filter: { _id: spaceId, spaceType: 'DOOH' },
+          filter: { spaceId: spaceId, campaignId: campId }, // Find the correct CampaignInventoryMapping
           update: {
             $unset: {
               'digitalStatus.$[d].isLive': 1,
@@ -727,7 +858,7 @@ export const deletePipelineAndCleanup = async (req, res) => {
       // We don't know which unitIds to free—so just clear campaign-scoped entries
       bulkOps.push({
         updateMany: {
-          filter: { _id: { $in: pipeline.spaces }, spaceType: 'DOOH' },
+          filter: { spaceId: { $in: pipeline.spaces }, campaignId: campId }, // Update CampaignInventoryMapping
           update: {
             $unset: {
               'digitalStatus.$[d].isLive': 1,
@@ -752,8 +883,8 @@ export const deletePipelineAndCleanup = async (req, res) => {
     }
 
     if (bulkOps.length) {
-      await Space.bulkWrite(bulkOps);
-      // clamp occupiedUnits >= 0 (in case of inconsistencies)
+      await CampaignInventoryMapping.bulkWrite(bulkOps); // Update CampaignInventoryMapping instead of Space
+      // Update Space fields
       const impactedSpaceIds = allocations.map(a => a.space).filter(Boolean);
       const clampFilter = impactedSpaceIds.length
         ? { _id: { $in: impactedSpaceIds }, occupiedUnits: { $lt: 0 } }
@@ -795,6 +926,8 @@ export const deletePipelineAndCleanup = async (req, res) => {
     return res.status(500).json({ error: 'Server error during pipeline deletion' });
   }
 };
+
+
 export async function assertUnitAvailableOrThrow({ campaignId, spaceId, unitId }) {
   const cur = await Campaign.findById(campaignId).lean();
   if (!cur) throw new Error('Campaign not found');

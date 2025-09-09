@@ -14,7 +14,7 @@ export default function DigitalStatusForm({
 }) {
   // Selected unit (1..unit)
   const [unitId, setUnitId] = useState(1);
-
+console.log("DSF",campaignId,spaceId,existingData);
   // Form fields
   const [view, setView] = useState('form');
   const [goLiveDate, setGoLiveDate] = useState('');
@@ -39,6 +39,7 @@ export default function DigitalStatusForm({
   // 🔒 Filter to THIS campaign only
   const campaignExisting = useMemo(() => {
     const ds = existingData;
+    console.log()
     if (Array.isArray(ds)) {
       return ds.filter(d => String(d?.campaignId || '') === String(campaignId));
     }
@@ -85,11 +86,11 @@ export default function DigitalStatusForm({
         const base = import.meta.env.VITE_API_BASE_URL;
         // Expecting payload: { totalUnits, free: number[], taken: number[] }
         const { data } = await axios.get(`${base}/api/pipeline/campaign/${campaignId}/availability/${spaceId}`);
-
+console.log("data is",data);
         const totalUnits = Math.max(1, Number(data?.totalUnits || unit || 1));
         const free = Array.isArray(data?.free) ? data.free : [];
         const taken = Array.isArray(data?.taken) ? data.taken : [];
-
+        console.log("detailed data is",totalUnits,free,taken);
         setAvailability({ totalUnits, free, taken });
 
         if (!pickedUnitRef.current) {
