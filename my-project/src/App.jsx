@@ -39,7 +39,7 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import DisclaimerPolicy from "./components/DisclaimerPolicy";
 import NotificationsPage from "./components/NotificationsPage";
 import EditProposal from "./components/EditProposal";
-import CloneCampaignPage from "./components/CloneCampaignPage"; // <--- ADD THIS LINE
+import CloneCampaignPage from "./components/CloneCampaignPage";
 
 // --- Error Pages ---
 import NotFound from "./components/NotFound";
@@ -49,137 +49,141 @@ export default function App() {
   return (
     <AuthProvider>
       <SidebarProvider>
-        <Toaster position="top-right" />
-        <Routes>
-          {/* ======= Public Routes ======= */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/create-user" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+        {/* ✅ Global Theme Wrapper */}
+        <div className="bg-theme text-theme min-h-screen flex flex-col">
+          {/* Global Toaster */}
+          <Toaster position="top-right" />
 
-          {/* ======= Protected Routes ======= */}
+          <Routes>
+            {/* ======= Public Routes ======= */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/create-user" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+
+            {/* ======= Protected Routes ======= */}
             <Route path="/users" element={<User />} />
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Navigate to="/home" replace />} />
-            <Route path="/home" element={<HomePage />} />
-            <Route path="/inventory" element={<InventoryDashboard />} />
-            <Route path="/booking-dashboard" element={<BookingsDashboard1 />} />
-            <Route path="/reports" element={<Report />} />
-            <Route path="/proposal-dashboard" element={<ProposalDashboard />} />
-            <Route path="/finances" element={<FinancePage />} />
-            <Route path="/booking/:id" element={<BookingDetails />} />
-            <Route
-              path="/clone-campaign/:campaignId/from-booking/:bookingId"
-              element={<CloneCampaignPage />}
-            />
-            <Route path="/space/:id" element={<SpaceDetails />} />
-            <Route path="/space/:id/edit" element={<EditSpace />} />
-            <Route path="/gallery" element={<Gallery />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/disclaimer-policy" element={<DisclaimerPolicy />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              <Route path="/home" element={<HomePage />} />
+              <Route path="/inventory" element={<InventoryDashboard />} />
+              <Route path="/booking-dashboard" element={<BookingsDashboard1 />} />
+              <Route path="/reports" element={<Report />} />
+              <Route path="/proposal-dashboard" element={<ProposalDashboard />} />
+              <Route path="/finances" element={<FinancePage />} />
+              <Route path="/booking/:id" element={<BookingDetails />} />
+              <Route
+                path="/clone-campaign/:campaignId/from-booking/:bookingId"
+                element={<CloneCampaignPage />}
+              />
+              <Route path="/space/:id" element={<SpaceDetails />} />
+              <Route path="/space/:id/edit" element={<EditSpace />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/disclaimer-policy" element={<DisclaimerPolicy />} />
 
-            {/* Booking & Space Form Flow */}
-            <Route
-              path="/add-space"
-              element={
-                <SpaceFormProvider>
-                  <AddSpaceForm />
-                </SpaceFormProvider>
-              }
-            />
-            <Route
-              path="/preview-add-space"
-              element={
-                <SpaceFormProvider>
-                  <PreviewAddSpaceForm />
-                </SpaceFormProvider>
-              }
-            />
-            <Route
-              path="/create-booking"
-              element={
-                <BookingFormProvider>
-                  <CreateBookingOrderForm />
-                </BookingFormProvider>
-              }
-            />
-            <Route
-              path="/create-booking-orderInfo"
-              element={
-                <BookingFormProvider>
-                  <BookingFormOrderInfo />
-                </BookingFormProvider>
-              }
-            />
-            <Route
-              path="/create-booking-addSpaces"
-              element={
-                <BookingFormProvider>
-                  <BookingFormAddSpaces />
-                </BookingFormProvider>
-              }
-            />
-            <Route
-              path="/booking-preview"
-              element={
-                <BookingFormProvider>
-                  <BookingPreview />
-                </BookingFormProvider>
-              }
-            />
-            <Route
-              path="/proposal/:id"
-              element={
-                <BookingFormProvider>
-                  <ProposalDetails />
-                </BookingFormProvider>
-              }
-            />
+              {/* Booking & Space Form Flow */}
+              <Route
+                path="/add-space"
+                element={
+                  <SpaceFormProvider>
+                    <AddSpaceForm />
+                  </SpaceFormProvider>
+                }
+              />
+              <Route
+                path="/preview-add-space"
+                element={
+                  <SpaceFormProvider>
+                    <PreviewAddSpaceForm />
+                  </SpaceFormProvider>
+                }
+              />
+              <Route
+                path="/create-booking"
+                element={
+                  <BookingFormProvider>
+                    <CreateBookingOrderForm />
+                  </BookingFormProvider>
+                }
+              />
+              <Route
+                path="/create-booking-orderInfo"
+                element={
+                  <BookingFormProvider>
+                    <BookingFormOrderInfo />
+                  </BookingFormProvider>
+                }
+              />
+              <Route
+                path="/create-booking-addSpaces"
+                element={
+                  <BookingFormProvider>
+                    <BookingFormAddSpaces />
+                  </BookingFormProvider>
+                }
+              />
+              <Route
+                path="/booking-preview"
+                element={
+                  <BookingFormProvider>
+                    <BookingPreview />
+                  </BookingFormProvider>
+                }
+              />
+              <Route
+                path="/proposal/:id"
+                element={
+                  <BookingFormProvider>
+                    <ProposalDetails />
+                  </BookingFormProvider>
+                }
+              />
 
-            <Route path="/edit-proposal/:id" element={<EditProposal />} />
+              <Route path="/edit-proposal/:id" element={<EditProposal />} />
 
-            {/* Campaign Pipeline Flow */}
-            <Route
-              path="/pipeline"
-              element={
-                <PipelineProvider>
-                  <ReactFlowProvider>
-                    <CampaignPipeline />
-                  </ReactFlowProvider>
-                </PipelineProvider>
-              }
-            />
-            <Route
-              path="/pipeline/:id"
-              element={
-                <PipelineProvider>
-                  <ReactFlowProvider>
-                    <CampaignPipeline />
-                  </ReactFlowProvider>
-                </PipelineProvider>
-              }
-            />
-            <Route
-              path="/campaign-details/:id"
-              element={
-                <PipelineProvider>
-                  <ReactFlowProvider>
-                    <CampaignDetails />
-                  </ReactFlowProvider>
-                </PipelineProvider>
-              }
-            />
+              {/* Campaign Pipeline Flow */}
+              <Route
+                path="/pipeline"
+                element={
+                  <PipelineProvider>
+                    <ReactFlowProvider>
+                      <CampaignPipeline />
+                    </ReactFlowProvider>
+                  </PipelineProvider>
+                }
+              />
+              <Route
+                path="/pipeline/:id"
+                element={
+                  <PipelineProvider>
+                    <ReactFlowProvider>
+                      <CampaignPipeline />
+                    </ReactFlowProvider>
+                  </PipelineProvider>
+                }
+              />
+              <Route
+                path="/campaign-details/:id"
+                element={
+                  <PipelineProvider>
+                    <ReactFlowProvider>
+                      <CampaignDetails />
+                    </ReactFlowProvider>
+                  </PipelineProvider>
+                }
+              />
 
-            {/* 🆕 Notifications */}
-            <Route path="/notifications" element={<NotificationsPage />} />
-          </Route>
+              {/* 🆕 Notifications */}
+              <Route path="/notifications" element={<NotificationsPage />} />
+            </Route>
 
-          {/* ======= Error Routes ======= */}
-          <Route path="/500" element={<InternalServerError />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* ======= Error Routes ======= */}
+            <Route path="/500" element={<InternalServerError />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
       </SidebarProvider>
     </AuthProvider>
   );
 }
-
