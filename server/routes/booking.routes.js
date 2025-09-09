@@ -187,211 +187,6 @@ export const getPaymentReport = async (req, res) => {
 
 
 
-// export const getFilteredBookings = async (req, res) => {
-//   try {
-//     const page  = parseInt(req.query.page, 10)  || 1;
-//     const limit = parseInt(req.query.limit, 10) || 10;
-//     const skip  = (page - 1) * limit;
-
-//     const search    = req.query.search || '';
-//     const startDate = req.query.startDate;
-//     const endDate   = req.query.endDate;
-
-//     const searchRegex = new RegExp(search, 'i');
-
-//     // ----- Build campaign-side filter (for date/name filters) -----
-//     const campaignFilter = {};
-//     if (startDate) campaignFilter.startDate = { $gte: startDate };
-//     if (endDate)   campaignFilter.endDate   = { ...(campaignFilter.endDate || {}), $lte: endDate };
-//     if (search)    campaignFilter.campaignName = searchRegex;
-
-//     // ----- Build direct booking search conditions -----
-//     const directBookingOr = [];
-//     if (search) {
-//       directBookingOr.push(
-//         { companyName: searchRegex },
-//         { clientName: searchRegex },
-//         { brandDisplayName: searchRegex }
-//       );
-//     }
-
-//     let finalBookingQuery = {};
-//     let bookingIdFilterFromCampaigns = null;
-
-//     // If any campaign filters were provided, constrain bookings by mapping table
-//     if (Object.keys(campaignFilter).length > 0) {
-//       const matchingCampaigns = await Campaign.find(campaignFilter)
-//         .select('_id')
-//         .lean();
-
-//       const matchedCampaignIds = matchingCampaigns.map(c => c._id);
-//       if (matchedCampaignIds.length === 0) {
-//         // No campaigns -> no bookings when campaign filters applied
-//         bookingIdFilterFromCampaigns = [];
-//       } else {
-//         const bcLinks = await BookingCampaign.find({ campaignId: { $in: matchedCampaignIds } })
-//           .select('bookingId')
-//           .lean();
-//         bookingIdFilterFromCampaigns = bcLinks.map(x => x.bookingId);
-//       }
-//     }
-
-//     // Combine booking filters
-//     if (bookingIdFilterFromCampaigns !== null && directBookingOr.length > 0) {
-//       finalBookingQuery = {
-//         $or: [
-//           { _id: { $in: bookingIdFilterFromCampaigns } },
-//           { $or: directBookingOr },
-//         ],
-//       };
-//     } else if (bookingIdFilterFromCampaigns !== null) {
-//       finalBookingQuery = { _id: { $in: bookingIdFilterFromCampaigns } };
-//     } else if (directBookingOr.length > 0) {
-//       finalBookingQuery = { $or: directBookingOr };
-//     } // else: no filters => get all
-
-//     // ----- Count for pagination -----
-//     const totalCount = await Booking.countDocuments(finalBookingQuery);
-
-//     // ----- Page bookings -----
-//     const bookings = await Booking.find(finalBookingQuery)
-//       .sort({ createdAt: -1 })
-//       .skip(skip)
-//       .limit(limit)
-//       .lean(); // lean for speed; we’ll attach fields manually
-
-//     if (bookings.length === 0) {
-//       return res.status(200).json({
-//         bookings: [],
-//         pagination: {
-//           totalCount,
-//           currentPage: page,
-//           totalPages: Math.ceil(totalCount / limit),
-//         },
-//       });
-//     }
-
-//     // ----- Find campaigns linked to these bookings via mapping table -----
-//     const bookingIds = bookings.map(b => b._id);
-//     const bcDocs = await BookingCampaign.find({ bookingId: { $in: bookingIds } })
-//       .select('bookingId campaignId')
-//       .lean();
-
-//     const bookingIdToCampaignIds = new Map();  // bookingId -> Set(campaignId)
-//     bcDocs.forEach(bc => {
-//       const key = bc.bookingId.toString();
-//       if (!bookingIdToCampaignIds.has(key)) bookingIdToCampaignIds.set(key, new Set());
-//       bookingIdToCampaignIds.get(key).add(bc.campaignId.toString());
-//     });
-
-//     const allCampaignIds = Array.from(new Set(bcDocs.map(x => x.campaignId.toString()))).map(id => new mongoose.Types.ObjectId(id));
-
-//     // ----- Load full campaign docs + populate spaces.id (Space) + pipeline -----
-//     const campaigns = await Campaign.find({ _id: { $in: allCampaignIds } })
-//       .populate({
-//         path: 'pipeline',
-//         model: 'Pipeline', // ensure your model name is 'Pipeline'
-//       })
-//       .populate({
-//         path: 'spaces.id',
-//         model: 'Space',    // ensure your model name is 'Space'
-//       })
-//       .lean();
-
-//     // Build a map for quick lookup
-//     const campaignById = new Map(campaigns.map(c => [c._id.toString(), c]));
-
-//     // ----- Compute campaignDates for every involved space -----
-//     // Gather all spaceIds that appear in these campaigns
-//     const allSpaceIds = Array.from(new Set(
-//       campaigns.flatMap(c => (c.spaces || []).map(s => s?.id?._id || s?.id)).filter(Boolean)
-//     )).map(id => new mongoose.Types.ObjectId(id));
-
-//     // Query ALL campaigns that include any of these spaces (to build the full timeline)
-//     // We only need _id, startDate, endDate, spaces.id
-//     const campaignsForSpaceTimeline = await Campaign.find({
-//       'spaces.id': { $in: allSpaceIds },
-//     })
-//       .select('_id startDate endDate spaces.id')
-//       .lean();
-
-//     // Map: spaceId -> [{ campaignId, startDate, endDate }]
-//     const spaceIdToCampaignDates = new Map();
-//     campaignsForSpaceTimeline.forEach(c => {
-//       (c.spaces || []).forEach(s => {
-//         const sid = (s?.id?._id || s?.id)?.toString();
-//         if (!sid) return;
-//         if (!spaceIdToCampaignDates.has(sid)) spaceIdToCampaignDates.set(sid, []);
-//         spaceIdToCampaignDates.get(sid).push({
-//           campaignId: c._id,
-//           startDate: c.startDate,
-//           endDate: c.endDate,
-//         });
-//       });
-//     });
-
-//     // ----- Attach campaigns to each booking with campaignDates on each space -----
-//     const bookingsWithCampaigns = bookings.map(b => {
-//       const cids = Array.from(bookingIdToCampaignIds.get(b._id.toString()) || []);
-//       const fullCampaigns = cids
-//         .map(id => campaignById.get(id))
-//         .filter(Boolean)
-//         .map(c => {
-//           // Clone shallowly to avoid mutating original
-//           const copy = {
-//             _id: c._id,
-//             campaignName: c.campaignName || '',
-//             description: c.description || '',
-//             spaces: (c.spaces || []).map(s => {
-//               // s.id may be object (populated) or ObjectId
-//               const spaceDoc = s?.id && s.id._id ? s.id : null;
-//               const sid = (spaceDoc?._id || s?.id)?.toString();
-//               const campaignDates = sid ? (spaceIdToCampaignDates.get(sid) || []) : [];
-
-//               return {
-//                 id: spaceDoc || s.id,     // keep your structure; populated doc if available
-//                 selectedUnits: s.selectedUnits,
-//                 _id: s._id,
-//                 campaignDates,            // <-- attach here
-//               };
-//             }),
-//             industry: c.industry,
-//             isFOC: c.isFOC,
-//             startDate: c.startDate,
-//             endDate: c.endDate,
-//             inventoryCosts: c.inventoryCosts || [],
-//             artwork: c.artwork || { confirmed: false },
-//             createdAt: c.createdAt,
-//             updatedAt: c.updatedAt,
-//             __v: c.__v,
-//             pipeline: c.pipeline || undefined,
-//           };
-//           return copy;
-//         });
-
-//       return {
-//         ...b,
-//         campaigns: fullCampaigns,
-//       };
-//     });
-
-//     return res.status(200).json({
-//       bookings: bookingsWithCampaigns,
-//       pagination: {
-//         totalCount,
-//         currentPage: page,
-//         totalPages: Math.ceil(totalCount / limit),
-//       },
-//     });
-//   } catch (error) {
-//     console.error('Error fetching filtered bookings:', error);
-//     return res.status(500).json({ error: error.message || 'Failed to fetch filtered bookings' });
-//   }
-// };
-
-
-
-
 
 export const getFilteredBookings = async (req, res) => {
   try {
@@ -2126,81 +1921,234 @@ router.get('/inventories-for-selection', authenticate, async (req, res) => {
 router.get('/dashboard-stats', authenticate, getBookingDashboardStats);
 router.get('/campaign/:id', getCampaignById);
 router.patch('/campaign/:id', updateCampaign);
+// router.post('/:bookingId/campaigns', async (req, res) => {
+// const session = await mongoose.startSession();
+// session.startTransaction();
+// try {
+// const { bookingId } = req.params;
+// console.log("Booking id",bookingId);
+// const campaignData = req.body;
+
+// const [newCampaign] = await Campaign.create([campaignData], { session });
+
+// if (!newCampaign || !newCampaign._id) {
+//   throw new Error('Campaign creation failed');
+// }
+
+// await Booking.findByIdAndUpdate(
+//   bookingId,
+//   { $push: { campaigns: newCampaign._id } },
+//   { new: true, session }
+// );
+
+// for (const { id: spaceId, selectedUnits } of newCampaign.spaces) {
+//   console.log("id of campaign is", newCampaign._id);
+
+//   const space = await Space.findById(spaceId).session(session);
+//   if (!space) throw new Error(`Space not found: ${spaceId}`);
+
+//   const availableUnits = space.unit - space.occupiedUnits;
+//   if (selectedUnits > availableUnits && !space.overlappingBooking) {
+//     space.overlappingBooking = true;
+//   }
+
+//   space.occupiedUnits += selectedUnits;
+
+//   const isDOOH = space.spaceType === 'DOOH';
+//   const allUnitsBooked = space.occupiedUnits >= space.unit;
+//   const noUnitsBooked = space.occupiedUnits === 0;
+
+//   space.availability = isDOOH
+//     ? allUnitsBooked
+//       ? 'Completely booked'
+//       : noUnitsBooked
+//         ? 'Completely available'
+//         : 'Partialy available'
+//     : space.overlappingBooking
+//       ? 'Overlapping booking'
+//       : allUnitsBooked
+//         ? 'Booked'
+//         : 'Available';
+
+//   if (!Array.isArray(space.campaignDates)) {
+//     space.campaignDates = [];
+//   }
+
+//   for (let i = 0; i < selectedUnits; i++) {
+//     space.campaignDates.push({
+//       campaignId: newCampaign._id,
+//       startDate: newCampaign.startDate,
+//       endDate: newCampaign.endDate,
+//     });
+//   }
+
+//   space.numberOfBookings += 1;
+//   await space.save({ session });
+// }
+
+// await session.commitTransaction();
+// session.endSession();
+
+// res.status(201).json({ message: 'Campaign created and linked', campaign: newCampaign });
+// } catch (err) {
+// await session.abortTransaction();
+// session.endSession();
+// console.error('Error creating campaign:', err);
+// res.status(500).json({ message: err.message || 'Failed to create and link campaign' });
+// }
+// });
+async function hasUnitConflicts({ session, spaceId, unitIds, startDate, endDate, excludeId = null }) {
+  const q = {
+    spaceId,
+    unitIds: { $in: unitIds },
+    startDate: { $lte: endDate },
+    endDate:   { $gte: startDate },
+  };
+  if (excludeId) q._id = { $ne: excludeId };
+  const exists = await CampaignInventoryMapping.exists(q).session(session);
+  return Boolean(exists);
+}
+
+// helper: allocate first N free unitIds if client passes only selectedUnits
+// async function allocateUnitIds({ session, space, startDate, endDate, need }) {
+//   const maxUnits = Math.max(1, Number(space.unit || 1));
+//   const all = Array.from({ length: maxUnits }, (_, i) => i + 1);
+
+//   const cur = CampaignInventoryMapping.find({
+//     spaceId: space._id,
+//     startDate: { $lte: endDate },
+//     endDate:   { $gte: startDate },
+//   }, { unitIds: 1 }).session(session).lean();
+
+//   const booked = new Set();
+//   for await (const m of cur) for (const u of (m.unitIds || [])) booked.add(u);
+
+//   const free = all.filter(u => !booked.has(u));
+//   return free.length >= need ? free.slice(0, need) : null;
+// }
+
 router.post('/:bookingId/campaigns', async (req, res) => {
-const session = await mongoose.startSession();
-session.startTransaction();
-try {
-const { bookingId } = req.params;
-console.log("Booking id",bookingId);
-const campaignData = req.body;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { bookingId } = req.params;
 
-const [newCampaign] = await Campaign.create([campaignData], { session });
+    // accept both JSON body or stringified JSON
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const {
+      campaignName, description, industry, isFOC = false,
+      startDate, endDate, selectedSpaces = []
+    } = body || {};
 
-if (!newCampaign || !newCampaign._id) {
-  throw new Error('Campaign creation failed');
-}
+    // validate booking
+    const booking = await Booking.findById(bookingId).session(session);
+    if (!booking) throw new Error('Booking not found');
 
-await Booking.findByIdAndUpdate(
-  bookingId,
-  { $push: { campaigns: newCampaign._id } },
-  { new: true, session }
-);
+    // 1) Create campaign header (no spaces[] inside)
+    const campaign = await new Campaign({
+      campaignName, description, industry, isFOC, startDate, endDate
+    }).save({ session });
 
-for (const { id: spaceId, selectedUnits } of newCampaign.spaces) {
-  console.log("id of campaign is", newCampaign._id);
+    // 2) Link booking ↔ campaign via join table
+    await new BookingCampaign({ bookingId, campaignId: campaign._id }).save({ session });
 
-  const space = await Space.findById(spaceId).session(session);
-  if (!space) throw new Error(`Space not found: ${spaceId}`);
+    // 3) For each selected space, create a mapping
+    for (const sel of selectedSpaces) {
+      const space = await Space.findById(sel.id).session(session);
+      if (!space) throw new Error(`Space not found: ${sel.id}`);
 
-  const availableUnits = space.unit - space.occupiedUnits;
-  if (selectedUnits > availableUnits && !space.overlappingBooking) {
-    space.overlappingBooking = true;
-  }
+      const isDOOH = space.spaceType === 'DOOH';
+      const maxUnits = Math.max(1, Number(space.unit || 1));
 
-  space.occupiedUnits += selectedUnits;
+      // determine unitIds
+      let unitIds = Array.isArray(sel.unitIds) && sel.unitIds.length
+        ? [...new Set(sel.unitIds.map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= maxUnits))]
+        : null;
 
-  const isDOOH = space.spaceType === 'DOOH';
-  const allUnitsBooked = space.occupiedUnits >= space.unit;
-  const noUnitsBooked = space.occupiedUnits === 0;
+      if (!unitIds) {
+        if (!isDOOH) {
+          unitIds = [1];
+        } else {
+          const need = Math.max(1, Number(sel.selectedUnits || 1));
+          const allocated = await allocateUnitIds({ session, space, startDate, endDate, need });
+          if (!allocated) {
+            if (space.overlappingBooking) {
+              // allow overlap, take first N units
+              unitIds = Array.from({ length: Math.min(need, maxUnits) }, (_, i) => i + 1);
+            } else {
+              throw new Error(`Not enough free units for space: ${space.spaceName} in ${startDate}..${endDate}`);
+            }
+          } else {
+            unitIds = allocated;
+          }
+        }
+      }
 
-  space.availability = isDOOH
-    ? allUnitsBooked
-      ? 'Completely booked'
-      : noUnitsBooked
-        ? 'Completely available'
-        : 'Partialy available'
-    : space.overlappingBooking
-      ? 'Overlapping booking'
-      : allUnitsBooked
-        ? 'Booked'
-        : 'Available';
+      // 3a) Prevent unit conflicts unless overlappingBooking=true
+      if (!space.overlappingBooking) {
+        const conflict = await hasUnitConflicts({
+          session, spaceId: space._id, unitIds, startDate, endDate
+        });
+        if (conflict) {
+          throw new Error(`Unit conflict for space ${space.spaceName}: unit(s) already reserved in this window`);
+        }
+      }
 
-  if (!Array.isArray(space.campaignDates)) {
-    space.campaignDates = [];
-  }
+      // 3b) Create mapping (coerce numbers; keep dates as strings)
+      const mappingDoc = {
+        campaignId: campaign._id,
+        spaceId: space._id,
+        unitIds,
+        startDate, endDate,
+        displayCost: Number(sel.displayCost || 0),
+        buyingPrice: Number(sel.buyingPrice || 0),
+        sellingPrice: Number(sel.sellingPrice || 0),
+        invoiceNo: sel.invoiceNo || '',
+        printingCostPerSquareFeet: Number(sel.printingCostPerSquareFeet || 0),
+        mountingCostPerSquareFeet: Number(sel.mountingCostPerSquareFeet || 0),
+        area: Number(sel.area || (Number(space.width || 0) * Number(space.height || 0)) || 0),
+        // initialize per-unit digital status aligned to unitIds
+        digitalStatus: unitIds.map(u => ({ unitId: u }))
+      };
 
-  for (let i = 0; i < selectedUnits; i++) {
-    space.campaignDates.push({
-      campaignId: newCampaign._id,
-      startDate: newCampaign.startDate,
-      endDate: newCampaign.endDate,
+      await new CampaignInventoryMapping(mappingDoc).save({ session });
+
+      // 3c) Update space counters & availability snapshot
+      const bookedCount = unitIds.length;
+      space.occupiedUnits = Math.max(0, Number(space.occupiedUnits || 0)) + bookedCount;
+
+      if (isDOOH) {
+        if (space.overlappingBooking) {
+          space.availability = 'Overlapping booking';
+        } else if (space.occupiedUnits >= maxUnits) {
+          space.availability = 'Completely booked';
+        } else if (space.occupiedUnits === 0) {
+          space.availability = 'Completely available';
+        } else {
+          space.availability = 'Partially available';
+        }
+      } else {
+        space.availability = space.overlappingBooking ? 'Overlapping booking'
+          : (space.occupiedUnits >= 1 ? 'Booked' : 'Available');
+      }
+
+      space.numberOfBookings = Math.max(0, Number(space.numberOfBookings || 0)) + 1;
+      await space.save({ session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(201).json({
+      message: 'Campaign created and linked',
+      campaign
     });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error('Error creating campaign:', err);
+    return res.status(500).json({ message: err.message || 'Failed to create and link campaign' });
   }
-
-  space.numberOfBookings += 1;
-  await space.save({ session });
-}
-
-await session.commitTransaction();
-session.endSession();
-
-res.status(201).json({ message: 'Campaign created and linked', campaign: newCampaign });
-} catch (err) {
-await session.abortTransaction();
-session.endSession();
-console.error('Error creating campaign:', err);
-res.status(500).json({ message: err.message || 'Failed to create and link campaign' });
-}
 });
 router.get('/', authenticate, getAllBookings);
 router.get('/optimized', authenticate, getAllBookings1);
