@@ -72,7 +72,7 @@ export default function CloneCampaignPage() {
         const token = localStorage.getItem("accessToken");
         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns/${campaignId}`, { headers: { Authorization: `Bearer ${token}` } });
         const campaignData = res.data;
-        
+        console.log("Campaign data is cloning",campaignData);
         setCampaign(campaignData);
         setFormData({
           campaignName: `Copy of ${campaignData.campaignName}`,
@@ -103,21 +103,7 @@ export default function CloneCampaignPage() {
     fetchCampaignDetails();
   }, [campaignId, navigate]);
 
-  // Effect to fetch other bookings if needed - Commented out
-  // useEffect(() => {
-  //   if (cloneOption === "other") {
-  //     const fetchBookings = async () => {
-  //       try {
-  //         const token = localStorage.getItem("accessToken");
-  //         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/bookings/for-selection`, { headers: { Authorization: `Bearer ${token}` } });
-  //         setAllBookings(res.data); // Fetch all, including original, then filter in useMemo
-  //       } catch (error) { toast.error("Failed to fetch bookings list."); }
-  //     };
-  //     fetchBookings();
-  //   }
-  // }, [cloneOption]);
-
-  // Effect to fetch all inventories for selection
+ 
   useEffect(() => {
     const fetchInventories = async () => {
       try {

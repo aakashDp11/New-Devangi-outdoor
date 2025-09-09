@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/authenticate.middleware.js';
 import Booking from '../models/booking.model.js';
 import mongoose from 'mongoose';
 import Pipeline from '../models/pipeline.model.js';
+import BookingCampaign from '../models/bookingCampaignMapping.model.js';
 import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
 const router = express.Router();
 
@@ -241,42 +242,95 @@ router.post('/:campaignId/clone/:bookingId', authenticate, async (req, res) => {
         res.status(500).json({ error: 'Server error while cloning campaign.' });
     }
 });
+
 router.get('/:id', async (req, res) => {
     try {
       const campaignId = req.params.id;
-   
-      // Step 1: Find the parent booking and get the FULL document.
-      const parentBooking = await Booking.findOne({ campaigns: campaignId }).lean();
-   
-      // Step 2: Find the campaign and populate the FULL space documents.
-      const campaign = await Campaign.findById(campaignId)
-        .populate({
-          path: 'spaces.id' // Get all fields from the Space model
-        })
-        .lean();
-   
+      if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+        return res.status(400).json({ message: 'Invalid campaign ID format' });
+      }
+  
+      // 1) Campaign header
+      const campaign = await Campaign.findById(campaignId).lean();
       if (!campaign) {
         return res.status(404).json({ message: 'Campaign not found' });
       }
-   
-      // Step 3: Construct a response that includes the full objects for the frontend.
+  
+      // 2) Find parent booking via join table
+      const bc = await BookingCampaign.findOne({ campaignId }).lean();
+      const parentBooking = bc ? await Booking.findById(bc.bookingId).lean() : null;
+  
+      // 3) Spaces for this campaign via mappings → join to Space
+      const mappings = await CampaignInventoryMapping.find(
+        { campaignId },
+        { spaceId: 1 }
+      ).lean();
+  
+      const spaceIds = [...new Set(mappings.map(m => String(m.spaceId)))];
+      let spaces = [];
+      if (spaceIds.length) {
+        spaces = await Space.find(
+          { _id: { $in: spaceIds.map(id => new mongoose.Types.ObjectId(id)) } },
+          // select whatever you need; here we fetch full doc like before
+          {}
+        ).lean();
+      }
+  
+      // (Back-compat) “spaceNames” like your old code did from populated campaign.spaces
+      const spaceNames = spaces.map(s => s.spaceName).filter(Boolean);
+  
+      // 4) Response shaped like before (campaign + booking + spaceNames)
       const responseData = {
         ...campaign,
-        booking: parentBooking, // Send the entire booking object
+        booking: parentBooking, // entire booking object
         bookingName: parentBooking ? (parentBooking.companyName || parentBooking.clientName) : 'N/A',
-        spaceNames: campaign.spaces ? campaign.spaces.map(space => space.id?.spaceName).filter(Boolean) : []
+        spaceNames
       };
-   
-      res.status(200).json(responseData);
-   
+  
+      return res.status(200).json(responseData);
     } catch (err) {
       console.error('Error fetching single campaign:', err);
-      if (err.kind === 'ObjectId') {
-          return res.status(400).json({ message: 'Invalid campaign ID format' });
-      }
-      res.status(500).json({ message: 'Server error, could not fetch the campaign.' });
+      return res.status(500).json({ message: 'Server error, could not fetch the campaign.' });
     }
   });
+// router.get('/:id', async (req, res) => {
+//     try {
+//       const campaignId = req.params.id;
+   
+//       // Step 1: Find the parent booking and get the FULL document.
+//       const parentBooking = await Booking.findOne({ campaigns: campaignId }).lean();
+   
+//       // Step 2: Find the campaign and populate the FULL space documents.
+//       const campaign = await Campaign.findById(campaignId)
+//         .populate({
+//           path: 'spaces.id' // Get all fields from the Space model
+//         })
+//         .lean();
+   
+//       if (!campaign) {
+//         return res.status(404).json({ message: 'Campaign not found' });
+//       }
+   
+//       // Step 3: Construct a response that includes the full objects for the frontend.
+//       const responseData = {
+//         ...campaign,
+//         booking: parentBooking, // Send the entire booking object
+//         bookingName: parentBooking ? (parentBooking.companyName || parentBooking.clientName) : 'N/A',
+//         spaceNames: campaign.spaces ? campaign.spaces.map(space => space.id?.spaceName).filter(Boolean) : []
+//       };
+   
+//       res.status(200).json(responseData);
+   
+//     } catch (err) {
+//       console.error('Error fetching single campaign:', err);
+//       if (err.kind === 'ObjectId') {
+//           return res.status(400).json({ message: 'Invalid campaign ID format' });
+//       }
+//       res.status(500).json({ message: 'Server error, could not fetch the campaign.' });
+//     }
+//   });
+
+
 // ===================================================================
 // =========== START: NEW CAMPAIGN CREATION ROUTE ====================
 // ===================================================================

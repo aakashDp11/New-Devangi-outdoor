@@ -23,94 +23,239 @@ const { Types } = mongoose;
 //   }
 // };
 
-export const getPipelineByCampaignId = async (req, res) => {
-  const { campaignId } = req.params;
-  try {
-    // 1) Load pipeline and campaign header
-    const pipeline = await Pipeline.findOne({ campaign: campaignId })
-      .populate({
-        path: 'campaign',
-        select: 'campaignName isFOC startDate endDate', // no inventoryCosts anymore
-      })
-      .lean();
-
-    if (!pipeline) {
-      return res.status(404).json({ error: 'Pipeline not found' });
-    }
-
-    // 2) Load mappings for this campaign and join to Space
-    const mappings = await CampaignInventoryMapping.find({ campaignId })
-      .populate({
-        path: 'spaceId',
-        select: 'spaceName city state spaceType unit availability width height',
-      })
-      .lean();
-
-    // 3) Shape response: attach mappings as pipeline.inventory (or whatever your UI expects)
-    const inventory = mappings.map(m => ({
-      mappingId: m._id,
-      space: m.spaceId,                // populated Space doc (limited fields)
-      unitIds: m.unitIds,              // which units are booked
-      startDate: m.startDate,
-      endDate: m.endDate,
-      displayCost: m.displayCost,
-      buyingPrice: m.buyingPrice,
-      sellingPrice: m.sellingPrice,
-      invoiceNo: m.invoiceNo,
-      printingCostPerSquareFeet: m.printingCostPerSquareFeet,
-      mountingCostPerSquareFeet: m.mountingCostPerSquareFeet,
-      area: m.area,
-      printingConfirmedAt: m.printingConfirmedAt,
-      mountingConfirmedAt: m.mountingConfirmedAt,
-      digitalStatus: m.digitalStatus,  // per-unit status (if you added it)
-      createdAt: m.createdAt,
-      updatedAt: m.updatedAt,
-    }));
-
-    // Optional: keep legacy shape for backward compatibility
-    // e.g., pipeline.spaces = inventory.map(i => i.space);
-
-    return res.json({
-      ...pipeline,
-      inventory, // new normalized list
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
-  }
-};
-// export const createPipelineForCampaign = async (req, res) => {
+// export const getPipelineByCampaignId = async (req, res) => {
 //   const { campaignId } = req.params;
 //   try {
-//     console.log("Campaign id is",campaignId);
-//     const campaign = await Campaign.findById(campaignId);
-//     console.log("Campaign is",campaign);
-//     if (!campaign) {
-//       return res.status(404).json({ error: 'Campaign not found' });
+//     // 1) Load pipeline and campaign header
+//     const pipeline = await Pipeline.findOne({ campaign: campaignId })
+//       .populate({
+//         path: 'campaign',
+//         select: 'campaignName isFOC startDate endDate', // no inventoryCosts anymore
+//       })
+//       .lean();
+
+//     if (!pipeline) {
+//       return res.status(404).json({ error: 'Pipeline not found' });
 //     }
-//     let existingPipeline = await Pipeline.findOne({ campaign: campaignId });
-//     console.log("Existing pipeline is",existingPipeline);
-//     if (existingPipeline) {
-//       if (!campaign.pipeline) {
-//         campaign.pipeline = existingPipeline._id;
-//         await campaign.save();
-//       }
-//       return res.status(200).json(existingPipeline);
-//     }
-//     const newPipeline = new Pipeline({
-//       campaign: campaignId,
-//       spaces: campaign.spaces.map(s => s.id),
+
+//     // 2) Load mappings for this campaign and join to Space
+//     const mappings = await CampaignInventoryMapping.find({ campaignId })
+//       .populate({
+//         path: 'spaceId',
+//         select: 'spaceName city state spaceType unit availability width height',
+//       })
+//       .lean();
+
+//     // 3) Shape response: attach mappings as pipeline.inventory (or whatever your UI expects)
+//     const inventory = mappings.map(m => ({
+//       mappingId: m._id,
+//       space: m.spaceId,                // populated Space doc (limited fields)
+//       unitIds: m.unitIds,              // which units are booked
+//       startDate: m.startDate,
+//       endDate: m.endDate,
+//       displayCost: m.displayCost,
+//       buyingPrice: m.buyingPrice,
+//       sellingPrice: m.sellingPrice,
+//       invoiceNo: m.invoiceNo,
+//       printingCostPerSquareFeet: m.printingCostPerSquareFeet,
+//       mountingCostPerSquareFeet: m.mountingCostPerSquareFeet,
+//       area: m.area,
+//       printingConfirmedAt: m.printingConfirmedAt,
+//       mountingConfirmedAt: m.mountingConfirmedAt,
+//       digitalStatus: m.digitalStatus,  // per-unit status (if you added it)
+//       createdAt: m.createdAt,
+//       updatedAt: m.updatedAt,
+//     }));
+
+//     // Optional: keep legacy shape for backward compatibility
+//     // e.g., pipeline.spaces = inventory.map(i => i.space);
+
+//     return res.json({
+//       ...pipeline,
+//       inventory, // new normalized list
 //     });
-//     console.log("New Pipeline is",newPipeline);
-//     await newPipeline.save();
-//     campaign.pipeline = newPipeline._id;
-//     await campaign.save();
-//     // console.log("New Pipeline is",newPipeline);
-//     res.status(201).json(newPipeline);
 //   } catch (error) {
-//     res.status(500).json({ error: error.message || 'Failed to create pipeline' });
+//     return res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
 //   }
 // };
 
+
+export const getPipelineByCampaignId = async (req, res) => {
+  const { campaignId } = req.params;
+  try {
+    if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+      return res.status(400).json({ error: 'Invalid campaign ID' });
+    }
+
+    // 1) Load pipeline (with payment/artwork/bookingStatus/po/invoice/etc.) and campaign header
+    const pipeline = await Pipeline.findOne({ campaign: campaignId }).lean();
+    if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+    const campaign = await Campaign.findById(campaignId).lean();
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    // 2) Load mappings for this campaign
+    const mappings = await CampaignInventoryMapping.find({ campaignId }, {
+      spaceId: 1,
+      displayCost: 1, buyingPrice: 1, sellingPrice: 1, invoiceNo: 1,
+      printingCostPerSquareFeet: 1, mountingCostPerSquareFeet: 1, area: 1,
+      startDate: 1, endDate: 1, unitIds: 1,
+      digitalStatus: 1,
+      createdAt: 1, updatedAt: 1
+    }).lean();
+
+    const spaceIds = [...new Set(mappings.map(m => String(m.spaceId)))].map(id => new mongoose.Types.ObjectId(id));
+
+    // 3) Load the Space docs we need to show in `spaces[]`
+    const spaces = await Space.find({ _id: { $in: spaceIds } }).lean();
+    const spaceMap = Object.fromEntries(spaces.map(s => [s._id.toString(), s]));
+
+    // 4) (Optional but matches your sample): for each space, include all campaign windows (`campaignDates`)
+    const allWindows = await CampaignInventoryMapping.find(
+      { spaceId: { $in: spaceIds } },
+      { spaceId: 1, campaignId: 1, startDate: 1, endDate: 1 }
+    ).lean();
+
+    const windowsBySpace = allWindows.reduce((acc, w) => {
+      const key = w.spaceId.toString();
+      (acc[key] ||= []).push({
+        campaignId: w.campaignId?.toString(),
+        startDate: w.startDate,
+        endDate: w.endDate,
+        _id: new mongoose.Types.ObjectId() // legacy array element id
+      });
+      return acc;
+    }, {});
+
+    // 5) Build legacy `inventoryCosts[]` from mappings
+    const inventoryCosts = mappings.map(m => ({
+      id: m.spaceId.toString(),
+      displayCost: m.displayCost ?? 0,
+      buyingPrice: m.buyingPrice ?? 0,
+      sellingPrice: m.sellingPrice ?? 0,
+      invoiceNo: m.invoiceNo ?? '',
+      // NOTE: legacy key names preserved below:
+      printingcostpersquareFeet: m.printingCostPerSquareFeet ?? 0,
+      mountingcostpersquareFeet: m.mountingCostPerSquareFeet ?? 0,
+      area: m.area ?? 0,
+      _id: new mongoose.Types.ObjectId()
+    }));
+
+    // 6) Build `spaces[]` in the legacy shape from Space docs, plus synthesized fields
+    const spacesResponse = mappings.map(m => {
+      const s = spaceMap[m.spaceId.toString()];
+      // Synthesize a single-space digitalStatus summary from per-unit statuses
+      const ds = Array.isArray(m.digitalStatus) ? m.digitalStatus : [];
+      const anyLive = ds.some(u => u?.isLive);
+      const allConfirmed = ds.length > 0 ? ds.every(u => u?.confirmed) : false;
+      const firstGoLive = ds.map(u => u?.goLiveDate).filter(Boolean).sort()[0] || '';
+      const firstAssignedAgency = ds.map(u => u?.assignedAgency).filter(Boolean)[0] || '';
+
+      // NOTE: your current Space model no longer has campaignDates/digitalStatus,
+      // so we attach them at response-time for backward compatibility.
+      const legacyDigitalStatus = {
+        confirmed: allConfirmed,
+        assignedAgency: firstAssignedAgency || '',
+        isLive: anyLive,
+        goLiveDate: firstGoLive,
+        createdAt: (m.createdAt ?? s?.createdAt)?.toString?.() || (m.createdAt || ''),
+        updatedAt: (m.updatedAt ?? s?.updatedAt)?.toString?.() || (m.updatedAt || '')
+      };
+
+      const legacyCampaignDates = windowsBySpace[m.spaceId.toString()] || [{
+        campaignId: campaignId,
+        startDate: m.startDate,
+        endDate: m.endDate,
+        _id: new mongoose.Types.ObjectId()
+      }];
+
+      // Pick fields to match your sample closely
+      return {
+        _id: s?._id,
+        spaceName: s?.spaceName,
+        landlord: s?.landlord,
+        peerMediaOwner: s?.peerMediaOwner,
+        spaceType: s?.spaceType,
+        traded: !!s?.traded,
+        category: s?.category,
+        mediaType: s?.mediaType ?? '',
+        price: s?.price ?? null,
+        footfall: s?.footfall ?? null,
+        audience: Array.isArray(s?.audience) ? s.audience : [],
+        demographics: s?.demographics,
+        description: s?.description ?? '',
+        unit: s?.unit ?? 1,
+        specification: s?.specification,
+        occupiedUnits: s?.occupiedUnits ?? 0,
+        width: s?.width ?? null,
+        height: s?.height ?? null,
+        additionalTags: s?.additionalTags,
+        previousBrands: s?.previousBrands ?? '',
+        tags: s?.tags ?? '',
+        address: s?.address,
+        city: s?.city,
+        state: s?.state,
+        latitude: s?.latitude,
+        longitude: s?.longitude,
+        landmark: s?.landmark,
+        zone: s?.zone,
+        ownershipType: s?.ownershipType,
+        tier: s?.tier,
+        faciaTowards: s?.faciaTowards,
+        overlappingBooking: !!s?.overlappingBooking,
+        mainPhoto: s?.mainPhoto ?? null,
+        longShot: s?.longShot ?? null,
+        closeShot: s?.closeShot ?? null,
+        printingStatus: s?.printingStatus ?? {
+          confirmed: false, printingDate: '', printingMaterial: '',
+          assignedPerson: '', assignedAgency: ''
+        },
+        numberOfBookings: s?.numberOfBookings ?? 0,
+        totalBookingValue: s?.totalBookingValue ?? 0,
+        mountingStatus: s?.mountingStatus ?? {
+          confirmed: false, mountingDate: '',
+          assignedPerson: '', assignedAgency: ''
+        },
+        otherPhotos: Array.isArray(s?.otherPhotos) ? s.otherPhotos : [],
+        digitalStatus: legacyDigitalStatus,          // synthesized from mapping.digitalStatus
+        availability: s?.availability,
+        dates: Array.isArray(s?.dates) ? s.dates : [],
+        campaignDates: legacyCampaignDates,          // synthesized from mappings across campaigns
+        createdAt: s?.createdAt,
+        updatedAt: s?.updatedAt,
+        __v: s?.__v,
+        isInventoryEnabled: s?.isInventoryEnabled
+      };
+    });
+
+    // 7) Assemble final legacy response
+    return res.json({
+      // pipeline top-level fields first (payment, etc.)
+      payment: pipeline.payment ?? { payments: [] },
+      _id: pipeline._id,
+      campaign: {
+        _id: campaign._id,
+        isFOC: !!campaign.isFOC,
+        // legacy inventoryCosts list
+        inventoryCosts
+      },
+      spaces: spacesResponse,
+      // forward pipeline subdocs as-is (aligns with your sample keys)
+      artwork: pipeline.artwork ?? { confirmed: false },
+      bookingStatus: pipeline.bookingStatus ?? {},
+      po: pipeline.po ?? {},
+      invoice: pipeline.invoice ?? [],
+      cashMemo: pipeline.cashMemo ?? [],
+      creditNote: pipeline.creditNote ?? [],
+      createdAt: pipeline.createdAt,
+      updatedAt: pipeline.updatedAt,
+      __v: pipeline.__v
+    });
+  } catch (error) {
+    console.error('getPipelineByCampaignId error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
+  }
+};
 
 export const createPipelineForCampaign = async (req, res) => {
   const { campaignId } = req.params;
