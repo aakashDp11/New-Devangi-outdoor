@@ -87,6 +87,31 @@ function CampaignPipelineInternal({ campaignId, isFOC }) {
  
 
   const isNodeCompleted = (nodeId, space = null) => {
+    console.log("Pipeline data is",pipelineData);
+    console.log("FOr print 1",space?.printingStatus?.confirmed);
+    console.log("FOr print 2",pipelineData.space?.printingStatus?.confirmed);
+    if (nodeId === 'booking') return pipelineData?.bookingStatus?.confirmed;
+    if (nodeId === 'po') return pipelineData?.po?.confirmed;
+    if (nodeId === 'artwork') return pipelineData?.artwork?.confirmed;
+    if (nodeId === 'invoice') {
+      return Array.isArray(pipelineData?.invoice) &&
+        pipelineData.invoice.length > 0 &&
+        pipelineData.invoice.some(inv => inv.invoiceNumber);
+    }
+    if (nodeId === 'payment') return pipelineData?.payment?.payments?.length > 0;
+    // if (nodeId.startsWith('print-')) return pipelineData.spaces?.printingStatus?.confirmed;
+    
+    // if (nodeId.startsWith('mount-')) return pipelineData.spaces?.mountingStatus?.confirmed;
+    if (nodeId.startsWith('print-')) {
+      // Iterate through the spaces array and find if any space has the confirmed printing status
+      return pipelineData.spaces?.some(space => space.printingStatus?.confirmed);
+    }
+    
+    if (nodeId.startsWith('mount-')) {
+      // Iterate through the spaces array and find if any space has the confirmed mounting status
+      return pipelineData.spaces?.some(space => space.mountingStatus?.confirmed);
+    }
+    
     if (nodeId.startsWith('digital-')) {
       // Find the corresponding digital status for the unit
       const ds = Array.isArray(campaignDigital) ? campaignDigital.find(x => x.unitId === 1) : null;
