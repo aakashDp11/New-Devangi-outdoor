@@ -13,7 +13,7 @@ export default function ArtworkForm({ campaignId, onConfirm, onClose, existingDa
   const username = localStorage.getItem('userName');
   const useremail = localStorage.getItem('userEmail');
   const userId = localStorage.getItem('userId');
-  
+  console.log("existing data in artwork form is",existingData);
   useEffect(() => {
     if (existingData && existingData.confirmed) {
       setView('summary');

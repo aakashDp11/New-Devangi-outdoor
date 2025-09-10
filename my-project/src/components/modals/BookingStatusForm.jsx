@@ -22,7 +22,7 @@ const BookingStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
   const [bookingDate, setBookingDate] = useState('');
   const [estimateDocument, setEstimateDocument] = useState(null);
   const [documentUrl, setDocumentUrl] = useState('');
-  
+  console.log("existing data in booking status form is",existingData);
   const { pipelineData, setPipelineData } = useContext(PipelineContext);
   const username = localStorage.getItem('userName');
   const useremail = localStorage.getItem('userEmail');
