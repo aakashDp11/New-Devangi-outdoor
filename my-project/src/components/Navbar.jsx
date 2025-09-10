@@ -4,6 +4,7 @@ import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "../context/AuthContext";
 import logo1 from "../assets/d3.png";
 import { getUnreadNotificationsCount } from "../services/notificationService";
+import ThemeControls from "./ThemeControls"; // ✅ Theme switcher
 import {
   FaHome,
   FaBoxOpen,
@@ -20,7 +21,6 @@ import {
   FaExclamationCircle,
   FaBell,
 } from "react-icons/fa";
-import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -44,6 +44,7 @@ export default function Navbar() {
       icon: <FaBell />,
       badge: unreadCount,
     },
+    { label: "Settings", path: "/settings", icon: <FaShieldAlt /> }, // ✅ NEW
   ];
 
   useEffect(() => {
@@ -73,32 +74,46 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Overlay for mobile when sidebar is open */}
+      {/* Overlay for mobile */}
       {!isCollapsed && (
         <div
-          className="fixed inset-0 bg-neutral bg-opacity-50 z-20 md:hidden"
+          className="fixed inset-0 z-20 md:hidden"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
           onClick={handleToggle}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`bg-base-200 text-base-content fixed top-0 h-full z-30 border-r border-base-300 shadow-lg flex flex-col transition-all duration-300 ease-in-out overflow-x-hidden
+        className={`fixed top-0 h-full z-30 shadow-lg flex flex-col transition-all duration-300 ease-in-out overflow-x-hidden
           ${isCollapsed ? "w-0 md:w-24" : "w-64"}
           ${isCollapsed ? "overflow-y-hidden" : "overflow-y-auto"}
           ${isCollapsed ? "left-[-100%] md:left-0" : "left-0"}
         `}
+        style={{
+          backgroundColor: "var(--color-surface, #fff)",
+          color: "var(--color-text)",
+          borderRight: "1px solid var(--color-border)",
+        }}
       >
         {/* Header */}
         <div
-          className={`flex items-center p-4 border-b border-base-300 bg-neutral text-neutral-content transition-all duration-300 relative
+          className={`flex items-center p-4 border-b transition-all duration-300 relative
             ${isCollapsed ? "h-20 justify-center" : "h-24 justify-between"}
           `}
+          style={{
+            backgroundColor: "var(--color-surface)",
+            borderColor: "var(--color-border)",
+          }}
         >
           {!isCollapsed && <img src={logo1} alt="Logo" className="w-40" />}
           <button
             onClick={handleToggle}
-            className="p-2 rounded-full hover:bg-primary focus:outline-none"
+            className="p-2 rounded-full"
+            style={{
+              backgroundColor: "var(--color-primary)",
+              color: "#fff",
+            }}
             aria-label="Toggle sidebar"
           >
             {isCollapsed ? <FaArrowRight size={16} /> : <FaArrowLeft size={16} />}
@@ -119,11 +134,13 @@ export default function Navbar() {
                   navigate(item.path);
                   if (window.innerWidth < 768) setIsCollapsed(true);
                 }}
-                className={`cursor-pointer transition-colors duration-200 mx-0 ${
-                  isActive
-                    ? "bg-primary text-primary-content"
-                    : "hover:bg-base-300"
-                }`}
+                className="cursor-pointer transition-colors duration-200 mx-0"
+                style={{
+                  backgroundColor: isActive
+                    ? "var(--color-primary)"
+                    : "transparent",
+                  color: isActive ? "#fff" : "var(--color-text)",
+                }}
                 title={item.label}
               >
                 <div
@@ -144,16 +161,16 @@ export default function Navbar() {
                     {item.label}
                   </span>
 
-                  {/* Badge for notifications */}
+                  {/* Badge */}
                   {item.badge > 0 && location.pathname !== "/notifications" && (
                     <span
-                      className={`absolute text-neutral-content text-[10px] font-bold bg-error rounded-full flex items-center justify-center
-                        ${
-                          isCollapsed
-                            ? "top-0.5 right-1.5 min-w-[1rem] h-4 px-1"
-                            : "top-1.5 right-3 min-w-[1.25rem] h-5 px-1.5"
-                        }
-                      `}
+                      className="absolute text-white text-[10px] font-bold bg-red-600 rounded-full flex items-center justify-center"
+                      style={{
+                        top: isCollapsed ? "0.125rem" : "0.375rem",
+                        right: isCollapsed ? "0.375rem" : "0.75rem",
+                        minWidth: isCollapsed ? "1rem" : "1.25rem",
+                        height: isCollapsed ? "1rem" : "1.25rem",
+                      }}
                     >
                       {item.badge}
                     </span>
@@ -164,53 +181,62 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Theme Switcher */}
-        <div className="border-t border-base-300 py-4 px-2 flex justify-center">
-          <ThemeSwitcher />
-        </div>
-
         {/* Footer */}
-        <div className="border-t border-base-300 pt-4 pb-4">
+        <div
+          className="pt-4 pb-4"
+          style={{ borderTop: "1px solid var(--color-border)" }}
+        >
+          
+
           {isCollapsed ? (
             <div className="flex flex-col items-center space-y-1 py-1">
               <FaShieldAlt
                 onClick={() => navigate("/privacy-policy")}
-                className="cursor-pointer hover:text-primary"
+                className="cursor-pointer"
+                style={{ color: "var(--color-text)" }}
                 size={16}
                 title="Privacy Policy"
               />
               <FaExclamationCircle
                 onClick={() => navigate("/disclaimer-policy")}
-                className="cursor-pointer hover:text-primary"
+                className="cursor-pointer"
+                style={{ color: "var(--color-text)" }}
                 size={16}
                 title="Disclaimer Policy"
               />
               <FaSignOutAlt
                 onClick={handleLogout}
-                className="cursor-pointer hover:text-primary"
+                className="cursor-pointer"
+                style={{ color: "var(--color-text)" }}
                 size={16}
                 title="Logout"
               />
             </div>
           ) : (
-            <div className="px-2 py-3 text-center text-xs font-medium whitespace-nowrap">
+            <div
+              className="px-2 py-3 text-center text-xs font-medium whitespace-nowrap"
+              style={{ color: "var(--color-muted, #666)" }}
+            >
               <span
                 onClick={() => navigate("/privacy-policy")}
-                className="cursor-pointer hover:text-primary"
+                className="cursor-pointer"
+                style={{ color: "var(--color-text)" }}
               >
                 Privacy Policy
               </span>
               <span className="mx-1 opacity-50">|</span>
               <span
                 onClick={() => navigate("/disclaimer-policy")}
-                className="cursor-pointer hover:text-primary"
+                className="cursor-pointer"
+                style={{ color: "var(--color-text)" }}
               >
                 Disclaimer Policy
               </span>
               <span className="mx-1 opacity-50">|</span>
               <span
                 onClick={handleLogout}
-                className="cursor-pointer hover:text-primary"
+                className="cursor-pointer"
+                style={{ color: "var(--color-text)" }}
               >
                 Logout
               </span>
@@ -219,10 +245,14 @@ export default function Navbar() {
         </div>
       </aside>
 
-      {/* Hamburger Toggle for Mobile */}
+      {/* Mobile hamburger */}
       <button
         onClick={handleToggle}
-        className="btn btn-square btn-neutral md:hidden fixed top-4 left-4 z-40"
+        className="p-2 rounded-md md:hidden fixed top-4 left-4 z-40"
+        style={{
+          backgroundColor: "var(--color-primary)",
+          color: "#fff",
+        }}
       >
         ☰
       </button>

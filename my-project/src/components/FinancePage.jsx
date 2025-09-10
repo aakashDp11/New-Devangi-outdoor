@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import PdfLogo from '../assets/pdf.png';
-import folderLogo from '../assets/vector-folder-icon.jpg'
-import folderLogo1 from '../assets/folder-icon-2.png'
+import folderLogo1 from '../assets/folder-icon-2.png';
 import { toast } from 'sonner';
-import { useSidebar } from '../context/SidebarContext'; // 1. ADDED: Import the hook
+import { useSidebar } from '../context/SidebarContext';
 import { FaArrowLeft } from 'react-icons/fa';
 
 const Card = ({ children, className = '', ...props }) => (
-  <div className={`bg-white border shadow-sm rounded-xl ${className}`} {...props}>
+  <div className={`bg-card text-card-foreground border shadow-sm rounded-xl ${className}`} {...props}>
     {children}
   </div>
 );
@@ -18,7 +17,7 @@ const CardContent = ({ children, className = '' }) => (
 );
 
 export default function FinancePage() {
-  const { isCollapsed } = useSidebar(); // 2. ADDED: Get the sidebar state
+  const { isCollapsed } = useSidebar();
   const [data, setData] = useState({});
   const [currentView, setCurrentView] = useState('year'); // 'year' | 'month' | 'documents'
   const [selectedYear, setSelectedYear] = useState(null);
@@ -29,7 +28,7 @@ export default function FinancePage() {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/finance`);
         const json = await res.json();
-        console.log("Finance data is",json);
+        console.log("Finance data is", json);
         setData(json);
       } catch (err) {
         console.error('Error fetching finance data:', err);
@@ -48,22 +47,23 @@ export default function FinancePage() {
       setSelectedYear(null);
     }
   };
-const handleDownload = async (url, filename = 'document') => {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Download failed');
 
-    const blob = await response.blob();
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
-    window.URL.revokeObjectURL(link.href);
-  } catch (err) {
-    console.error('Download error:', err);
-    toast.error('Failed to download file. Please try again.');
-  }
-};
+  const handleDownload = async (url, filename = 'document') => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Download failed');
+
+      const blob = await response.blob();
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      window.URL.revokeObjectURL(link.href);
+    } catch (err) {
+      console.error('Download error:', err);
+      toast.error('Failed to download file. Please try again.');
+    }
+  };
 
   const journey = () => {
     if (currentView === 'year') return '';
@@ -72,19 +72,24 @@ const handleDownload = async (url, filename = 'document') => {
   };
 
   return (
-    <div className="min-h-screen  w-screen bg-gray-50 text-black flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen w-screen bg-background text-foreground flex flex-col lg:flex-row overflow-hidden">
       <Navbar />
-      {/* 3. ADDED: Dynamic class for main content area */}
       <main className={`flex-1 h-full overflow-y-auto px-6 py-6 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+        
         {/* Journey Bar */}
-        <div className="text-sm text-gray-500 mb-4">
+        <div className="text-sm text-muted-foreground mb-4">
           {currentView !== 'year' && (
-            <button onClick={handleBack} className="text-black bg-slate-200 hover:bg-slate-100 mr-3"><FaArrowLeft className='inline'/>  Back</button>
+            <button
+              onClick={handleBack}
+              className="text-foreground bg-muted hover:bg-accent mr-3 px-2 py-1 rounded"
+            >
+              <FaArrowLeft className="inline" /> Back
+            </button>
           )}
           {journey()}
         </div>
 
-          <h2 className="text-2xl font-sans font-normal">       
+        <h2 className="text-2xl font-sans font-normal">       
           {currentView === 'year' && '📁 PO and Invoice'}
           {currentView === 'month' && '📂 Select a Month'}
           {currentView === 'documents' && '📄 Finance Documents'}
@@ -102,14 +107,13 @@ const handleDownload = async (url, filename = 'document') => {
                 }}
                 className="cursor-pointer w-[80%] h-[100px] flex items-center justify-center hover:shadow-md"
               >
-                <CardContent className="text-lg font-semibold"> <div className='flex flex-col'>
-           
-            <img src={folderLogo1} className='w-[40%] mx-auto'/>
-            <div className='mx-auto'>Year {year}</div>
-         </div></CardContent>
+                <CardContent className="text-lg font-semibold">
+                  <div className="flex flex-col">
+                    <img src={folderLogo1} className="w-[40%] mx-auto" />
+                    <div className="mx-auto">Year {year}</div>
+                  </div>
+                </CardContent>
               </Card>
-        
-             
             ))}
           </div>
         )}
@@ -126,14 +130,11 @@ const handleDownload = async (url, filename = 'document') => {
                 }}
                 className="cursor-pointer w-[60%] h-[80px] flex items-center justify-center hover:shadow-md"
               >
-            
                 <CardContent className="text-md font-medium">
-                 
-         <div className='flex flex-col'>
-           
-            <img src={folderLogo1} className='w-[40%] mx-auto'/>
-            <div className='mx-auto'>{month}</div>
-         </div>
+                  <div className="flex flex-col">
+                    <img src={folderLogo1} className="w-[40%] mx-auto" />
+                    <div className="mx-auto">{month}</div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -151,9 +152,9 @@ const handleDownload = async (url, filename = 'document') => {
                   data[selectedYear][selectedMonth].purchaseOrders.map((doc, i) => (
                     <div
                       key={i}
-                      className="flex flex-col items-center bg-gray-100 p-4 rounded-lg shadow-sm h-[160px] w-full max-w-[140px] mx-auto"
+                      className="flex flex-col items-center bg-muted p-4 rounded-lg shadow-sm h-[160px] w-full max-w-[140px] mx-auto"
                     >
-                      <div className="w-16 h-16 flex items-center justify-center bg-white border rounded">
+                      <div className="w-16 h-16 flex items-center justify-center bg-card border rounded">
                         {doc.fileUrl?.endsWith('.pdf') ? (
                           <img src={PdfLogo} alt="PDF" className="w-6 h-6" />
                         ) : (
@@ -168,12 +169,11 @@ const handleDownload = async (url, filename = 'document') => {
                         >
                           Download
                         </button>
-
                       )}
                     </div>
                   ))
                 ) : (
-                  <div className="text-gray-400 col-span-full">No POs available</div>
+                  <div className="text-muted-foreground col-span-full">No POs available</div>
                 )}
               </div>
             </div>
@@ -186,9 +186,9 @@ const handleDownload = async (url, filename = 'document') => {
                   data[selectedYear][selectedMonth].invoices.map((doc, i) => (
                     <div
                       key={i}
-                      className="flex flex-col items-center bg-gray-100 p-4 rounded-lg shadow-sm h-[160px] w-full max-w-[140px] mx-auto"
+                      className="flex flex-col items-center bg-muted p-4 rounded-lg shadow-sm h-[160px] w-full max-w-[140px] mx-auto"
                     >
-                      <div className="w-16 h-16 flex items-center justify-center bg-white border rounded">
+                      <div className="w-16 h-16 flex items-center justify-center bg-card border rounded">
                         {doc.fileUrl?.endsWith('.pdf') ? (
                           <img src={PdfLogo} alt="PDF" className="w-6 h-6" />
                         ) : (
@@ -198,16 +198,16 @@ const handleDownload = async (url, filename = 'document') => {
                       <div className="mt-2 text-xs text-center line-clamp-2">{doc.documentName || 'Invoice'}</div>
                       {doc.fileUrl && (
                         <button
-                            onClick={() => handleDownload(doc.fileUrl, doc.documentName || 'invoice')}
-                            className="mt-1 text-xs text-blue-600 hover:underline"
-                          >
-                            Download
-                          </button>
+                          onClick={() => handleDownload(doc.fileUrl, doc.documentName || 'invoice')}
+                          className="mt-1 text-xs text-blue-600 hover:underline"
+                        >
+                          Download
+                        </button>
                       )}
                     </div>
                   ))
                 ) : (
-                  <div className="text-gray-400 col-span-full">No Invoices available</div>
+                  <div className="text-muted-foreground col-span-full">No Invoices available</div>
                 )}
               </div>
             </div>

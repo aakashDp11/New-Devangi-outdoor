@@ -11,37 +11,62 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Use theme variables */
+  background-color: var(--color-background);
+  color: var(--color-text);
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
+  background-color: var(--color-background);
+  color: var(--color-text);
 }
 
-/* Links */
 a {
   font-weight: 500;
+  color: var(--color-primary);
   text-decoration: inherit;
 }
 a:hover {
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
-/* Buttons (styled by DaisyUI, these are fallback styles) */
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
 button {
   border-radius: 8px;
+  border: 1px solid var(--color-border, transparent);
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
+  background-color: var(--color-primary);
+  color: #fff;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: all 0.25s;
 }
 button:hover {
   opacity: 0.9;
 }
 button:focus,
 button:focus-visible {
-  outline: 2px auto;
+  outline: 4px auto -webkit-focus-ring-color;
 }

@@ -2,7 +2,7 @@ import React from "react";
 
 export const Card = ({ children, className = "", ...props }) => (
   <div
-    className={`bg-white border border-gray-200 shadow-sm rounded-lg w-full flex flex-col ${className}`}
+    className={`bg-base-100 border border-base-300 shadow-sm rounded-lg w-full flex flex-col ${className}`}
     {...props}
   >
     {children}
@@ -17,14 +17,14 @@ export const CardContent = ({ children, className = "" }) => (
 
 export const Input = (props) => (
   <input
-    className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+    className="w-full px-3 py-2 text-xs border border-base-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-base-100 text-base-content"
     {...props}
   />
 );
 
 export const Select = ({ children, ...props }) => (
   <select
-    className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black bg-white"
+    className="w-full px-3 py-2 text-xs border border-base-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-base-100 text-base-content"
     {...props}
   >
     {children}
@@ -33,7 +33,7 @@ export const Select = ({ children, ...props }) => (
 
 export const Button = ({ children, className = "", ...props }) => (
   <button
-    className={`px-4 py-2 rounded-md bg-black text-white text-xs font-medium hover:bg-gray-800 transition disabled:bg-gray-400 disabled:cursor-not-allowed ${className}`}
+    className={`px-4 py-2 rounded-md bg-primary text-primary-content text-xs font-medium hover:bg-primary/80 transition disabled:bg-base-300 disabled:cursor-not-allowed ${className}`}
     {...props}
   >
     {children}
@@ -42,7 +42,7 @@ export const Button = ({ children, className = "", ...props }) => (
 
 export const ShimmerCard = ({ className = "" }) => (
   <div
-    className={`bg-gray-200 animate-pulse rounded-lg w-full h-[320px] ${className}`}
+    className={`bg-base-200 animate-pulse rounded-lg w-full h-[320px] ${className}`}
   />
 );
 
@@ -58,27 +58,27 @@ export const PaginationControls = ({
     <div
       className={`flex items-center justify-between mt-4 text-xs ${className}`}
     >
-      <span className="text-gray-600">
+      <span className="text-base-content opacity-70">
         Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
       </span>
       <div className="inline-flex items-center gap-x-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 bg-white text-black hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-8 h-8 flex items-center justify-center rounded-md border border-base-300 bg-base-100 text-base-content hover:bg-base-200 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Previous Page"
         >
           {"<"}
         </button>
 
-        <div className="w-8 h-8 flex items-center justify-center rounded-md font-medium bg-black text-white">
+        <div className="w-8 h-8 flex items-center justify-center rounded-md font-medium bg-primary text-primary-content">
           {currentPage}
         </div>
 
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 bg-white text-black hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-8 h-8 flex items-center justify-center rounded-md border border-base-300 bg-base-100 text-base-content hover:bg-base-200 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Next Page"
         >
           {">"}

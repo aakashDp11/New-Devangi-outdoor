@@ -34,15 +34,20 @@ export default function MainCard({
     <Card
       elevation={elevation || 0}
       sx={[
-        (theme) => ({
+        {
           position: 'relative',
           border: border ? '1px solid' : 'none',
           borderRadius: 1,
-          borderColor: 'grey.A800',
-          boxShadow: boxShadow && !border ? shadow || theme.customShadows.z1 : 'inherit',
+          borderColor: 'var(--color-border)',
+          backgroundColor: 'var(--color-surface)',
+          color: 'var(--color-text)',
+          boxShadow: boxShadow && !border ? shadow || '0 1px 3px var(--color-shadow)' : 'inherit',
+          transition: 'all 0.3s ease-in-out',
+
           ':hover': {
-            boxShadow: boxShadow ? shadow || theme.customShadows.z1 : 'inherit'
+            boxShadow: boxShadow ? shadow || '0 2px 6px var(--color-shadow)' : 'inherit'
           },
+
           ...(modal && {
             position: 'absolute',
             top: '50%',
@@ -50,9 +55,13 @@ export default function MainCard({
             transform: 'translate(-50%, -50%)',
             width: { xs: `calc(100% - 50px)`, sm: 'auto' },
             maxWidth: 768,
-            '& .MuiCardContent-root': { overflowY: 'auto', minHeight: 'auto', maxHeight: `calc(100vh - 200px)` }
+            '& .MuiCardContent-root': {
+              overflowY: 'auto',
+              minHeight: 'auto',
+              maxHeight: `calc(100vh - 200px)`
+            }
           })
-        }),
+        },
         sx
       ]}
       ref={ref}
@@ -60,11 +69,19 @@ export default function MainCard({
     >
       {/* card header and action */}
       {!darkTitle && title && (
-        <CardHeader sx={headerSX} slotProps={{ title: { variant: 'subtitle1' } }} title={title} action={secondary} subheader={subheader} />
+        <CardHeader
+          sx={headerSX}
+          slotProps={{ title: { variant: 'subtitle1' } }}
+          title={title}
+          action={secondary}
+          subheader={subheader}
+        />
       )}
 
       {/* content & header divider */}
-      {title && divider && <Divider />}
+      {title && divider && (
+        <Divider sx={{ borderColor: 'var(--color-border)' }} />
+      )}
 
       {/* card content */}
       {content && <CardContent sx={contentSX}>{children}</CardContent>}

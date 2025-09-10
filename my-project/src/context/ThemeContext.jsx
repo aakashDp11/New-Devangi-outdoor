@@ -1,76 +1,126 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { themes } from '../config/themes';
 
 const ThemeContext = createContext();
 
-// ✅ Must match tailwind.config.js daisyui.themes
-const themes = [
-  "light",
-  "dark",
-  "cupcake",
-  "bumblebee",
-  "emerald",
-  "corporate",
-  "synthwave",
-  "cyberpunk",
-  "valentine",
-  "halloween",
-  "garden",
-  "forest",
-  "aqua",
-  "lofi",
-  "pastel",
-  "fantasy",
-  "wireframe",
-  "black",
-  "luxury",
-  "dracula",
-  "cmyk",
-  "autumn",
-  "business",
-  "acid",
-  "lemonade",
-  "night",
-  "coffee",
-  "winter",
-];
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState("light");
+  // Load saved theme from localStorage or default to 'light'
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    const saved = localStorage.getItem('app-theme');
+    return saved && themes[saved] ? saved : 'light';
+  });
 
-  // Load theme from localStorage
+  // Load saved background settings
+  const [backgroundType, setBackgroundType] = useState(() => {
+    const saved = localStorage.getItem('app-background-type');
+    return saved || 'solid';
+  });
+
+  const [customBackground, setCustomBackground] = useState(() => {
+    const saved = localStorage.getItem('app-custom-background');
+    return saved || themes.light.background;
+  });
+
+  const theme = themes[currentTheme];
+
+  // Apply theme to CSS variables
   useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved && themes.includes(saved)) {
-      setTheme(saved);
-    }
-  }, []);
-
-  // Apply theme to <html> only and persist
-  useEffect(() => {
-    // ✅ Always set theme on <html>
-    document.documentElement.setAttribute("data-theme", theme);
-
-    // ❌ Ensure <body> never carries theme (prevents override)
-    if (document.body.hasAttribute("data-theme")) {
-      document.body.removeAttribute("data-theme");
-    }
-
-    // Save in localStorage
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const nextTheme = () => {
-    setTheme((prev) => {
-      const idx = themes.indexOf(prev);
-      return themes[(idx + 1) % themes.length];
+    const root = document.documentElement;
+    
+    // Set CSS custom properties for the current theme
+    Object.entries(theme).forEach(([key, value]) => {
+      if (key !== 'name' && key !== 'icon') {
+        root.style.setProperty(`--color-${key}`, value);
+      }
     });
+
+    // Apply background style to body
+    const backgroundStyle = getBackgroundStyle();
+    Object.entries(backgroundStyle).forEach(([property, value]) => {
+      document.body.style[property] = value;
+    });
+
+    // Save to localStorage
+    localStorage.setItem('app-theme', currentTheme);
+  }, [currentTheme, backgroundType, customBackground]);
+
+  const applyTheme = (themeName) => {
+    if (themes[themeName]) {
+      setCurrentTheme(themeName);
+    }
+  };
+
+  const applyBackground = (bgType, bgColor = null) => {
+    setBackgroundType(bgType);
+    if (bgColor) {
+      setCustomBackground(bgColor);
+    }
+    localStorage.setItem('app-background-type', bgType);
+    if (bgColor) {
+      localStorage.setItem('app-custom-background', bgColor);
+    }
+  };
+
+  const getBackgroundStyle = () => {
+    const base = theme.background;
+    
+    switch (backgroundType) {
+      case 'solid':
+        return { 
+          backgroundColor: customBackground || base,
+          backgroundImage: 'none'
+        };
+      case 'gradient':
+        return {
+          background: `linear-gradient(135deg, ${theme.primary}20, ${theme.secondary}20, ${base})`,
+          backgroundAttachment: 'fixed'
+        };
+      case 'pattern':
+        return {
+          backgroundColor: base,
+          backgroundImage: `radial-gradient(circle at 1px 1px, ${theme.border}40 1px, transparent 0)`,
+          backgroundSize: '20px 20px'
+        };
+      case 'mesh':
+        return {
+          background: `conic-gradient(from 0deg at 50% 50%, ${theme.primary}15, ${theme.secondary}15, ${theme.accent}15, ${theme.primary}15)`,
+          backgroundAttachment: 'fixed'
+        };
+      default:
+        return { backgroundColor: base };
+    }
+  };
+
+  const backgroundOptions = {
+    solid: 'Solid Color',
+    gradient: 'Gradient',
+    pattern: 'Subtle Pattern',
+    mesh: 'Mesh Gradient'
+  };
+
+  const value = {
+    currentTheme,
+    theme,
+    themes,
+    backgroundType,
+    customBackground,
+    applyTheme,
+    applyBackground,
+    getBackgroundStyle,
+    backgroundOptions
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, nextTheme, themes }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
 };
-
-export const useTheme = () => useContext(ThemeContext);

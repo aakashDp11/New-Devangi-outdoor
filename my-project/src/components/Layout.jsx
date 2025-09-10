@@ -9,7 +9,13 @@ const Layout = ({ children }) => {
   const handleToggle = () => setIsCollapsed(prev => !prev);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div
+      className="flex min-h-screen transition-colors duration-300"
+      style={{
+        backgroundColor: 'var(--color-background)',
+        color: 'var(--color-text)',
+      }}
+    >
       <Navbar />
 
       {/* Main Content Area */}
@@ -20,13 +26,25 @@ const Layout = ({ children }) => {
           ml-0
           ${isCollapsed ? 'md:ml-24' : 'md:ml-64'}
         `}
+        style={{
+          backgroundColor: 'var(--color-background)',
+          color: 'var(--color-text)',
+        }}
       >
         {/* Mobile Header with Hamburger Menu */}
-        <div className="md:hidden flex items-center mb-4 p-2 bg-white rounded-lg shadow">
+        <div
+          className="md:hidden flex items-center mb-4 p-2 rounded-lg shadow transition-colors duration-300"
+          style={{
+            backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
           <button
             onClick={handleToggle}
-            className="p-2 rounded-md text-gray-700"
+            className="p-2 rounded-md"
             aria-label="Open sidebar"
+            style={{ color: 'var(--color-text)' }}
           >
             <FaBars size={20} />
           </button>

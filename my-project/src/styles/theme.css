@@ -1,0 +1,198 @@
+/* Theme CSS Variables */
+:root {
+  /* Default light theme colors */
+  --color-primary: #3b82f6;
+  --color-secondary: #6366f1;
+  --color-background: #ffffff;
+  --color-surface: #f8fafc;
+  --color-text: #1f2937;
+  --color-textSecondary: #6b7280;
+  --color-border: #e5e7eb;
+  --color-accent: #10b981;
+}
+
+/* Theme-aware CSS classes */
+.theme-bg {
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+.theme-surface {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.theme-primary {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.theme-secondary {
+  background-color: var(--color-secondary);
+  color: white;
+}
+
+.theme-text {
+  color: var(--color-text);
+}
+
+.theme-text-secondary {
+  color: var(--color-textSecondary);
+}
+
+.theme-border {
+  border-color: var(--color-border);
+}
+
+.theme-accent {
+  background-color: var(--color-accent);
+  color: white;
+}
+
+/* Common component styles */
+.themed-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.themed-button-primary {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.themed-button-primary:hover {
+  opacity: 0.8;
+}
+
+.themed-button-secondary {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.themed-button-secondary:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.themed-input {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+.themed-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary)25;
+}
+
+.themed-modal {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Navbar theming */
+.themed-navbar {
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+/* Sidebar theming */
+.themed-sidebar {
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+/* Transitions */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Dark mode improvements */
+@media (prefers-color-scheme: dark) {
+  /* This will be overridden by the theme system, but provides a fallback */
+  :root {
+    --color-primary: #60a5fa;
+    --color-secondary: #a78bfa;
+    --color-background: #111827;
+    --color-surface: #1f2937;
+    --color-text: #f9fafb;
+    --color-textSecondary: #d1d5db;
+    --color-border: #374151;
+    --color-accent: #34d399;
+  }
+}
+
+/* Scrollbar theming */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-textSecondary);
+}
+
+/* Selection colors */
+::selection {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+::-moz-selection {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* Focus outline using theme colors */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Utility classes for quick theming */
+.bg-theme-primary { background-color: var(--color-primary); }
+.bg-theme-secondary { background-color: var(--color-secondary); }
+.bg-theme-background { background-color: var(--color-background); }
+.bg-theme-surface { background-color: var(--color-surface); }
+.bg-theme-accent { background-color: var(--color-accent); }
+
+.text-theme-primary { color: var(--color-primary); }
+.text-theme-secondary { color: var(--color-secondary); }
+.text-theme-text { color: var(--color-text); }
+.text-theme-text-secondary { color: var(--color-textSecondary); }
+.text-theme-accent { color: var(--color-accent); }
+
+.border-theme-primary { border-color: var(--color-primary); }
+.border-theme-border { border-color: var(--color-border); }
+.border-theme-accent { border-color: var(--color-accent); }
