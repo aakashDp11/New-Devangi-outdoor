@@ -76,7 +76,7 @@ export default function Navbar() {
       {/* Overlay for mobile when sidebar is open */}
       {!isCollapsed && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          className="fixed inset-0 bg-neutral bg-opacity-50 z-20 md:hidden"
           onClick={handleToggle}
         />
       )}
@@ -147,7 +147,7 @@ export default function Navbar() {
                   {/* Badge for notifications */}
                   {item.badge > 0 && location.pathname !== "/notifications" && (
                     <span
-                      className={`absolute text-white text-[10px] font-bold bg-red-500 rounded-full flex items-center justify-center
+                      className={`absolute text-neutral-content text-[10px] font-bold bg-error rounded-full flex items-center justify-center
                         ${
                           isCollapsed
                             ? "top-0.5 right-1.5 min-w-[1rem] h-4 px-1"
@@ -222,7 +222,7 @@ export default function Navbar() {
       {/* Hamburger Toggle for Mobile */}
       <button
         onClick={handleToggle}
-        className="md:hidden fixed top-4 left-4 z-40 bg-neutral text-neutral-content border border-base-300 p-2 rounded shadow-lg"
+        className="btn btn-square btn-neutral md:hidden fixed top-4 left-4 z-40"
       >
         ☰
       </button>

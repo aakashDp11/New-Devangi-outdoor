@@ -45,9 +45,17 @@ export const ThemeProvider = ({ children }) => {
     }
   }, []);
 
-  // Apply theme to <html> and persist
+  // Apply theme to <html> only and persist
   useEffect(() => {
+    // ✅ Always set theme on <html>
     document.documentElement.setAttribute("data-theme", theme);
+
+    // ❌ Ensure <body> never carries theme (prevents override)
+    if (document.body.hasAttribute("data-theme")) {
+      document.body.removeAttribute("data-theme");
+    }
+
+    // Save in localStorage
     localStorage.setItem("theme", theme);
   }, [theme]);
 
