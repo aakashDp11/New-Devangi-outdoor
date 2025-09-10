@@ -760,37 +760,174 @@ router.put('/campaign/:campaignId/digital-status/:spaceId/:unitId', async (req, 
 
 
 
+
+
+
+
+// router.put('/campaign/:id/update-costs', async (req, res) => {
+//   try {
+//     const { inventoryCosts } = req.body;
+
+//     // 1. Update campaign inventoryCosts
+//     const campaign = await Campaign.findById(req.params.id);
+//     if (!campaign) {
+//       return res.status(404).json({ error: 'Campaign not found' });
+//     }
+
+//     // Update the inventoryCosts in the campaign
+//     for (const cost of inventoryCosts) {
+//       // Check if the cost belongs to an existing space and update accordingly
+//       const campaignInventoryMapping = await CampaignInventoryMapping.findOneAndUpdate(
+//         { campaignId: campaign._id, spaceId: cost.spaceId },
+//         {
+//           $set: {
+//             displayCost: cost.displayCost,
+//             buyingPrice: cost.buyingPrice,
+//             sellingPrice: cost.sellingPrice,
+//             printingCostPerSquareFeet: cost.printingcostpersquareFeet,
+//             mountingCostPerSquareFeet: cost.mountingcostpersquareFeet,
+//             area: cost.area
+//           }
+//         },
+//         { new: true }
+//       );
+//       if (!campaignInventoryMapping) {
+//         // If the mapping doesn't exist, you might want to create it or handle the error accordingly.
+//         console.log(`No inventory mapping found for space ${cost.spaceId} in campaign ${campaign._id}`);
+//       }
+//     }
+
+//     // 2. Calculate totalAmount from inventoryCosts
+//     let totalAmount = 0;
+//     let totalPrintingAmount = 0;
+//     let totalMountingAmount = 0;
+//     let totalDisplayAmount = 0;
+
+//     for (const cost of inventoryCosts) {
+//       const display = cost.displayCost || 0;
+//       const printing = cost.printingcostpersquareFeet > 0
+//         ? (cost.printingcostpersquareFeet * cost.area)
+//         : 0;
+//       const mounting = cost.mountingcostpersquareFeet > 0
+//         ? (cost.mountingcostpersquareFeet * cost.area)
+//         : 0;
+
+//       // Add each amount to the respective totals
+//       totalDisplayAmount += display;
+//       totalPrintingAmount += printing;
+//       totalMountingAmount += mounting;
+
+//       // Base amount (without GST)
+//       const base = display + printing + mounting;
+//       // Add GST (if applicable)
+//       const withGST = base * 1.18; // Assuming GST is 18%
+//       totalAmount += withGST;
+//     }
+
+//     // 3. Update payment.totalAmount in the related pipeline
+//     const pipeline = await Pipeline.findOneAndUpdate(
+//       { campaign: req.params.id },
+//       {
+//         'payment.totalAmount': Math.round(totalAmount), // round the total amount
+//         'payment.printingAmount': Math.round(totalPrintingAmount), // total printing amount
+//         'payment.mountingAmount': Math.round(totalMountingAmount), // total mounting amount
+//         'payment.displayAmount': Math.round(totalDisplayAmount), // total display amount
+//         'payment.gstValue': Math.round(totalAmount - (totalAmount / 1.18)), // GST calculation
+//         'payment.finalAmountWithGST': Math.round(totalAmount), // final amount with GST
+//       },
+//       { new: true }
+//     );
+
+//     if (!pipeline) {
+//       return res.status(404).json({ error: 'Pipeline not found' });
+//     }
+
+//     res.json({ campaign, pipeline });
+//   } catch (err) {
+//     console.error('Update failed:', err);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
 router.put('/campaign/:id/update-costs', async (req, res) => {
   try {
     const { inventoryCosts } = req.body;
 
-    // Update campaign inventoryCosts
-    const campaign = await Campaign.findByIdAndUpdate(
-      req.params.id,
-      { inventoryCosts },
-      { new: true }
-    );
-
-
-    let totalAmount = 0;
-
-    for (const cost of inventoryCosts) {
-      const display = cost.displayCost || 0;
-      const printing = (cost.printingcostpersquareFeet || 0) * (cost.area || 0);
-      const mounting = (cost.mountingcostpersquareFeet || 0) * (cost.area || 0);
-      const base = display + printing + mounting;
-      // const withGST = base * 1.18;
-      totalAmount += base;
+    // 1. Update campaign inventoryCosts
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
     }
 
-    // Update payment.totalAmount in related pipeline
-    await Pipeline.findOneAndUpdate(
+    // Variables to store the total costs
+    let totalAmount = 0;
+    let totalPrintingAmount = 0;
+    let totalMountingAmount = 0;
+    let totalDisplayAmount = 0;
+
+    // Loop through the inventoryCosts to update individual space costs
+    for (const cost of inventoryCosts) {
+      // Update the inventory costs in the CampaignInventoryMapping
+      const campaignInventoryMapping = await CampaignInventoryMapping.findOneAndUpdate(
+        { campaignId: campaign._id, spaceId: cost.spaceId },
+        {
+          $set: {
+            displayCost: cost.displayCost,
+            buyingPrice: cost.buyingPrice,
+            sellingPrice: cost.sellingPrice,
+            printingCostPerSquareFeet: cost.printingcostpersquareFeet,
+            mountingCostPerSquareFeet: cost.mountingcostpersquareFeet,
+            area: cost.area
+          }
+        },
+        { new: true }
+      );
+
+      if (!campaignInventoryMapping) {
+        // If the mapping doesn't exist, log or handle accordingly
+        console.log(`No inventory mapping found for space ${cost.spaceId} in campaign ${campaign._id}`);
+      }
+
+      // 2. Calculate costs for this individual space
+      const display = cost.displayCost || 0;
+      const printing = cost.printingcostpersquareFeet > 0
+        ? (cost.printingcostpersquareFeet * cost.area)
+        : 0;
+      const mounting = cost.mountingcostpersquareFeet > 0
+        ? (cost.mountingcostpersquareFeet * cost.area)
+        : 0;
+
+      // Add this space's costs to the total accumulators
+      totalDisplayAmount += display;
+      totalPrintingAmount += printing;
+      totalMountingAmount += mounting;
+
+      // Base amount (without GST)
+      const base = display + printing + mounting;
+      // Add GST (if applicable)
+      const withGST = base * 1.18; // Assuming GST is 18%
+      totalAmount += withGST;
+    }
+
+    // 3. After all spaces have been updated, update the payment.totalAmount in the related pipeline
+    const pipeline = await Pipeline.findOneAndUpdate(
       { campaign: req.params.id },
-      { 'payment.totalAmount': Math.round(totalAmount) }, // round if needed
+      {
+        'payment.totalAmount': Math.round(totalAmount), // round the total amount
+        'payment.printingAmount': Math.round(totalPrintingAmount), // total printing amount
+        'payment.mountingAmount': Math.round(totalMountingAmount), // total mounting amount
+        'payment.displayAmount': Math.round(totalDisplayAmount), // total display amount
+        'payment.gstValue': Math.round(totalAmount - (totalAmount / 1.18)), // GST calculation
+        'payment.finalAmountWithGST': Math.round(totalAmount), // final amount with GST
+      },
       { new: true }
     );
 
-    res.json({ campaign });
+    if (!pipeline) {
+      return res.status(404).json({ error: 'Pipeline not found' });
+    }
+
+    res.json({ campaign, pipeline });
   } catch (err) {
     console.error('Update failed:', err);
     res.status(500).json({ error: err.message });

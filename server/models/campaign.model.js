@@ -61,7 +61,7 @@ const campaignSchema = new Schema({
   description: { type: String },
   industry: { type: String, default: 'Other' },
   isFOC: { type: Boolean, default: false },
-
+  tags:{String},
   artwork: {
     confirmed: { type: Boolean, default: false }, // Is artwork available
     documentUrl: { type: String },

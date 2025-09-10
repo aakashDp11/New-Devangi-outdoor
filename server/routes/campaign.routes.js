@@ -22,14 +22,7 @@ router.get('/', async (req, res) => {
   try {
     const campaigns = await Campaign.find({})
       .select('campaignName startDate endDate pipeline spaces')
-    //   .populate({
-    //     path: 'pipeline',
-    //     select: 'bookingStatus artwork po invoice'
-    //   })
-    //   .populate({
-    //     path: 'spaces.id',
-    //     select: 'spaceName spaceType price printingStatus mountingStatus'
-    //   });
+
 
     res.status(200).json({ campaigns });
     
@@ -39,24 +32,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-/**
- * @route   GET /api/campaigns/by-space/:spaceId
- * @desc    Get all campaigns that include a specific space ID
- * @access  Public
- */
-// router.get('/by-space/:spaceId', async (req, res) => {
-//   try {
-//     const { spaceId } = req.params;
 
-//     const campaigns = await Campaign.find({ 'spaces.id': spaceId })
-//       .select('campaignName startDate endDate');
-
-//     res.status(200).json(campaigns);
-//   } catch (err) {
-//     console.error('Error fetching campaigns by space:', err);
-//     res.status(500).json({ message: 'Server error, could not fetch campaigns by space.' });
-//   }
-// });
 router.get('/by-space/:spaceId', async (req, res) => {
     try {
       const { spaceId } = req.params;
@@ -92,6 +68,35 @@ router.get('/by-space/:spaceId', async (req, res) => {
     } catch (err) {
       console.error('Error fetching campaigns by space:', err);
       res.status(500).json({ message: 'Server error, could not fetch campaigns by space.' });
+    }
+  });
+
+  router.put('/:id/add-tag', async (req, res) => {
+    const { tag } = req.body;
+    try {
+      const campaign = await Campaign.findById(req.params.id);
+      if (!campaign) return res.status(404).json({ message: 'Not found' });
+  
+      campaign.tags =  campaign.tags ? `${campaign.tags}, ${tag}` : tag;
+      await  campaign.save();
+      res.status(200).json(campaign);
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+  
+  router.put('/:id/remove-tag', async (req, res) => {
+    const { tag } = req.body;
+    try {
+      const campaign = await Booking.findById(req.params.id);
+      if (!campaign) return res.status(404).json({ message: 'Not found' });
+  
+      const tagList = (campaign.tags || '').split(',').map(t => t.trim()).filter(t => t && t !== tag);
+      campaign.tags = tagList.join(', ');
+      await campaign.save();
+      res.status(200).json(campaign);
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
     }
   });
 router.post('/check-availability', authenticate, async (req, res) => {

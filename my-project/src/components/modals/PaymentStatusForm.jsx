@@ -27,7 +27,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/campaign/${campaignId}`);
         const data = existingData || res.data?.payment || {};
-
+console.log("Payment data is ",data);
         if (Array.isArray(data.payments)) {
           const enriched = data.payments.map(p => ({
             amount: p.amount || '',
@@ -41,9 +41,9 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
         }
 
         const campaignCosts = res.data?.campaign?.inventoryCosts || [];
-        let totalDisplay = 0;
-        let totalPrinting = 0;
-        let totalMounting = 0;
+        let totalDisplay =  data.displayAmount;
+        let totalPrinting = data.printingAmount;
+        let totalMounting = data.mountingAmount;
 
         for (const cost of campaignCosts) {
           const area = cost.area || 0;

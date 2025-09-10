@@ -20,11 +20,7 @@ const bookingSchema = new Schema({
   bookingSource: { type: String },
   agencyName: { type: String },
   reminderTimeline: { type: Number },
-  isFOCBooking: { type: Boolean, default: false },  // Remove this, as migrated to Campaign
-  industry: {
-    type: String,
-    default: 'Other',
-  },
+  tags:{String},
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
