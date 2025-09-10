@@ -78,7 +78,7 @@ const DigitalUnitSchema = new Schema({
   isLive: { type: Boolean, default: false },
   goLiveDate: { type: String, default: '' }, // keep as 'YYYY-MM-DD' string
   note: { type: String },
-
+  tags:{String},
   completedAt: { type: Date },     // when 'confirmed' flips true
   liveCompletedAt: { type: Date }  // when 'isLive' flips true
 }, { _id: false, timestamps: true });

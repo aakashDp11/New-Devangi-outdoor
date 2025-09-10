@@ -2026,7 +2026,34 @@ async function hasUnitConflicts({ session, spaceId, unitIds, startDate, endDate,
 //   const free = all.filter(u => !booked.has(u));
 //   return free.length >= need ? free.slice(0, need) : null;
 // }
+router.put('/:id/add-tag', async (req, res) => {
+  const { tag } = req.body;
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: 'Not found' });
 
+    booking.tags = booking.tags ? `${booking.tags}, ${tag}` : tag;
+    await booking.save();
+    res.status(200).json(booking);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.put('/:id/remove-tag', async (req, res) => {
+  const { tag } = req.body;
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: 'Not found' });
+
+    const tagList = (booking.tags || '').split(',').map(t => t.trim()).filter(t => t && t !== tag);
+    booking.tags = tagList.join(', ');
+    await booking.save();
+    res.status(200).json(booking);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 router.post('/:bookingId/campaigns', async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();

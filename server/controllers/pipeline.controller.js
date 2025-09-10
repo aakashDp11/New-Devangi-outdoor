@@ -5,79 +5,7 @@ import mongoose from 'mongoose';
 import { uploadToS3 } from '../utils/s3uploader.js';
 import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
 const { Types } = mongoose;
-// export const getPipelineByCampaignId = async (req, res) => {
-//   const { campaignId } = req.params;
-//   try {
-//     const pipeline = await Pipeline.findOne({ campaign: campaignId })
-//       .populate('spaces')
-//       .populate({
-//         path: 'campaign',
-//         select: 'inventoryCosts isFOC',
-//       });
-//     if (!pipeline) {
-//       return res.status(404).json({ error: 'Pipeline not found' });
-//     }
-//     res.json(pipeline);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
-//   }
-// };
 
-// export const getPipelineByCampaignId = async (req, res) => {
-//   const { campaignId } = req.params;
-//   try {
-//     // 1) Load pipeline and campaign header
-//     const pipeline = await Pipeline.findOne({ campaign: campaignId })
-//       .populate({
-//         path: 'campaign',
-//         select: 'campaignName isFOC startDate endDate', // no inventoryCosts anymore
-//       })
-//       .lean();
-
-//     if (!pipeline) {
-//       return res.status(404).json({ error: 'Pipeline not found' });
-//     }
-
-//     // 2) Load mappings for this campaign and join to Space
-//     const mappings = await CampaignInventoryMapping.find({ campaignId })
-//       .populate({
-//         path: 'spaceId',
-//         select: 'spaceName city state spaceType unit availability width height',
-//       })
-//       .lean();
-
-//     // 3) Shape response: attach mappings as pipeline.inventory (or whatever your UI expects)
-//     const inventory = mappings.map(m => ({
-//       mappingId: m._id,
-//       space: m.spaceId,                // populated Space doc (limited fields)
-//       unitIds: m.unitIds,              // which units are booked
-//       startDate: m.startDate,
-//       endDate: m.endDate,
-//       displayCost: m.displayCost,
-//       buyingPrice: m.buyingPrice,
-//       sellingPrice: m.sellingPrice,
-//       invoiceNo: m.invoiceNo,
-//       printingCostPerSquareFeet: m.printingCostPerSquareFeet,
-//       mountingCostPerSquareFeet: m.mountingCostPerSquareFeet,
-//       area: m.area,
-//       printingConfirmedAt: m.printingConfirmedAt,
-//       mountingConfirmedAt: m.mountingConfirmedAt,
-//       digitalStatus: m.digitalStatus,  // per-unit status (if you added it)
-//       createdAt: m.createdAt,
-//       updatedAt: m.updatedAt,
-//     }));
-
-//     // Optional: keep legacy shape for backward compatibility
-//     // e.g., pipeline.spaces = inventory.map(i => i.space);
-
-//     return res.json({
-//       ...pipeline,
-//       inventory, // new normalized list
-//     });
-//   } catch (error) {
-//     return res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
-//   }
-// };
 
 
 export const getPipelineByCampaignId = async (req, res) => {
