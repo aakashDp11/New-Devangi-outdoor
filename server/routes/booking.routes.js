@@ -1152,33 +1152,89 @@ export const deleteBooking = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Failed to delete booking' });
   }
 };
+// export const getBookingById = async (req, res) => {
+//   const { id: bookingId } = req.params;
+
+//   try {
+//     // Step 1: Fetch the booking by ID, populate the 'user' field
+//     const booking = await Booking.findById(bookingId).populate('user');
+
+//     if (!booking) {
+//       return res.status(404).json({ error: 'Booking not found' });
+//     }
+
+//     // Step 2: Fetch related BookingCampaigns for this booking
+//     const bookingCampaigns = await BookingCampaign.find({ bookingId }).populate({
+//       path: 'campaignId',
+//       model: 'Campaign',
+//       select: '_id campaignName startDate endDate industry isFOC',  // Populate Campaign details
+//     })
+//     .populate({
+//       path: 'pipeline',
+//       model: 'Pipeline',
+//       select: 'payment bookingStatus artwork po invoice',  // Populate Pipeline details
+//       strictPopulate: false,  // Allow populating even if not strictly defined in schema
+//     });
+//     console.log('Booking Campaigns:', bookingCampaigns);
+
+//     // Step 3: Prepare the response data exactly as the previous structure
+//     const result = {
+//       _id:bookingId,
+//       companyName: booking.companyName,
+//       clientName: booking.clientName,
+//       clientEmail: booking.clientEmail,
+//       clientContactNumber: booking.clientContactNumber,
+//       clientPanNumber: booking.clientPanNumber,
+//       brandDisplayName: booking.brandDisplayName,
+//       clientGstNumber: booking.clientGstNumber,
+//       bookingSource: booking.bookingSource,
+//       bookingMode: booking.bookingMode,
+//       clientType: booking.clientType,
+//       createdAt: booking.createdAt,
+//       campaigns: bookingCampaigns.map(bc => ({
+//         _id: bc.campaignId._id,
+//         campaignName: bc.campaignId.campaignName,
+//         startDate: bc.campaignId.startDate,
+//         endDate: bc.campaignId.endDate,
+//         industry: bc.campaignId.industry,
+//         isFOC: bc.campaignId.isFOC,
+//         // pipeline: bc.pipeline,  // Include the entire pipeline for each campaign
+//       }))
+//     };
+
+//     return res.status(200).json(result);
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
+//   }
+// };
+
 export const getBookingById = async (req, res) => {
   const { id: bookingId } = req.params;
 
   try {
-    // Step 1: Fetch the booking by ID, populate the 'user' field
+    // Step 1: Fetch the booking by ID and populate 'user' field
     const booking = await Booking.findById(bookingId).populate('user');
-
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
     // Step 2: Fetch related BookingCampaigns for this booking
-    const bookingCampaigns = await BookingCampaign.find({ bookingId }).populate({
-      path: 'campaignId',
-      model: 'Campaign',
-      select: '_id campaignName startDate endDate industry isFOC',  // Populate Campaign details
-    })
-    // .populate({
-    //   path: 'pipeline',
-    //   model: 'Pipeline',
-    //   select: 'payment bookingStatus artwork po invoice',  // Populate Pipeline details
-    //   strictPopulate: false,  // Allow populating even if not strictly defined in schema
-    // });
+    const bookingCampaigns = await BookingCampaign.find({ bookingId })
+      .populate({
+        path: 'campaignId', // Populate Campaign details
+        model: 'Campaign',
+        select: '_id campaignName startDate endDate industry isFOC',
+        populate: {
+          path: 'pipeline',  // Populate the pipeline from the Campaign
+          model: 'Pipeline',
+          select: 'payment ',  // Select relevant fields from Pipeline
+        }
+      });
 
-    // Step 3: Prepare the response data exactly as the previous structure
+    // Step 3: Prepare the response data in the desired structure
     const result = {
-      _id:bookingId,
+      _id: bookingId,
       companyName: booking.companyName,
       clientName: booking.clientName,
       clientEmail: booking.clientEmail,
@@ -1197,7 +1253,13 @@ export const getBookingById = async (req, res) => {
         endDate: bc.campaignId.endDate,
         industry: bc.campaignId.industry,
         isFOC: bc.campaignId.isFOC,
-        // pipeline: bc.pipeline,  // Include the entire pipeline for each campaign
+        pipeline: bc.campaignId.pipeline ? {
+          payment: bc.campaignId.pipeline.payment,
+          // bookingStatus: bc.campaignId.pipeline.bookingStatus,
+          // artwork: bc.campaignId.pipeline.artwork,
+          // po: bc.campaignId.pipeline.po,
+          // invoice: bc.campaignId.pipeline.invoice
+        } : null,
       }))
     };
 
@@ -1207,7 +1269,6 @@ export const getBookingById = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
   }
 };
-
 export const getAllBookings1 = async (req, res) => {
   try {
     const page  = parseInt(req.query.page)  || 1;
