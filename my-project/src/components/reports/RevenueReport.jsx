@@ -5,43 +5,95 @@ import dayjs from "dayjs";
 import { LineChart, BarChart, PieChart } from "@mui/x-charts";
 import { CircularProgress } from "@mui/material";
 
-// --- UI HELPER COMPONENTS (Unchanged) ---
-const Input = ({ ...props }) => (
-  <input
-    className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-    {...props}
-  />
+// --- ENHANCED UI HELPER COMPONENTS WITH ANIMATIONS ---
+const Input = ({ error, ...props }) => (
+  <div className="relative">
+    <input
+      className={`w-full px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 transition-all duration-300 transform hover:scale-[1.02] ${
+        error 
+          ? 'border-red-300 focus:ring-red-500 bg-red-50' 
+          : 'border-gray-300 focus:ring-blue-500 hover:border-blue-400'
+      }`}
+      {...props}
+    />
+    {error && (
+      <div className="absolute -bottom-5 left-0 text-xs text-red-500 animate-fade-in">
+        {error}
+      </div>
+    )}
+  </div>
 );
-const Button = ({ children, ...props }) => (
-  <button
-    className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-    {...props}
-  >
-    {children}
-  </button>
-);
-const Card = ({ children, className }) => (
-  <div className={`bg-white shadow-md rounded-lg overflow-hidden ${className}`}>
+
+const Button = ({ children, loading = false, disabled = false, variant = "primary", ...props }) => {
+  const baseClasses = "px-4 py-2 text-xs font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed";
+  
+  const variants = {
+    primary: "text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-lg hover:shadow-xl",
+    secondary: "text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-gray-500 shadow-md hover:shadow-lg",
+    danger: "text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 shadow-lg hover:shadow-xl"
+  };
+
+  return (
+    <button
+      className={`${baseClasses} ${variants[variant]}`}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading ? (
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+          <span>Loading...</span>
+        </div>
+      ) : (
+        children
+      )}
+    </button>
+  );
+};
+
+const Card = ({ children, className, animate = true }) => (
+  <div className={`bg-white shadow-md rounded-lg overflow-hidden transition-all duration-500 ${
+    animate ? 'hover:shadow-xl transform hover:-translate-y-1' : ''
+  } ${className}`}>
     {children}
   </div>
 );
-const CardContent = ({ children }) => <div className="p-6">{children}</div>;
+
+const CardContent = ({ children }) => (
+  <div className="p-6 animate-fade-in">{children}</div>
+);
+
 const ShimmerCard = () => (
   <div className="h-80 bg-gray-200 rounded-lg animate-pulse">
     <div className="p-6 h-full flex items-center justify-center text-gray-400">
-      Loading Chart...
+      <div className="flex flex-col items-center gap-2">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span className="animate-bounce">Loading Chart...</span>
+      </div>
     </div>
   </div>
 );
 
-const Select = ({ children, ...props }) => (
-  <select
-    className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-    {...props}
-  >
-    {children}
-  </select>
+const Select = ({ error, ...props }) => (
+  <div className="relative">
+    <select
+      className={`w-full px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 transition-all duration-300 transform hover:scale-[1.02] ${
+        error 
+          ? 'border-red-300 focus:ring-red-500 bg-red-50' 
+          : 'border-gray-300 focus:ring-blue-500 hover:border-blue-400'
+      }`}
+      {...props}
+    >
+      {props.children}
+    </select>
+    {error && (
+      <div className="absolute -bottom-5 left-0 text-xs text-red-500 animate-fade-in">
+        {error}
+      </div>
+    )}
+  </div>
 );
+
 const SortableHeader = ({ title, sortKey, sortConfig, onSort, disabled = false }) => {
   const isSorting = sortConfig.key === sortKey;
   const direction = isSorting ? sortConfig.direction : null;
@@ -56,11 +108,17 @@ const SortableHeader = ({ title, sortKey, sortConfig, onSort, disabled = false }
     <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
       <div
         onClick={handleSort}
-        className={`flex items-center gap-1.5 ${disabled ? 'cursor-default' : 'cursor-pointer select-none'}`}
+        className={`flex items-center gap-1.5 transition-all duration-200 ${
+          disabled 
+            ? 'cursor-default' 
+            : 'cursor-pointer select-none hover:text-blue-600 transform hover:scale-105'
+        }`}
       >
         {title}
         {!disabled && (
-          <span className="text-gray-400">
+          <span className={`text-gray-400 transition-all duration-200 ${
+            isSorting ? 'text-blue-600 transform scale-125' : ''
+          }`}>
             {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '⇅'}
           </span>
         )}
@@ -71,41 +129,107 @@ const SortableHeader = ({ title, sortKey, sortConfig, onSort, disabled = false }
 
 const EnhancedPaginationControls = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
     const [pageInput, setPageInput] = useState(currentPage.toString());
+    const [inputError, setInputError] = useState("");
 
     useEffect(() => {
         setPageInput(currentPage.toString());
+        setInputError("");
     }, [currentPage]);
+
+    const validatePageInput = (value) => {
+        const pageNum = parseInt(value, 10);
+        if (!value.trim()) {
+            return "Page number required";
+        }
+        if (isNaN(pageNum)) {
+            return "Must be a number";
+        }
+        if (pageNum < 1) {
+            return "Must be at least 1";
+        }
+        if (pageNum > totalPages) {
+            return `Max page is ${totalPages}`;
+        }
+        return "";
+    };
+
+    const handlePageInputChange = (e) => {
+        const value = e.target.value;
+        setPageInput(value);
+        setInputError(validatePageInput(value));
+    };
 
     const handlePageSubmit = (e) => {
         e.preventDefault();
-        const pageNum = parseInt(pageInput, 10);
-        if (pageNum && pageNum > 0 && pageNum <= totalPages) {
-            onPageChange(pageNum);
+        const error = validatePageInput(pageInput);
+        if (!error) {
+            onPageChange(parseInt(pageInput, 10));
         } else {
-            setPageInput(currentPage.toString());
+            setInputError(error);
         }
     };
 
     if (totalCount === 0) return null;
 
     return (
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-xs gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-xs gap-4 animate-slide-up">
             <span className="text-gray-600">
                 Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)} - {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} results
             </span>
             {totalPages > 1 && (
                 <div className="flex items-center gap-2">
-                    <button onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)} disabled={currentPage === 1} className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50">Previous</button>
+                    <Button 
+                        onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)} 
+                        disabled={currentPage === 1} 
+                        variant="secondary"
+                    >
+                        Previous
+                    </Button>
                     <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
                         <span className="text-gray-700">Page</span>
-                        <input type="text" value={pageInput} onChange={(e) => setPageInput(e.target.value)} className="w-10 h-7 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                        <div className="relative">
+                            <input 
+                                type="text" 
+                                value={pageInput} 
+                                onChange={handlePageInputChange}
+                                className={`w-10 h-7 text-center border rounded-md focus:outline-none focus:ring-1 transition-all duration-300 ${
+                                    inputError ? 'border-red-300 focus:ring-red-500 bg-red-50' : 'border-gray-300 focus:ring-blue-500'
+                                }`}
+                            />
+                            {inputError && (
+                                <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 text-xs text-red-500 whitespace-nowrap animate-fade-in">
+                                    {inputError}
+                                </div>
+                            )}
+                        </div>
                         <span className="text-gray-700">of {totalPages}</span>
                     </form>
-                    <button onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)} disabled={currentPage === totalPages} className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50">Next</button>
+                    <Button 
+                        onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)} 
+                        disabled={currentPage === totalPages}
+                        variant="secondary"
+                    >
+                        Next
+                    </Button>
                 </div>
             )}
         </div>
     );
+};
+
+// --- VALIDATION UTILITIES ---
+const validateDateRange = (startDate, endDate) => {
+    if (startDate && endDate && dayjs(startDate).isAfter(dayjs(endDate))) {
+        return "Start date must be before end date";
+    }
+    return "";
+};
+
+const validateSearchInput = (value, minLength = 2) => {
+    if (value && value.length < minLength) {
+        return `Minimum ${minLength} characters required`;
+    }
+    return "";
 };
 
 // --- End of UI Helper Components ---
@@ -118,7 +242,7 @@ export default function RevenueReport({
   handleShowDateModal = () => {},
   navigate,
 }) {
-  // --- STATE & LOGIC FOR REVENUE GRAPH (Unchanged) ---
+  // --- STATE & LOGIC FOR REVENUE GRAPH ---
   const [revenueView, setRevenueView] = useState("monthly");
   const [revenueChartData, setRevenueChartData] = useState({
     xLabels: [],
@@ -137,6 +261,10 @@ export default function RevenueReport({
     endDate: "",
   });
   const [industryTotal, setIndustryTotal] = useState(0);
+
+  // --- VALIDATION STATES ---
+  const [agencyDateError, setAgencyDateError] = useState("");
+  const [industryDateError, setIndustryDateError] = useState("");
 
   useEffect(() => {
     if (bookingStats.length > 0) processRevenueData();
@@ -174,7 +302,7 @@ export default function RevenueReport({
     setRevenueChartData({ xLabels, yData });
   };
 
-  // --- STATE & LOGIC FOR PAYMENTS TABLE (Unchanged) ---
+  // --- STATE & LOGIC FOR PAYMENTS TABLE ---
   const [paymentData, setPaymentData] = useState([]);
   const [paymentCurrentPage, setPaymentCurrentPage] = useState(1);
   const [paymentTotalPages, setPaymentTotalPages] = useState(1);
@@ -186,6 +314,22 @@ export default function RevenueReport({
     startDate: "",
     endDate: "",
   });
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  
+  // --- PAYMENT VALIDATION STATES ---
+  const [paymentErrors, setPaymentErrors] = useState({
+    clientName: "",
+    bookingName: "",
+    dateRange: ""
+  });
+
+  const validatePaymentFilters = (filters) => {
+    const errors = {};
+    errors.clientName = validateSearchInput(filters.clientName);
+    errors.bookingName = validateSearchInput(filters.bookingName);
+    errors.dateRange = validateDateRange(filters.startDate, filters.endDate);
+    return errors;
+  };
   
   const resetPaymentFilters = () => {
     setPaymentFilters({
@@ -194,7 +338,24 @@ export default function RevenueReport({
       startDate: "",
       endDate: "",
     });
+    setPaymentErrors({
+      clientName: "",
+      bookingName: "",
+      dateRange: ""
+    });
     setPaymentCurrentPage(1);
+  };
+
+  const handlePaymentFilterChange = (field, value) => {
+    const newFilters = { ...paymentFilters, [field]: value };
+    setPaymentFilters(newFilters);
+    
+    const errors = validatePaymentFilters(newFilters);
+    setPaymentErrors(errors);
+    
+    if (!errors[field] && !errors.dateRange) {
+      setPaymentCurrentPage(1);
+    }
   };
 
   const handlePaymentSort = (key, direction) => {
@@ -203,10 +364,15 @@ export default function RevenueReport({
   };
 
   useEffect(() => {
-    fetchPaymentReport();
+    const errors = validatePaymentFilters(paymentFilters);
+    const hasErrors = Object.values(errors).some(error => error);
+    if (!hasErrors) {
+      fetchPaymentReport();
+    }
   }, [paymentFilters, paymentCurrentPage, paymentSortConfig]);
 
   const fetchPaymentReport = async () => {
+    setPaymentLoading(true);
     try {
       const params = new URLSearchParams({
         page: paymentCurrentPage,
@@ -215,13 +381,13 @@ export default function RevenueReport({
         sortDirection: paymentSortConfig.direction,
       });
 
-      if (paymentFilters.clientName)
+      if (paymentFilters.clientName && !paymentErrors.clientName)
         params.append("clientName", paymentFilters.clientName);
-      if (paymentFilters.bookingName)
+      if (paymentFilters.bookingName && !paymentErrors.bookingName)
         params.append("bookingName", paymentFilters.bookingName);
-      if (paymentFilters.startDate)
+      if (paymentFilters.startDate && !paymentErrors.dateRange)
         params.append("startDate", paymentFilters.startDate);
-      if (paymentFilters.endDate)
+      if (paymentFilters.endDate && !paymentErrors.dateRange)
         params.append("endDate", paymentFilters.endDate);
 
       const res = await fetch(
@@ -236,6 +402,8 @@ export default function RevenueReport({
       setPaymentTotalCount(data.pagination?.totalCount || 0);
     } catch (error) {
       console.error("Error fetching payment report", error);
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -302,13 +470,22 @@ export default function RevenueReport({
       alert("Failed to download payments report. Please try again.");
     }
   };
-  
+
+  // --- AGENCY DATA FETCHING WITH VALIDATION ---
   useEffect(() => {
-    fetchRevenueByAgency();
+    const error = validateDateRange(agencyFilters.startDate, agencyFilters.endDate);
+    setAgencyDateError(error);
+    if (!error) {
+      fetchRevenueByAgency();
+    }
   }, [agencyFilters]);
 
   useEffect(() => {
-    fetchRevenueByIndustry();
+    const error = validateDateRange(industryFilters.startDate, industryFilters.endDate);
+    setIndustryDateError(error);
+    if (!error) {
+      fetchRevenueByIndustry();
+    }
   }, [industryFilters]);
   
   const resetAgencyFilters = () => {
@@ -316,6 +493,7 @@ export default function RevenueReport({
       startDate: "",
       endDate: "",
     });
+    setAgencyDateError("");
   };
 
   const resetIndustryFilters = () => {
@@ -323,6 +501,7 @@ export default function RevenueReport({
       startDate: "",
       endDate: "",
     });
+    setIndustryDateError("");
   };
 
   const fetchRevenueByAgency = async () => {
@@ -406,7 +585,7 @@ export default function RevenueReport({
     }
   };
 
-  // --- STATE & LOGIC FOR TRADE MARGIN TABLE (Unchanged) ---
+  // --- STATE & LOGIC FOR TRADE MARGIN TABLE ---
   const [tradeMarginData, setTradeMarginData] = useState([]);
   const [tradeMarginFilters, setTradeMarginFilters] = useState({
     bookingSearch: "",
@@ -422,6 +601,13 @@ export default function RevenueReport({
   const [tradeMarginTableLoading, setTradeMarginTableLoading] = useState(true);
   const [tradeMarginTableError, setTradeMarginTableError] = useState(null);
 
+  // --- TRADE MARGIN VALIDATION STATES ---
+  const [tradeMarginErrors, setTradeMarginErrors] = useState({
+    bookingSearch: "",
+    inventorySearch: "",
+    dateRange: ""
+  });
+
   // --- STATE & LOGIC FOR TRADE MARGIN GRAPH ---
   const [tradeMarginGraphFilters, setTradeMarginGraphFilters] = useState({
     bookingSearch: "",
@@ -434,9 +620,22 @@ export default function RevenueReport({
   const [tradeMarginChartData, setTradeMarginChartData] = useState({ xLabels: [], yData: [] });
   const [tradeMarginGraphLoading, setTradeMarginGraphLoading] = useState(true);
   const [tradeMarginGraphError, setTradeMarginGraphError] = useState(null);
-  // --- CHANGE 1: ADD STATE FOR TOTAL TRADE MARGIN ---
   const [totalTradeMargin, setTotalTradeMargin] = useState(0);
 
+  // --- TRADE MARGIN GRAPH VALIDATION STATES ---
+  const [tradeMarginGraphErrors, setTradeMarginGraphErrors] = useState({
+    bookingSearch: "",
+    inventorySearch: "",
+    dateRange: ""
+  });
+
+  const validateTradeMarginFilters = (filters) => {
+    const errors = {};
+    errors.bookingSearch = validateSearchInput(filters.bookingSearch);
+    errors.inventorySearch = validateSearchInput(filters.inventorySearch);
+    errors.dateRange = validateDateRange(filters.startDate, filters.endDate);
+    return errors;
+  };
 
   const resetTradeMarginFilters = () => {
     setTradeMarginFilters({
@@ -446,13 +645,25 @@ export default function RevenueReport({
         startDate: "",
         endDate: "",
     });
+    setTradeMarginErrors({
+        bookingSearch: "",
+        inventorySearch: "",
+        dateRange: ""
+    });
     setTradeMarginCurrentPage(1);
   };
 
   const handleTradeMarginFilterChange = (e) => {
     const { name, value } = e.target;
-    setTradeMarginFilters((prev) => ({ ...prev, [name]: value }));
-    setTradeMarginCurrentPage(1);
+    const newFilters = { ...tradeMarginFilters, [name]: value };
+    setTradeMarginFilters(newFilters);
+    
+    const errors = validateTradeMarginFilters(newFilters);
+    setTradeMarginErrors(errors);
+    
+    if (!Object.values(errors).some(error => error)) {
+      setTradeMarginCurrentPage(1);
+    }
   };
   
   const handleTradeMarginSort = (key, direction) => {
@@ -468,11 +679,20 @@ export default function RevenueReport({
         startDate: "",
         endDate: "",
     });
+    setTradeMarginGraphErrors({
+        bookingSearch: "",
+        inventorySearch: "",
+        dateRange: ""
+    });
   };
 
   const handleTradeMarginGraphFilterChange = (e) => {
     const { name, value } = e.target;
-    setTradeMarginGraphFilters((prev) => ({ ...prev, [name]: value }));
+    const newFilters = { ...tradeMarginGraphFilters, [name]: value };
+    setTradeMarginGraphFilters(newFilters);
+    
+    const errors = validateTradeMarginFilters(newFilters);
+    setTradeMarginGraphErrors(errors);
   };
 
   const fetchTradeMarginTable = async () => {
@@ -492,11 +712,16 @@ export default function RevenueReport({
         sortKey: tradeMarginSortConfig.key,
         sortDirection: tradeMarginSortConfig.direction,
       });
-      if (tradeMarginFilters.bookingSearch) params.append('booking', tradeMarginFilters.bookingSearch);
-      if (tradeMarginFilters.inventorySearch) params.append('inventory', tradeMarginFilters.inventorySearch);
-      if (tradeMarginFilters.inventoryType) params.append('inventoryType', tradeMarginFilters.inventoryType);
-      if (tradeMarginFilters.startDate) params.append('startDate', tradeMarginFilters.startDate);
-      if (tradeMarginFilters.endDate) params.append('endDate', tradeMarginFilters.endDate);
+      if (tradeMarginFilters.bookingSearch && !tradeMarginErrors.bookingSearch) 
+        params.append('booking', tradeMarginFilters.bookingSearch);
+      if (tradeMarginFilters.inventorySearch && !tradeMarginErrors.inventorySearch) 
+        params.append('inventory', tradeMarginFilters.inventorySearch);
+      if (tradeMarginFilters.inventoryType) 
+        params.append('inventoryType', tradeMarginFilters.inventoryType);
+      if (tradeMarginFilters.startDate && !tradeMarginErrors.dateRange) 
+        params.append('startDate', tradeMarginFilters.startDate);
+      if (tradeMarginFilters.endDate && !tradeMarginErrors.dateRange) 
+        params.append('endDate', tradeMarginFilters.endDate);
 
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/trade-margin?${params.toString()}`, { headers: { "Authorization": `Bearer ${token}` } });
       if (!res.ok) throw new Error(`Failed to fetch report: ${res.statusText}`);
@@ -524,11 +749,16 @@ export default function RevenueReport({
 
     try {
       const params = new URLSearchParams({ all: 'true' });
-      if (tradeMarginGraphFilters.bookingSearch) params.append('booking', tradeMarginGraphFilters.bookingSearch);
-      if (tradeMarginGraphFilters.inventorySearch) params.append('inventory', tradeMarginGraphFilters.inventorySearch);
-      if (tradeMarginGraphFilters.inventoryType) params.append('inventoryType', tradeMarginGraphFilters.inventoryType);
-      if (tradeMarginGraphFilters.startDate) params.append('startDate', tradeMarginGraphFilters.startDate);
-      if (tradeMarginGraphFilters.endDate) params.append('endDate', tradeMarginGraphFilters.endDate);
+      if (tradeMarginGraphFilters.bookingSearch && !tradeMarginGraphErrors.bookingSearch) 
+        params.append('booking', tradeMarginGraphFilters.bookingSearch);
+      if (tradeMarginGraphFilters.inventorySearch && !tradeMarginGraphErrors.inventorySearch) 
+        params.append('inventory', tradeMarginGraphFilters.inventorySearch);
+      if (tradeMarginGraphFilters.inventoryType) 
+        params.append('inventoryType', tradeMarginGraphFilters.inventoryType);
+      if (tradeMarginGraphFilters.startDate && !tradeMarginGraphErrors.dateRange) 
+        params.append('startDate', tradeMarginGraphFilters.startDate);
+      if (tradeMarginGraphFilters.endDate && !tradeMarginGraphErrors.dateRange) 
+        params.append('endDate', tradeMarginGraphFilters.endDate);
       
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reports/trade-margin?${params.toString()}`, { headers: { "Authorization": `Bearer ${token}` } });
       if (!res.ok) throw new Error(`Failed to fetch graph data: ${res.statusText}`);
@@ -543,26 +773,33 @@ export default function RevenueReport({
   };
 
   useEffect(() => {
-    fetchTradeMarginTable();
+    const errors = validateTradeMarginFilters(tradeMarginFilters);
+    const hasErrors = Object.values(errors).some(error => error);
+    if (!hasErrors) {
+      fetchTradeMarginTable();
+    }
   }, [tradeMarginFilters, tradeMarginCurrentPage, tradeMarginSortConfig]);
   
   useEffect(() => {
-    fetchTradeMarginGraph();
+    const errors = validateTradeMarginFilters(tradeMarginGraphFilters);
+    const hasErrors = Object.values(errors).some(error => error);
+    if (!hasErrors) {
+      fetchTradeMarginGraph();
+    }
   }, [tradeMarginGraphFilters, tradeMarginChartView]);
 
-  // --- CHANGE 2: UPDATE TRADE MARGIN DATA PROCESSING TO CALCULATE A TOTAL ---
   const processTradeMarginData = (data) => {
     const marginMap = new Map();
-    let calculatedTotal = 0; // Create a temporary total
+    let calculatedTotal = 0;
     data.forEach(({ date, tradeMargin }) => {
       if (!date || typeof tradeMargin !== 'number') return;
-      calculatedTotal += tradeMargin; // Sum up the total margin
+      calculatedTotal += tradeMargin;
       const d = dayjs(date);
       const key = tradeMarginChartView === "monthly" ? d.format("MMM YYYY") : d.format("YYYY");
       marginMap.set(key, (marginMap.get(key) || 0) + tradeMargin);
     });
 
-    setTotalTradeMargin(calculatedTotal); // Set the total to state
+    setTotalTradeMargin(calculatedTotal);
 
     const sortedKeys = Array.from(marginMap.keys()).sort((a, b) => {
       const format = tradeMarginChartView === "monthly" ? "MMM YYYY" : "YYYY";
@@ -617,7 +854,7 @@ export default function RevenueReport({
         'Inventory': item.inventory || "N/A",
         'Inventory Type': item.inventoryType || "N/A",
         'Booking': item.booking || "N/A",
-        'Invoice NO': item.invoiceNo || "N/A", // <-- ADD THIS LINE
+        'Invoice NO': item.invoiceNo || "N/A",
         'Trade Margin': item.tradeMargin || 0,
         'Date': dayjs(item.date).format("DD MMM YYYY")
       }));
@@ -647,33 +884,86 @@ export default function RevenueReport({
 
   return (
     <div className="space-y-10">
-      {/* Payments Report Table (Unchanged) */}
-      <Card>
+      {/* Add custom CSS animations */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slide-up {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bounce-in {
+          0% { opacity: 0; transform: scale(0.3); }
+          50% { opacity: 1; transform: scale(1.05); }
+          70% { transform: scale(0.9); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.6s ease-out;
+        }
+        .animate-slide-up {
+          animation: slide-up 0.8s ease-out;
+        }
+        .animate-bounce-in {
+          animation: bounce-in 0.8s ease-out;
+        }
+      `}</style>
+
+      {/* Payments Report Table */}
+      <Card animate={true}>
         <CardContent>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-            <h3 className="text-lg font-semibold text-gray-800">Payments Report ({paymentTotalCount})</h3>
-            <Button onClick={downloadPaymentsExcel} disabled={paymentData.length === 0}>Download Full Report</Button>
+            <h3 className="text-lg font-semibold text-gray-800 animate-bounce-in">
+              Payments Report ({paymentTotalCount})
+            </h3>
+            <Button 
+              onClick={downloadPaymentsExcel} 
+              disabled={paymentData.length === 0}
+              loading={paymentLoading}
+            >
+              Download Full Report
+            </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-start">
             <Input
               placeholder="Client Name"
               value={paymentFilters.clientName}
-              onChange={(e) => {setPaymentFilters({ ...paymentFilters, clientName: e.target.value }); setPaymentCurrentPage(1);}}
+              onChange={(e) => handlePaymentFilterChange('clientName', e.target.value)}
+              error={paymentErrors.clientName}
             />
             <Input
               placeholder="Booking Name"
               value={paymentFilters.bookingName}
-              onChange={(e) => {setPaymentFilters({ ...paymentFilters, bookingName: e.target.value }); setPaymentCurrentPage(1);}}
+              onChange={(e) => handlePaymentFilterChange('bookingName', e.target.value)}
+              error={paymentErrors.bookingName}
             />
-            <button
-              onClick={() => handleShowDateModal("payments", paymentFilters, setPaymentFilters)}
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
-            >
-              {paymentFilters.startDate && paymentFilters.endDate ? `${paymentFilters.startDate} to ${paymentFilters.endDate}` : "Filter by Payment Date"}
-            </button>
-            <Button onClick={resetPaymentFilters}>Reset Filters</Button>
+            <div className="relative">
+              <button
+                onClick={() => handleShowDateModal("payments", paymentFilters, (filters) => {
+                  setPaymentFilters(filters);
+                  const errors = validatePaymentFilters(filters);
+                  setPaymentErrors(errors);
+                })}
+                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-300 transform hover:scale-[1.02]"
+              >
+                {paymentFilters.startDate && paymentFilters.endDate 
+                  ? `${paymentFilters.startDate} to ${paymentFilters.endDate}` 
+                  : "Filter by Payment Date"
+                }
+              </button>
+              {paymentErrors.dateRange && (
+                <div className="absolute -bottom-5 left-0 text-xs text-red-500 animate-fade-in">
+                  {paymentErrors.dateRange}
+                </div>
+              )}
+            </div>
+            <Button onClick={resetPaymentFilters} variant="secondary">
+              Reset Filters
+            </Button>
           </div>
-          <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
+          <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white animate-slide-up">
             <table className="w-full text-xs text-left text-gray-600">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
@@ -687,9 +977,23 @@ export default function RevenueReport({
                 </tr>
               </thead>
               <tbody>
-                {paymentData.length > 0 ? (
-                  paymentData.map((p) => (
-                    <tr key={p._id || p.bookingId} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => handleRowClick(p)}>
+                {paymentLoading ? (
+                  <tr>
+                    <td colSpan="7" className="text-center py-10 text-gray-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                        <span>Loading payments...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : paymentData.length > 0 ? (
+                  paymentData.map((p, index) => (
+                    <tr 
+                      key={p._id || p.bookingId} 
+                      className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-md transform hover:scale-[1.01]" 
+                      onClick={() => handleRowClick(p)}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
                       <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.bookingName}</td>
                       <td className="px-6 py-4">{p.clientName}</td>
                       <td className="px-6 py-4">₹{p.amount?.toLocaleString()}</td>
@@ -697,36 +1001,75 @@ export default function RevenueReport({
                       <td className="px-6 py-4 capitalize">{p.mode}</td>
                       <td className="px-6 py-4">{p.referenceNumber || "N/A"}</td>
                       <td className="px-6 py-4">
-                        {p.documentUrl ? (<a href={p.documentUrl} target="_blank" className="text-blue-500 underline" rel="noreferrer" onClick={(e) => e.stopPropagation()}>View</a>) : "N/A"}
+                        {p.documentUrl ? (
+                          <a 
+                            href={p.documentUrl} 
+                            target="_blank" 
+                            className="text-blue-500 underline hover:text-blue-700 transition-colors duration-200" 
+                            rel="noreferrer" 
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View
+                          </a>
+                        ) : "N/A"}
                       </td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="7" className="text-center py-10 text-gray-500">No payments found.</td></tr>
+                  <tr>
+                    <td colSpan="7" className="text-center py-10 text-gray-500">
+                      No payments found.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
-          <EnhancedPaginationControls currentPage={paymentCurrentPage} totalPages={paymentTotalPages} onPageChange={setPaymentCurrentPage} totalCount={paymentTotalCount} itemsPerPage={ITEMS_PER_PAGE}/>
+          <EnhancedPaginationControls 
+            currentPage={paymentCurrentPage} 
+            totalPages={paymentTotalPages} 
+            onPageChange={setPaymentCurrentPage} 
+            totalCount={paymentTotalCount} 
+            itemsPerPage={ITEMS_PER_PAGE}
+          />
         </CardContent>
       </Card>
 
       {/* Revenue By Agency */}
-      <Card className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+      <Card className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden" animate={true}>
         <CardContent className="bg-white px-6 py-8 space-y-10">
-          <div>
+          <div className="animate-fade-in">
             <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-              <h3 className="text-lg font-semibold text-gray-800 border-l-4 border-indigo-500 pl-3">Agency vs Direct Revenue</h3>
+              <h3 className="text-lg font-semibold text-gray-800 border-l-4 border-indigo-500 pl-3">
+                Agency vs Direct Revenue
+              </h3>
               <div className="flex items-center gap-2">
-                <button onClick={() => handleShowDateModal("agency", agencyFilters, setagencyFilters)} className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50">
-                    {agencyFilters.startDate && agencyFilters.endDate ? `${agencyFilters.startDate} to ${agencyFilters.endDate}` : "Filter by Date"}
-                </button>
-                <Button onClick={resetAgencyFilters}>Reset</Button>
+                <div className="relative">
+                  <button 
+                    onClick={() => handleShowDateModal("agency", agencyFilters, (filters) => {
+                      setagencyFilters(filters);
+                      setAgencyDateError(validateDateRange(filters.startDate, filters.endDate));
+                    })} 
+                    className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-300 transform hover:scale-[1.02]"
+                  >
+                    {agencyFilters.startDate && agencyFilters.endDate 
+                      ? `${agencyFilters.startDate} to ${agencyFilters.endDate}` 
+                      : "Filter by Date"
+                    }
+                  </button>
+                  {agencyDateError && (
+                    <div className="absolute -bottom-5 left-0 text-xs text-red-500 animate-fade-in">
+                      {agencyDateError}
+                    </div>
+                  )}
+                </div>
+                <Button onClick={resetAgencyFilters} variant="secondary">Reset</Button>
               </div>
-              <p className="font-semibold text-sm w-full sm:w-auto text-right">Total Revenue: ₹{totalRevenue.toLocaleString()}</p>
+              <p className="font-semibold text-sm w-full sm:w-auto text-right animate-bounce-in">
+                Total Revenue: ₹{totalRevenue.toLocaleString()}
+              </p>
             </div>
-            {/* --- CHANGE 3: UPDATE PIE CHART TO SHOW PERCENTAGES --- */}
-            <div className="flex justify-center">
+            <div className="flex justify-center animate-bounce-in">
               <PieChart
                 series={[
                   {
@@ -737,9 +1080,7 @@ export default function RevenueReport({
                     })),
                     innerRadius: 40,
                     outerRadius: 80,
-                    // This formatter adds the percentage to the pie slice label
                     arcLabel: (item) => `${(item.value / totalRevenue * 100).toFixed(1)}%`,
-                    // This formatter adds more detail to the tooltip on hover
                     valueFormatter: (item) => `₹${item.value.toLocaleString()} (${(item.value / totalRevenue * 100).toFixed(1)}%)`,
                   },
                 ]}
@@ -756,10 +1097,11 @@ export default function RevenueReport({
               />
             </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-l-4 border-green-500 pl-3">Revenue by Agency Name</h3>
-            <div className="rounded-lg border border-gray-100 shadow-sm p-4 bg-gray-50">
-              {/* --- CHANGE 4: UPDATE AGENCY BAR CHART TO SHOW PERCENTAGES IN TOOLTIP --- */}
+          <div className="animate-slide-up">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-l-4 border-green-500 pl-3">
+              Revenue by Agency Name
+            </h3>
+            <div className="rounded-lg border border-gray-100 shadow-sm p-4 bg-gray-50 hover:shadow-md transition-shadow duration-300">
               <BarChart
                 xAxis={[{ scaleType: "band", data: revenueByAgency.map((d) => d._id) }]}
                 series={[
@@ -778,20 +1120,37 @@ export default function RevenueReport({
       </Card>
 
       {/* Revenue by Industry */}
-      <Card className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+      <Card className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden" animate={true}>
         <CardContent className="bg-white px-6 py-8 space-y-10">
-          <div>
+          <div className="animate-fade-in">
             <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-              <h3 className="text-lg font-semibold text-gray-800 border-l-4 border-yellow-500 pl-3">Revenue by Industry</h3>
+              <h3 className="text-lg font-semibold text-gray-800 border-l-4 border-yellow-500 pl-3">
+                Revenue by Industry
+              </h3>
               <div className="flex items-center gap-2">
-                <button onClick={() => handleShowDateModal("industry", industryFilters, setIndustryFilters)} className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50">
-                    {industryFilters.startDate && industryFilters.endDate ? `${industryFilters.startDate} to ${industryFilters.endDate}` : "Filter by Date"}
-                </button>
-                <Button onClick={resetIndustryFilters}>Reset</Button>
+                <div className="relative">
+                  <button 
+                    onClick={() => handleShowDateModal("industry", industryFilters, (filters) => {
+                      setIndustryFilters(filters);
+                      setIndustryDateError(validateDateRange(filters.startDate, filters.endDate));
+                    })} 
+                    className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-300 transform hover:scale-[1.02]"
+                  >
+                    {industryFilters.startDate && industryFilters.endDate 
+                      ? `${industryFilters.startDate} to ${industryFilters.endDate}` 
+                      : "Filter by Date"
+                    }
+                  </button>
+                  {industryDateError && (
+                    <div className="absolute -bottom-5 left-0 text-xs text-red-500 animate-fade-in">
+                      {industryDateError}
+                    </div>
+                  )}
+                </div>
+                <Button onClick={resetIndustryFilters} variant="secondary">Reset</Button>
               </div>
             </div>
-            <div className="rounded-md border border-gray-100 shadow-sm p-3 bg-gray-50">
-              {/* --- CHANGE 5: UPDATE INDUSTRY BAR CHART TO SHOW PERCENTAGES IN TOOLTIP --- */}
+            <div className="rounded-md border border-gray-100 shadow-sm p-3 bg-gray-50 hover:shadow-md transition-shadow duration-300 animate-bounce-in">
               <BarChart
                 xAxis={[{ scaleType: "band", data: industryRevenue.map((item) => item._id || "Others") }]}
                 series={[
@@ -805,57 +1164,127 @@ export default function RevenueReport({
                 height={250}
               />
             </div>
-            <p className="text-sm text-gray-600 mt-2 text-right">Total Revenue: ₹{industryTotal.toLocaleString()}</p>
+            <p className="text-sm text-gray-600 mt-2 text-right animate-fade-in">
+              Total Revenue: ₹{industryTotal.toLocaleString()}
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Revenue Graph (Unchanged) */}
+      {/* Revenue Graph */}
       {loadingCharts ? <ShimmerCard /> : (
-        <Card>
+        <Card animate={true}>
           <CardContent>
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-base font-semibold text-gray-800">Revenue Graph</h3>
-              <button onClick={() => setRevenueView((prev) => (prev === "yearly" ? "monthly" : "yearly"))} className="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-md">View By: {revenueView === "yearly" ? "Yearly" : "Monthly"}</button>
+              <h3 className="text-base font-semibold text-gray-800 animate-bounce-in">Revenue Graph</h3>
+              <Button 
+                onClick={() => setRevenueView((prev) => (prev === "yearly" ? "monthly" : "yearly"))} 
+                variant="secondary"
+              >
+                View By: {revenueView === "yearly" ? "Yearly" : "Monthly"}
+              </Button>
             </div>
-            <div className="flex flex-grow h-80 -ml-4 -mr-2">
-              <LineChart xAxis={[{ data: revenueChartData.xLabels, scaleType: "point" }]} yAxis={[{ label: "Amount in Lakhs", min: 0, max: yMax > 0 ? yMax * 1.2 : 100000, valueFormatter: yAxisFormatter }]} series={[{ data: revenueChartData.yData, label: "Revenue", color: "#8b5cf6", showMark: true, valueFormatter: tooltipFormatter, area: true }]} grid={{ vertical: true, horizontal: true }} margin={{ top: 40, right: 20, bottom: 50, left: 60 }} legend={{ direction: "row", position: { vertical: "top", horizontal: "middle" }, padding: 0 }}/>
+            <div className="flex flex-grow h-80 -ml-4 -mr-2 animate-slide-up">
+              <LineChart 
+                xAxis={[{ data: revenueChartData.xLabels, scaleType: "point" }]} 
+                yAxis={[{ 
+                  label: "Amount in Lakhs", 
+                  min: 0, 
+                  max: yMax > 0 ? yMax * 1.2 : 100000, 
+                  valueFormatter: yAxisFormatter 
+                }]} 
+                series={[{ 
+                  data: revenueChartData.yData, 
+                  label: "Revenue", 
+                  color: "#8b5cf6", 
+                  showMark: true, 
+                  valueFormatter: tooltipFormatter, 
+                  area: true 
+                }]} 
+                grid={{ vertical: true, horizontal: true }} 
+                margin={{ top: 40, right: 20, bottom: 50, left: 60 }} 
+                legend={{ 
+                  direction: "row", 
+                  position: { vertical: "top", horizontal: "middle" }, 
+                  padding: 0 
+                }}
+              />
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Trade Margin Report Table (Unchanged) */}
-      <Card>
+      {/* Trade Margin Report Table */}
+      <Card animate={true}>
         <CardContent>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-              <h3 className="text-lg font-semibold text-gray-800">Trade Margin Report ({tradeMarginTotalCount})</h3>
-              <Button onClick={downloadTradeMarginExcel} disabled={tradeMarginData.length === 0}>Download Full Report</Button>
-            </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 items-center">
-            <Input name="bookingSearch" placeholder="Filter by Booking" value={tradeMarginFilters.bookingSearch} onChange={handleTradeMarginFilterChange} />
-            <Input name="inventorySearch" placeholder="Filter by Inventory" value={tradeMarginFilters.inventorySearch} onChange={handleTradeMarginFilterChange} />
-            <Select name="inventoryType" value={tradeMarginFilters.inventoryType} onChange={handleTradeMarginFilterChange}>
-                <option value="">Filter by Inventory Type</option>
-                <option value="Billboard">Billboard</option>
-                <option value="DOOh">DOOH</option>
-                <option value="Gantry">Gantry</option>
-                <option value="Pole kiosk">Pole kiosk</option>
-                <option value="BQS">BQS</option>
-                <option value="DigitalBQS">DigitalBQS</option>
-                <option value="Miscellaneous">Miscellaneous</option>
-            </Select>
-            <button
-              onClick={() => {
-                handleShowDateModal("tradeMarginTable", tradeMarginFilters, setTradeMarginFilters);
-              }}
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+            <h3 className="text-lg font-semibold text-gray-800 animate-bounce-in">
+              Trade Margin Report ({tradeMarginTotalCount})
+            </h3>
+            <Button 
+              onClick={downloadTradeMarginExcel} 
+              disabled={tradeMarginData.length === 0}
+              loading={tradeMarginTableLoading}
             >
-              {tradeMarginFilters.startDate && tradeMarginFilters.endDate ? `${dayjs(tradeMarginFilters.startDate).format("DD MMM YYYY")} to ${dayjs(tradeMarginFilters.endDate).format("DD MMM YYYY")}` : "Filter by Date Range"}
-            </button>
-            <Button onClick={resetTradeMarginFilters}>Reset Filters</Button>
+              Download Full Report
+            </Button>
           </div>
-          <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 items-start">
+            <Input 
+              name="bookingSearch" 
+              placeholder="Filter by Booking" 
+              value={tradeMarginFilters.bookingSearch} 
+              onChange={handleTradeMarginFilterChange} 
+              error={tradeMarginErrors.bookingSearch}
+            />
+            <Input 
+              name="inventorySearch" 
+              placeholder="Filter by Inventory" 
+              value={tradeMarginFilters.inventorySearch} 
+              onChange={handleTradeMarginFilterChange} 
+              error={tradeMarginErrors.inventorySearch}
+            />
+            <Select 
+              name="inventoryType" 
+              value={tradeMarginFilters.inventoryType} 
+              onChange={handleTradeMarginFilterChange}
+            >
+              <option value="">Filter by Inventory Type</option>
+              <option value="Billboard">Billboard</option>
+              <option value="DOOh">DOOH</option>
+              <option value="Gantry">Gantry</option>
+              <option value="Pole kiosk">Pole kiosk</option>
+              <option value="BQS">BQS</option>
+              <option value="DigitalBQS">DigitalBQS</option>
+              <option value="Miscellaneous">Miscellaneous</option>
+            </Select>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  handleShowDateModal("tradeMarginTable", tradeMarginFilters, (filters) => {
+                    setTradeMarginFilters(filters);
+                    const errors = validateTradeMarginFilters(filters);
+                    setTradeMarginErrors(errors);
+                  });
+                }}
+                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-300 transform hover:scale-[1.02]"
+              >
+                {tradeMarginFilters.startDate && tradeMarginFilters.endDate 
+                  ? `${dayjs(tradeMarginFilters.startDate).format("DD MMM YYYY")} to ${dayjs(tradeMarginFilters.endDate).format("DD MMM YYYY")}` 
+                  : "Filter by Date Range"
+                }
+              </button>
+              {tradeMarginErrors.dateRange && (
+                <div className="absolute -bottom-5 left-0 text-xs text-red-500 animate-fade-in">
+                  {tradeMarginErrors.dateRange}
+                </div>
+              )}
+            </div>
+            <Button onClick={resetTradeMarginFilters} variant="secondary">
+              Reset Filters
+            </Button>
+          </div>
+          <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white animate-slide-up">
             <table className="w-full text-xs text-left text-gray-600">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
@@ -869,12 +1298,27 @@ export default function RevenueReport({
               </thead>
               <tbody>
                 {tradeMarginTableLoading ? (
-                  <tr><td colSpan="5" className="text-center py-10 text-gray-500"><CircularProgress size={24} /></td></tr>
+                  <tr>
+                    <td colSpan="6" className="text-center py-10 text-gray-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                        <span>Loading trade margins...</span>
+                      </div>
+                    </td>
+                  </tr>
                 ) : tradeMarginTableError ? (
-                  <tr><td colSpan="5" className="text-center py-10 text-red-500">{tradeMarginTableError}</td></tr>
+                  <tr>
+                    <td colSpan="6" className="text-center py-10 text-red-500">
+                      {tradeMarginTableError}
+                    </td>
+                  </tr>
                 ) : tradeMarginData.length > 0 ? (
                   tradeMarginData.map((item, index) => (
-                    <tr key={item.id || index} className="bg-white border-b hover:bg-gray-50">
+                    <tr 
+                      key={item.id || index} 
+                      className="bg-white border-b hover:bg-gray-50 transition-all duration-200 hover:shadow-md transform hover:scale-[1.01]"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
                       <td className="px-6 py-4">{item.inventory || "N/A"}</td>
                       <td className="px-6 py-4">{item.inventoryType || "N/A"}</td>
                       <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{item.booking || "N/A"}</td>
@@ -884,12 +1328,22 @@ export default function RevenueReport({
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="5" className="text-center py-10 text-gray-500">No trade margin data found.</td></tr>
+                  <tr>
+                    <td colSpan="6" className="text-center py-10 text-gray-500">
+                      No trade margin data found.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
-          <EnhancedPaginationControls currentPage={tradeMarginCurrentPage} totalPages={tradeMarginTotalPages} onPageChange={setTradeMarginCurrentPage} totalCount={tradeMarginTotalCount} itemsPerPage={ITEMS_PER_PAGE} />
+          <EnhancedPaginationControls 
+            currentPage={tradeMarginCurrentPage} 
+            totalPages={tradeMarginTotalPages} 
+            onPageChange={setTradeMarginCurrentPage} 
+            totalCount={tradeMarginTotalCount} 
+            itemsPerPage={ITEMS_PER_PAGE} 
+          />
         </CardContent>
       </Card>
 

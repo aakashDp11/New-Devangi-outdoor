@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
-// Assuming Navbar is available in the same directory or path
-import Navbar from "./Navbar"; // Uncomment if you have a Navbar component
+import Navbar from "./Navbar";
 import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
@@ -14,7 +13,7 @@ import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 
 const Input = ({ className = "", ...props }) => (
   <input
-    className={`border px-3 py-2 rounded w-full ${className}`}
+    className={`border border-[var(--color-border)] px-3 py-2 rounded w-full bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] ${className}`}
     {...props}
   />
 );
@@ -35,10 +34,10 @@ const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
     <th scope="col" className="px-6 py-3">
       <div
         onClick={handleSort}
-        className="flex items-center gap-1.5 cursor-pointer select-none"
+        className="flex items-center gap-1.5 cursor-pointer select-none text-[var(--color-text)] hover:text-[var(--color-primary)]"
       >
         {title}
-        <span className="text-gray-400">
+        <span className="text-[var(--color-muted)]">
           {direction === "asc" ? "▲" : direction === "desc" ? "▼" : "⇅"}
         </span>
       </div>
@@ -47,7 +46,7 @@ const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
 };
 
 /**
- * NEW: Reusable Pagination component with results count.
+ * Reusable Pagination component with results count.
  */
 const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage, loading }) => {
     const [pageInput, setPageInput] = useState(currentPage.toString());
@@ -62,12 +61,12 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPe
         if (pageNum && pageNum > 0 && pageNum <= totalPages) {
             onPageChange(pageNum);
         } else {
-            setPageInput(currentPage.toString()); // Reset if invalid
+            setPageInput(currentPage.toString());
         }
     };
 
     if (totalCount === 0 && !loading) {
-        return null; // Don't render pagination if there are no results
+        return null;
     }
 
     const startItem = (currentPage - 1) * itemsPerPage + 1;
@@ -75,30 +74,30 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPe
 
     return (
         <div className="flex flex-col sm:flex-row justify-between items-center mt-6 text-xs gap-4">
-            <span className="text-gray-600">
+            <span className="text-[var(--color-muted)]">
                 {totalCount > 0 ? `Showing ${startItem} - ${endItem} of ${totalCount} results` : ''}
             </span>
             {totalPages > 1 && (
                 <div className="flex items-center gap-4">
                     <button
-                        className="px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
+                        className="px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded hover:bg-[var(--color-hover)] disabled:opacity-50 transition"
                         onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
                         disabled={currentPage === 1 || loading}
                     >
                         <FaArrowLeft />
                     </button>
                     <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
-                        <span className="text-gray-600">Page</span>
+                        <span className="text-[var(--color-text)]">Page</span>
                         <input
                             type="text"
                             value={pageInput}
                             onChange={(e) => setPageInput(e.target.value)}
-                            className="w-12 h-8 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-12 h-8 text-center border border-[var(--color-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-surface)] text-[var(--color-text)]"
                         />
-                        <span className="text-gray-600">of {totalPages}</span>
+                        <span className="text-[var(--color-text)]">of {totalPages}</span>
                     </form>
                     <button
-                        className="px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
+                        className="px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded hover:bg-[var(--color-hover)] disabled:opacity-50 transition"
                         onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)}
                         disabled={currentPage === totalPages || loading}
                     >
@@ -259,7 +258,7 @@ export default function BookingsDashboard1() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 h-screen w-screen text-black flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen bg-[var(--color-background)] h-screen w-screen text-[var(--color-text)] flex flex-col lg:flex-row overflow-hidden">
       <Navbar />
       <main
         className={`flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 transition-all duration-300 ${
@@ -270,7 +269,7 @@ export default function BookingsDashboard1() {
           <h2 className="text-2xl">Bookings ({totalCount})</h2>
           <button
             onClick={() => navigate("/create-booking")}
-            className="bg-black text-white text-xs px-3 py-2 rounded hover:scale-105 transition"
+            className="bg-[var(--color-primary)] text-white text-xs px-3 py-2 rounded hover:opacity-90 transition"
           >
             + Create Booking
           </button>
@@ -289,12 +288,12 @@ export default function BookingsDashboard1() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowDateModal(true)}
-              className="border px-4 py-1 rounded bg-white text-xs hover:bg-gray-100"
+              className="border border-[var(--color-border)] px-4 py-1 rounded bg-[var(--color-surface)] text-xs hover:bg-[var(--color-hover)] text-[var(--color-text)] transition"
             >
               Date Filter
             </button>
             {(dateRange[0].startDate || dateRange[0].endDate) && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-[var(--color-muted)]">
                 {dateRange[0].startDate
                   ? formatDate(dateRange[0].startDate)
                   : "Any"}{" "}
@@ -308,16 +307,16 @@ export default function BookingsDashboard1() {
           <div className="flex justify-end">
             <button
               onClick={handleClearAllFilters}
-              className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700 transition"
+              className="px-3 py-1 rounded bg-[var(--color-danger)] text-white text-xs hover:opacity-90 transition"
             >
               Reset Filters
             </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white">
-          <table className="w-full text-xs text-left text-gray-600">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+        <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+          <table className="w-full text-xs text-left text-[var(--color-muted)]">
+            <thead className="text-xs text-[var(--color-text)] uppercase bg-[var(--color-muted-light)]">
               <tr>
                 <th scope="col" className="px-6 py-3">
                   #
@@ -334,19 +333,19 @@ export default function BookingsDashboard1() {
               {loading ? (
                 <tr>
                   <td colSpan="7" className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Loading bookings...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
+                    <p className="mt-2 text-[var(--color-muted)]">Loading bookings...</p>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-red-600">
+                  <td colSpan="7" className="text-center py-8 text-[var(--color-danger)]">
                     Error: {error}
                   </td>
                 </tr>
               ) : sortedData.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-gray-600">
+                  <td colSpan="7" className="text-center py-8 text-[var(--color-muted)]">
                     No bookings found matching your criteria.
                   </td>
                 </tr>
@@ -355,14 +354,14 @@ export default function BookingsDashboard1() {
                   const upcomingStart = getUpcomingCampaignDate(item.campaigns, "startDate");
                   const upcomingEnd = getUpcomingCampaignDate(item.campaigns, "endDate");
                   return (
-                    <tr key={item._id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/booking/${item._id}`)}>
-                      <td className="px-6 py-4 text-gray-500">{(currentPage - 1) * limit + index + 1}</td>
-                      <td className="px-6 py-4 font-mono text-gray-500">{item._id?.substring(0, 6).toUpperCase() || "N/A"}</td>
-                      <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{item.companyName || "No Company"}</td>
-                      <td className="px-6 py-4">{item.clientName || "No Client"}</td>
-                      <td className="px-6 py-4">{formatDate(item.createdAt)}</td>
-                      <td className="px-6 py-4">{formatDate(upcomingStart)}</td>
-                      <td className="px-6 py-4">{formatDate(upcomingEnd)}</td>
+                    <tr key={item._id} className="bg-[var(--color-surface)] border-b border-[var(--color-border)] hover:bg-[var(--color-hover)] cursor-pointer transition" onClick={() => navigate(`/booking/${item._id}`)}>
+                      <td className="px-6 py-4 text-[var(--color-muted)]">{(currentPage - 1) * limit + index + 1}</td>
+                      <td className="px-6 py-4 font-mono text-[var(--color-muted)]">{item._id?.substring(0, 6).toUpperCase() || "N/A"}</td>
+                      <td className="px-6 py-4 font-medium text-[var(--color-text)] whitespace-nowrap">{item.companyName || "No Company"}</td>
+                      <td className="px-6 py-4 text-[var(--color-text)]">{item.clientName || "No Client"}</td>
+                      <td className="px-6 py-4 text-[var(--color-text)]">{formatDate(item.createdAt)}</td>
+                      <td className="px-6 py-4 text-[var(--color-text)]">{formatDate(upcomingStart)}</td>
+                      <td className="px-6 py-4 text-[var(--color-text)]">{formatDate(upcomingEnd)}</td>
                     </tr>
                   );
                 })
@@ -371,7 +370,6 @@ export default function BookingsDashboard1() {
           </table>
         </div>
 
-        {/* MODIFIED: Replaced old pagination with new component */}
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -383,13 +381,19 @@ export default function BookingsDashboard1() {
 
         {showDateModal && (
           <div className="fixed inset-0 text-xs flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white rounded-xl shadow-lg p-2 py-[1%]">
+            <div className="bg-[var(--color-surface)] rounded-xl shadow-lg p-2 py-[1%] border border-[var(--color-border)]">
               <DateRange editableDateInputs={true} onChange={(item) => setDateRange([item.selection])} moveRangeOnFirstSelection={false} ranges={dateRange} className="text-xs"/>
               <div className="flex justify-end gap-2 mt-4 mx-2">
-                <button onClick={() => setShowDateModal(false)} className="text-xs px-3 py-1 rounded bg-gray-200 mr-auto hover:bg-gray-300">
+                <button 
+                  onClick={() => setShowDateModal(false)} 
+                  className="text-xs px-3 py-1 rounded bg-[var(--color-muted-light)] mr-auto hover:bg-[var(--color-hover)] text-[var(--color-text)] transition"
+                >
                   Cancel
                 </button>
-                <button onClick={handleApplyDateFilters} className="text-xs px-3 py-1 rounded bg-black text-white hover:bg-gray-900">
+                <button 
+                  onClick={handleApplyDateFilters} 
+                  className="text-xs px-3 py-1 rounded bg-[var(--color-primary)] text-white hover:opacity-90 transition"
+                >
                   Apply
                 </button>
               </div>

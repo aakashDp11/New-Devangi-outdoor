@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import { useNavigate } from 'react-router-dom';
@@ -40,23 +39,23 @@ function Stepper({ currentStep }) {
 
 // --- industryOptions remains the same ---
 const industryOptions = [
-    { value: 'Tourism', label: 'Tourism' },
-    { value: 'Retail', label: 'Retail' },
-    { value: 'Real Estate', label: 'Real Estate' },
-    { value: 'Other', label: 'Other' },
-    { value: 'Movie', label: 'Movie' },
-    { value: 'Media and Entertainment', label: 'Media and Entertainment' },
-    { value: 'FMCG', label: 'FMCG' },
-    { value: 'Finance', label: 'Finance' },
-    { value: 'Financial Services', label: 'Financial Services' },
-    { value: 'Healthcare', label: 'Healthcare' },
-    { value: 'Hospitality', label: 'Hospitality' },
-    { value: 'IT Industry', label: 'IT Industry' },
-    { value: 'Automobile', label: 'Automobile' },
-    { value: 'Clothing & Apparel', label: 'Clothing & Apparel' },
-    { value: 'Ecommerce', label: 'Ecommerce' },
-    { value: 'Edtech', label: 'Edtech' },
-    { value: 'Entertainment', label: 'Entertainment' },
+  { value: 'Tourism', label: 'Tourism' },
+  { value: 'Retail', label: 'Retail' },
+  { value: 'Real Estate', label: 'Real Estate' },
+  { value: 'Other', label: 'Other' },
+  { value: 'Movie', label: 'Movie' },
+  { value: 'Media and Entertainment', label: 'Media and Entertainment' },
+  { value: 'FMCG', label: 'FMCG' },
+  { value: 'Finance', label: 'Finance' },
+  { value: 'Financial Services', label: 'Financial Services' },
+  { value: 'Healthcare', label: 'Healthcare' },
+  { value: 'Hospitality', label: 'Hospitality' },
+  { value: 'IT Industry', label: 'IT Industry' },
+  { value: 'Automobile', label: 'Automobile' },
+  { value: 'Clothing & Apparel', label: 'Clothing & Apparel' },
+  { value: 'Ecommerce', label: 'Ecommerce' },
+  { value: 'Edtech', label: 'Edtech' },
+  { value: 'Entertainment', label: 'Entertainment' },
 ];
 
 export default function BookingFormOrderInfo() {
@@ -66,45 +65,50 @@ export default function BookingFormOrderInfo() {
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Track validation errors for campaigns
+  const [errors, setErrors] = useState({});
+
   useEffect(() => {
     const fetchSpaces = async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/selectcampaignSpaces`);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/spaces/selectcampaignSpaces`
+      );
       const data = await res.json();
-      const transformed = data.filter(space => {
-        if (typeof space.isInventoryEnabled === 'undefined') return true;
-        return space.isInventoryEnabled === true;
-      })
-      .map(space => ({
-        id: space._id,
-        name: space.spaceName,
-        facia: space.faciaTowards,
-        city: space.city,
-        category: space.category,
-        spaceType: space.spaceType,
-        isInventoryEnabled:space.isInventoryEnabled,
-        unit: space.unit,
-        occupiedUnits: space.occupiedUnits,
-        ownershipType: space.ownershipType,
-        specification:space.specification,
-        campaignDates:space.campaignDates,
-        price: space.price,
-        traded: space.traded,
-        mainPhoto:space.mainPhoto,
-        overlappingBooking: space.overlappingBooking,
-        width: space.width,
-        height: space.height,
-        availableFrom: space.dates?.[0],
-        availableTo: space.dates?.[space.dates.length - 1],
-        status: space.occupiedUnits === 0
-          ? 'Completely available'
-          : space.occupiedUnits < space.unit
-          ? 'Partialy available'
-          : 'Completely booked',
-        // --- FIX: Add the missing transit fields to the transformed object ---
-        transitType: space.transitType,
-        transitLine: space.transitLine,
-        // --- END FIX ---
-      }));
+      const transformed = data
+        .filter((space) => {
+          if (typeof space.isInventoryEnabled === 'undefined') return true;
+          return space.isInventoryEnabled === true;
+        })
+        .map((space) => ({
+          id: space._id,
+          name: space.spaceName,
+          facia: space.faciaTowards,
+          city: space.city,
+          category: space.category,
+          spaceType: space.spaceType,
+          isInventoryEnabled: space.isInventoryEnabled,
+          unit: space.unit,
+          occupiedUnits: space.occupiedUnits,
+          ownershipType: space.ownershipType,
+          specification: space.specification,
+          campaignDates: space.campaignDates,
+          price: space.price,
+          traded: space.traded,
+          mainPhoto: space.mainPhoto,
+          overlappingBooking: space.overlappingBooking,
+          width: space.width,
+          height: space.height,
+          availableFrom: space.dates?.[0],
+          availableTo: space.dates?.[space.dates.length - 1],
+          status:
+            space.occupiedUnits === 0
+              ? 'Completely available'
+              : space.occupiedUnits < space.unit
+              ? 'Partialy available'
+              : 'Completely booked',
+          transitType: space.transitType,
+          transitLine: space.transitLine,
+        }));
       setSpaces(transformed);
       setLoading(false);
     };
@@ -127,8 +131,47 @@ export default function BookingFormOrderInfo() {
   const globalAvailability = computeGlobalAvailability();
 
   const updateCampaign = (index, updatedCampaign) => {
-    const campaigns = orderInfo.campaigns.map((c, i) => i === index ? updatedCampaign : c);
+    const campaigns = orderInfo.campaigns.map((c, i) =>
+      i === index ? updatedCampaign : c
+    );
     setOrderInfo({ ...orderInfo, campaigns });
+  };
+
+  const validateCampaign = (campaign) => {
+    const newErrors = {};
+
+    if (!campaign.campaignName || campaign.campaignName.trim().length < 3) {
+      newErrors.campaignName =
+        'Campaign name is required and must be at least 3 characters.';
+    } else if (!/^[a-zA-Z0-9\s]+$/.test(campaign.campaignName)) {
+      newErrors.campaignName = 'Campaign name must not contain special characters.';
+    }
+
+    if (!campaign.industry) {
+      newErrors.industry = 'Industry is required.';
+    }
+
+    if (!campaign.startDate) {
+      newErrors.startDate = 'Start date is required.';
+    } else if (new Date(campaign.startDate) < new Date(new Date().toDateString())) {
+      newErrors.startDate = 'Start date cannot be in the past.';
+    }
+
+    if (!campaign.endDate) {
+      newErrors.endDate = 'End date is required.';
+    } else if (campaign.startDate && new Date(campaign.endDate) < new Date(campaign.startDate)) {
+      newErrors.endDate = 'End date must be after start date.';
+    }
+
+    if (campaign.description && campaign.description.length < 10) {
+      newErrors.description = 'Description must be at least 10 characters.';
+    }
+
+    if (!campaign.selectedSpaces || campaign.selectedSpaces.length === 0) {
+      newErrors.selectedSpaces = 'At least one space must be selected.';
+    }
+
+    return newErrors;
   };
 
   const handleCampaignChange = (index, e) => {
@@ -139,19 +182,31 @@ export default function BookingFormOrderInfo() {
       finalValue = value === 'true';
     }
 
-    updateCampaign(index, {
+    const updated = {
       ...orderInfo.campaigns[index],
       [name]: finalValue,
-    });
+    };
+
+    updateCampaign(index, updated);
+
+    // Inline validation update
+    const validationErrors = validateCampaign(updated);
+    setErrors((prev) => ({ ...prev, [index]: validationErrors }));
   };
-  
+
   const toggleSpaceSelection = (campaignIndex, spaceId) => {
     const campaign = orderInfo.campaigns[campaignIndex];
     const exists = campaign.selectedSpaces?.find((s) => s.id === spaceId);
     const updatedSelectedSpaces = exists
       ? campaign.selectedSpaces.filter((s) => s.id !== spaceId)
-      : [...(campaign.selectedSpaces || []), { ...spaces.find((s) => s.id === spaceId), selectedUnits: 1 }];
-    updateCampaign(campaignIndex, { ...campaign, selectedSpaces: updatedSelectedSpaces });
+      : [
+          ...(campaign.selectedSpaces || []),
+          { ...spaces.find((s) => s.id === spaceId), selectedUnits: 1 },
+        ];
+    const updated = { ...campaign, selectedSpaces: updatedSelectedSpaces };
+    updateCampaign(campaignIndex, updated);
+    const validationErrors = validateCampaign(updated);
+    setErrors((prev) => ({ ...prev, [campaignIndex]: validationErrors }));
   };
 
   const updateSelectedUnits = (campaignIndex, spaceId, units) => {
@@ -159,7 +214,8 @@ export default function BookingFormOrderInfo() {
     const updatedSpaces = campaign.selectedSpaces.map((s) =>
       s.id === spaceId ? { ...s, selectedUnits: units } : s
     );
-    updateCampaign(campaignIndex, { ...campaign, selectedSpaces: updatedSpaces });
+    const updated = { ...campaign, selectedSpaces: updatedSpaces };
+    updateCampaign(campaignIndex, updated);
   };
 
   const handleSearchChange = (index, value) => {
@@ -192,18 +248,28 @@ export default function BookingFormOrderInfo() {
   const deleteCampaign = (index) => {
     const updatedCampaigns = orderInfo.campaigns.filter((_, i) => i !== index);
     setOrderInfo({ ...orderInfo, campaigns: updatedCampaigns });
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[index];
+      return newErrors;
+    });
   };
 
   const saveCampaign = (index) => {
     const campaign = orderInfo.campaigns[index];
-    if (!campaign.campaignName || !campaign.industry || !campaign.startDate || !campaign.endDate) {
-        toast.error("Please fill in all required fields before saving.");
-        return;
+    const validationErrors = validateCampaign(campaign);
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, [index]: validationErrors }));
+      toast.error('Please fix validation errors before saving.');
+      return;
     }
+
     updateCampaign(index, {
       ...orderInfo.campaigns[index],
       isSaved: true,
     });
+    setErrors((prev) => ({ ...prev, [index]: {} }));
   };
 
   const editCampaign = (index) => {
@@ -215,25 +281,29 @@ export default function BookingFormOrderInfo() {
 
   const handleNext = () => {
     if (!orderInfo.campaigns || orderInfo.campaigns.length === 0) {
-      toast.error("Please add and save at least one campaign to continue.");
+      toast.error('Please add and save at least one campaign to continue.');
       return;
     }
 
-    const hasUnsavedCampaigns = orderInfo.campaigns.some(c => !c.isSaved);
+    const hasUnsavedCampaigns = orderInfo.campaigns.some((c) => !c.isSaved);
     if (hasUnsavedCampaigns) {
-      toast.error("Please save all campaigns before proceeding.");
+      toast.error('Please save all campaigns before proceeding.');
       return;
     }
-    
+
     navigate('/booking-preview');
   };
-  
+
   const handleBack = () => navigate('/create-booking');
 
   return (
     <div className="bg-white flex">
       <Navbar />
-      <main className={`flex-1 p-6 min-h-screen pb-24 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+      <main
+        className={`flex-1 p-6 min-h-screen pb-24 transition-all duration-300 ${
+          isCollapsed ? 'lg:ml-24' : 'lg:ml-64'
+        }`}
+      >
         <Stepper currentStep="Order" />
         <h2 className="text-2xl font-semibold mb-6">Create Order</h2>
 
@@ -242,22 +312,35 @@ export default function BookingFormOrderInfo() {
         ) : (
           <>
             {orderInfo.campaigns?.map((campaign, index) => (
-              <div key={index} className="relative border rounded p-4 mb-6 shadow-sm">
+              <div
+                key={index}
+                className="relative border rounded p-4 mb-6 shadow-sm"
+              >
                 {campaign.isSaved ? (
                   <div className="flex justify-between items-center">
                     <div>
                       <h3 className="font-semibold">{campaign.campaignName}</h3>
                       <p className="text-xs">Industry: {campaign.industry}</p>
-                      <p className="text-xs">From {campaign.startDate} to {campaign.endDate}</p>
+                      <p className="text-xs">
+                        From {campaign.startDate} to {campaign.endDate}
+                      </p>
                       {campaign.isFOC && (
-                        <p className="text-xs font-bold text-green-600">This is a FOC Campaign</p>
+                        <p className="text-xs font-bold text-green-600">
+                          This is a FOC Campaign
+                        </p>
                       )}
                     </div>
                     <div className="space-x-2">
-                      <button onClick={() => editCampaign(index)} className="text-xs border px-3 py-1 rounded">
+                      <button
+                        onClick={() => editCampaign(index)}
+                        className="text-xs border px-3 py-1 rounded"
+                      >
                         Edit
                       </button>
-                      <button onClick={() => deleteCampaign(index)} className="text-xs border px-3 py-1 rounded text-red-500">
+                      <button
+                        onClick={() => deleteCampaign(index)}
+                        className="text-xs border px-3 py-1 rounded text-red-500"
+                      >
                         Delete
                       </button>
                     </div>
@@ -270,6 +353,7 @@ export default function BookingFormOrderInfo() {
                         name="campaignName"
                         value={campaign.campaignName}
                         onChange={(e) => handleCampaignChange(index, e)}
+                        error={errors[index]?.campaignName}
                       />
                       <CustomSelect
                         label="Industry"
@@ -277,6 +361,7 @@ export default function BookingFormOrderInfo() {
                         value={campaign.industry}
                         onChange={(e) => handleCampaignChange(index, e)}
                         options={industryOptions}
+                        error={errors[index]?.industry}
                       />
                       <Input
                         label="Start Date"
@@ -284,6 +369,7 @@ export default function BookingFormOrderInfo() {
                         type="date"
                         value={campaign.startDate}
                         onChange={(e) => handleCampaignChange(index, e)}
+                        error={errors[index]?.startDate}
                       />
                       <Input
                         label="End Date"
@@ -291,6 +377,7 @@ export default function BookingFormOrderInfo() {
                         type="date"
                         value={campaign.endDate}
                         onChange={(e) => handleCampaignChange(index, e)}
+                        error={errors[index]?.endDate}
                       />
                       <div className="col-span-2">
                         <label className="text-xs font-medium">Description</label>
@@ -300,8 +387,13 @@ export default function BookingFormOrderInfo() {
                           onChange={(e) => handleCampaignChange(index, e)}
                           className="w-full border rounded p-2 mt-1 text-xs"
                         />
+                        {errors[index]?.description && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {errors[index]?.description}
+                          </p>
+                        )}
                       </div>
-                      
+
                       <div className="col-span-2">
                         <label className="text-xs font-medium block mb-2">
                           Is this a FOC (Free of Cost) Campaign?
@@ -317,7 +409,10 @@ export default function BookingFormOrderInfo() {
                               onChange={(e) => handleCampaignChange(index, e)}
                               className="h-4 w-4 accent-black"
                             />
-                            <label htmlFor={`foc-yes-${index}`} className="ml-2 text-xs font-medium">
+                            <label
+                              htmlFor={`foc-yes-${index}`}
+                              className="ml-2 text-xs font-medium"
+                            >
                               Yes
                             </label>
                           </div>
@@ -331,7 +426,10 @@ export default function BookingFormOrderInfo() {
                               onChange={(e) => handleCampaignChange(index, e)}
                               className="h-4 w-4 accent-black"
                             />
-                            <label htmlFor={`foc-no-${index}`} className="ml-2 text-xs font-medium">
+                            <label
+                              htmlFor={`foc-no-${index}`}
+                              className="ml-2 text-xs font-medium"
+                            >
                               No
                             </label>
                           </div>
@@ -350,9 +448,17 @@ export default function BookingFormOrderInfo() {
                       onUpdateSelectedUnits={updateSelectedUnits}
                       onSearchChange={handleSearchChange}
                     />
+                    {errors[index]?.selectedSpaces && (
+                      <p className="text-red-500 text-xs mt-2">
+                        {errors[index]?.selectedSpaces}
+                      </p>
+                    )}
 
                     <div className="flex mt-4">
-                      <button onClick={() => deleteCampaign(index)} className="mr-auto text-red-500 hover:text-red-700">
+                      <button
+                        onClick={() => deleteCampaign(index)}
+                        className="mr-auto text-red-500 hover:text-red-700"
+                      >
                         🗑️
                       </button>
                       <button
@@ -366,14 +472,21 @@ export default function BookingFormOrderInfo() {
                 )}
               </div>
             ))}
-            <button onClick={addCampaign} className="border px-3 py-2 rounded text-sm">
+            <button
+              onClick={addCampaign}
+              className="border px-3 py-2 rounded text-sm"
+            >
               + Add Campaign
             </button>
           </>
         )}
       </main>
 
-      <div className={`fixed bottom-0 right-0 bg-white z-10 left-0 transition-all duration-300 ${isCollapsed ? 'lg:left-24' : 'lg:left-64'}`}>
+      <div
+        className={`fixed bottom-0 right-0 bg-white z-10 left-0 transition-all duration-300 ${
+          isCollapsed ? 'lg:left-24' : 'lg:left-64'
+        }`}
+      >
         <div className="flex justify-between items-center w-full px-6 py-3 max-w-screen-xl mx-auto">
           <button
             type="button"
@@ -382,7 +495,7 @@ export default function BookingFormOrderInfo() {
           >
             Cancel
           </button>
-          
+
           <div className="flex items-center space-x-3">
             <button
               type="button"
@@ -405,24 +518,52 @@ export default function BookingFormOrderInfo() {
   );
 }
 
-// --- Input and CustomSelect components remain the same ---
-function Input({ label, ...props }) {
+// --- Input and CustomSelect components updated to support error display ---
+function Input({ label, error, ...props }) {
   return (
     <div>
       <label className="text-xs font-medium">{label}</label>
-      <input {...props} className="w-full border px-3 py-2 rounded mt-1 text-xs" />
+      <input
+        {...props}
+        className={`w-full border px-3 py-2 rounded mt-1 text-xs ${
+          error ? 'border-red-500' : ''
+        }`}
+      />
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
   );
 }
 
-export function CustomSelect({ label, value, onChange, name, options, mandatory }) {
+export function CustomSelect({
+  label,
+  value,
+  onChange,
+  name,
+  options,
+  mandatory,
+  error,
+}) {
   const selected = options.find((o) => o.value === value) || null;
   const customStyles = {
     control: (provided) => ({
-      ...provided, minHeight: '42px', height: '42px', borderColor: 'hsl(0, 0%, 80%)', boxShadow: 'none', '&:hover': { borderColor: 'hsl(0, 0%, 70%)' },
+      ...provided,
+      minHeight: '42px',
+      height: '42px',
+      borderColor: error ? 'red' : 'hsl(0, 0%, 80%)',
+      boxShadow: 'none',
+      '&:hover': { borderColor: error ? 'red' : 'hsl(0, 0%, 70%)' },
     }),
-    valueContainer: (provided) => ({ ...provided, height: '42px', padding: '0 8px' }),
-    input: (provided) => ({ ...provided, fontSize: '0.75rem', margin: '0', padding: '0' }),
+    valueContainer: (provided) => ({
+      ...provided,
+      height: '42px',
+      padding: '0 8px',
+    }),
+    input: (provided) => ({
+      ...provided,
+      fontSize: '0.75rem',
+      margin: '0',
+      padding: '0',
+    }),
     singleValue: (provided) => ({ ...provided, fontSize: '0.75rem' }),
     indicatorsContainer: (provided) => ({ ...provided, height: '42px' }),
   };
@@ -432,7 +573,19 @@ export function CustomSelect({ label, value, onChange, name, options, mandatory 
         {label}
         {mandatory === 'true' && <span className="text-red-500 ml-1">*</span>}
       </label>
-      <Select styles={customStyles} className="w-full" name={name} options={options} value={selected} onChange={(option) => onChange({ target: { name, value: option?.value || '' } })} isSearchable placeholder="Select..."/>
+      <Select
+        styles={customStyles}
+        className="w-full"
+        name={name}
+        options={options}
+        value={selected}
+        onChange={(option) =>
+          onChange({ target: { name, value: option?.value || '' } })
+        }
+        isSearchable
+        placeholder="Select..."
+      />
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
   );
 }

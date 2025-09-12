@@ -7,6 +7,280 @@ import MapPreview from "./MapPreview";
 import Select from "react-select";
 import { useSidebar } from "../context/SidebarContext";
 
+// Validation utility functions
+const validators = {
+  // Text validations
+  isValidName: (value) => {
+    const regex = /^[a-zA-Z\s'-]+$/;
+    return regex.test(value) && value.length >= 2;
+  },
+
+  isValidSpaceName: (value) => {
+    const regex = /^[a-zA-Z0-9\s'-]+$/;
+    return regex.test(value) && value.length >= 2 && value.length <= 100;
+  },
+
+  // Email validation
+  isValidEmail: (value) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(value);
+  },
+
+  // Phone validation (Indian format)
+  isValidPhone: (value) => {
+    const regex = /^[6-9]\d{9}$/;
+    return regex.test(value.replace(/\s+/g, ''));
+  },
+
+  // Numeric validations
+  isValidPrice: (value) => {
+    const num = parseFloat(value);
+    return !isNaN(num) && num > 0 && num <= 100000000; // Max 10 crores
+  },
+
+  isValidFootfall: (value) => {
+    const num = parseInt(value);
+    return !isNaN(num) && num >= 0 && num <= 10000000; // Max 1 crore
+  },
+
+  isValidDimension: (value) => {
+    const num = parseFloat(value);
+    return !isNaN(num) && num > 0 && num <= 1000; // Max 1000 ft
+  },
+
+  // Coordinate validations
+  isValidLatitude: (value) => {
+    const num = parseFloat(value);
+    return !isNaN(num) && num >= -90 && num <= 90;
+  },
+
+  isValidLongitude: (value) => {
+    const num = parseFloat(value);
+    return !isNaN(num) && num >= -180 && num <= 180;
+  },
+
+  // PIN code validation (Indian format)
+  isValidPinCode: (value) => {
+    const regex = /^[1-9][0-9]{5}$/;
+    return regex.test(value);
+  },
+
+  // Date validations
+  isValidDate: (dateStr) => {
+    const date = new Date(dateStr);
+    return date instanceof Date && !isNaN(date);
+  },
+
+  isEndDateValid: (startDate, endDate) => {
+    if (!startDate || !endDate) return true;
+    
+    // Handle both DD-MM-YYYY and YYYY-MM-DD formats
+    let start, end;
+    
+    if (startDate.includes('-') && startDate.split('-')[0].length === 4) {
+      // YYYY-MM-DD format
+      start = new Date(startDate);
+    } else if (startDate.includes('-') && startDate.split('-')[2].length === 4) {
+      // DD-MM-YYYY format
+      const [day, month, year] = startDate.split('-');
+      start = new Date(`${year}-${month}-${day}`);
+    } else {
+      start = new Date(startDate);
+    }
+    
+    if (endDate.includes('-') && endDate.split('-')[0].length === 4) {
+      // YYYY-MM-DD format
+      end = new Date(endDate);
+    } else if (endDate.includes('-') && endDate.split('-')[2].length === 4) {
+      // DD-MM-YYYY format
+      const [day, month, year] = endDate.split('-');
+      end = new Date(`${year}-${month}-${day}`);
+    } else {
+      end = new Date(endDate);
+    }
+    
+    return end > start;
+  },
+
+  // Address validation
+  isValidAddress: (value) => {
+    return value.length >= 10 && value.length <= 500;
+  },
+
+  // Resolution validation for DOOH
+  isValidResolution: (value) => {
+    const regex = /^\d+x\d+$/i;
+    return regex.test(value) || /^\d+\s*[x*]\s*\d+$/i.test(value);
+  },
+
+  // File validations
+  isValidImageFile: (file) => {
+    if (!file) return true; // Optional files
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    return validTypes.includes(file.type) && file.size <= maxSize;
+  },
+
+  // Custom business validations
+  isValidOwnershipDuration: (startDate, endDate, ownershipType) => {
+    if (!startDate || !endDate || !ownershipType) return { valid: true };
+    
+    const start = validators.parseDate(startDate);
+    const end = validators.parseDate(endDate);
+    
+    if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return { valid: true }; // Let other validations handle invalid dates
+    }
+    
+    const diffDays = (end - start) / (1000 * 60 * 60 * 24);
+    
+    // Minimum lease period validations
+    if (ownershipType === 'Leased' && diffDays < 30) {
+      return { valid: false, message: 'Lease period should be at least 30 days' };
+    }
+    return { valid: true };
+  }
+};
+
+// Enhanced validation messages
+const getValidationMessage = (field, value, form) => {
+  switch (field) {
+    case 'spaceName':
+      if (!value) return 'Space name is required';
+      if (value.length < 2) return 'Space name must be at least 2 characters';
+      if (value.length > 100) return 'Space name must be less than 100 characters';
+      if (!validators.isValidSpaceName(value)) return 'Space name contains invalid characters';
+      return null;
+
+    case 'landlord':
+      if (!value) return 'Landlord name is required';
+      if (!validators.isValidName(value)) return 'Please enter a valid landlord name';
+      return null;
+
+    case 'price':
+    case 'buyingPrice':
+      if (value && !validators.isValidPrice(value)) return 'Please enter a valid price (max 10 crores)';
+      return null;
+
+    case 'footfall':
+      if (value && !validators.isValidFootfall(value)) return 'Please enter a valid footfall number';
+      return null;
+
+    case 'width':
+    case 'height':
+      if (form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit') {
+        if (!value) return `${field} is required`;
+        if (!validators.isValidDimension(value)) return `Please enter a valid ${field} (max 1000 ft)`;
+      }
+      return null;
+
+    case 'latitude':
+      if (form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit') {
+        if (!value) return 'Latitude is required';
+        if (!validators.isValidLatitude(value)) return 'Please enter a valid latitude (-90 to 90)';
+      }
+      return null;
+
+    case 'longitude':
+      if (form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit') {
+        if (!value) return 'Longitude is required';
+        if (!validators.isValidLongitude(value)) return 'Please enter a valid longitude (-180 to 180)';
+      }
+      return null;
+
+    case 'zip':
+      if (value && !validators.isValidPinCode(value)) return 'Please enter a valid 6-digit PIN code';
+      return null;
+
+    case 'address':
+      if (!value) return 'Address is required';
+      if (!validators.isValidAddress(value)) return 'Address should be between 10-500 characters';
+      return null;
+
+    case 'city':
+      if (!value) return 'City is required';
+      if (!validators.isValidName(value)) return 'Please enter a valid city name';
+      return null;
+
+    case 'resolution':
+      if (form.spaceType === 'DOOH') {
+        if (!value) return 'Resolution is required for DOOH';
+        if (!validators.isValidResolution(value)) return 'Please enter resolution in format like "1920x1080"';
+      }
+      return null;
+
+    case 'unit':
+      if (form.spaceType === 'DOOH') {
+        if (!value) return 'Slots are required for DOOH';
+        const num = parseInt(value);
+        if (isNaN(num) || num < 1 || num > 10) return 'Slots should be between 1-10 for DOOH';
+      }
+      return null;
+
+    case 'startDate':
+      if (!value) return 'Start date is required';
+      if (!validators.isValidDate(value)) return 'Please enter a valid start date';
+      return null;
+
+    case 'endDate':
+      if (!value) return 'End date is required';
+      if (!validators.isValidDate(value)) return 'Please enter a valid end date';
+      if (!validators.isEndDateValid(form.startDate, value)) return 'End date must be after start date';
+      
+      // Check ownership duration
+      const durationCheck = validators.isValidOwnershipDuration(form.startDate, value, form.ownershipType);
+      if (!durationCheck.valid) return durationCheck.message;
+      return null;
+
+    default:
+      return null;
+  }
+};
+
+// Real-time validation hook
+const useFieldValidation = () => {
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [fieldWarnings, setFieldWarnings] = useState({});
+
+  const validateField = (name, value, form) => {
+    const error = getValidationMessage(name, value, form);
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      [name]: error
+    }));
+
+    // Add warnings for potential issues
+    let warning = null;
+    if (name === 'footfall' && value) {
+      const num = parseInt(value);
+      if (num > 1000000) warning = 'Very high footfall - please verify';
+    }
+    
+    if (name === 'price' && value) {
+      const num = parseFloat(value);
+      if (num > 10000000) warning = 'Very high price - please verify';
+    }
+
+    setFieldWarnings(prev => ({
+      ...prev,
+      [name]: warning
+    }));
+
+    return !error;
+  };
+
+  const clearFieldError = (name) => {
+    setFieldErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      return newErrors;
+    });
+  };
+
+  return { fieldErrors, fieldWarnings, validateField, clearFieldError };
+};
+
 // New component specifically for multi-select audience field with custom UI
 function MultiAudienceSelect({ label, name, value, onChange, options, mandatory }) {
   const valueAsArray = Array.isArray(value) ? value : [];
@@ -80,6 +354,9 @@ export default function AddSpaceForm() {
     stepOrder,
   } = useSpaceForm();
 
+  // Add validation hooks
+  const { fieldErrors, fieldWarnings, validateField, clearFieldError } = useFieldValidation();
+
   // State for dependent dropdown options
   const [transitTypeOptions, setTransitTypeOptions] = useState([]);
   const [lineOptions, setLineOptions] = useState([]);
@@ -91,8 +368,22 @@ export default function AddSpaceForm() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
+  // Enhanced input change handler with validation
+  const handleValidatedInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Update form state
+    handleInputChange(e);
+    
+    // Validate field in real-time
+    setTimeout(() => {
+      validateField(name, value, { ...form, [name]: value });
+    }, 300); // Debounce validation
+  };
+
+  // Enhanced validation for current step - REMOVED TOAST MESSAGES
   const validateCurrentStep = () => {
-    const isSpecialType = form.spaceType === "BQS"  || form.spaceType === "DigitalBQS" || form.spaceType === "Transit";
+    const isSpecialType = form.spaceType === "BQS" || form.spaceType === "DigitalBQS" || form.spaceType === "Transit";
 
     const mandatoryFieldsByStep = {
       Basic: [
@@ -100,36 +391,48 @@ export default function AddSpaceForm() {
       ],
       Specifications:
         form.spaceType === "DOOH"
-          ? [ "unit", "resolution", "width", "height"]
+          ? ["unit", "resolution", "width", "height"]
           : ["illumination", "width", "height"],
-      Location: ["address", "city", "state",  "latitude", "longitude"],
+      Location: ["address", "city", "state", "latitude", "longitude"],
     };
 
-    // If spaceType is BQS or Transit, modify the mandatory fields
-        // If spaceType is BQS or Transit, modify the mandatory fields
+    // Modify mandatory fields for special types
     if (isSpecialType) {
       mandatoryFieldsByStep.Basic.push("buyingPrice");
-      mandatoryFieldsByStep.Specifications = ["illumination"]; // Only illumination is mandatory
+      mandatoryFieldsByStep.Specifications = ["illumination"];
       const locationFields = mandatoryFieldsByStep.Location;
-      // MODIFICATION: Filter out latitude and longitude for BQS/Transit spaces
       mandatoryFieldsByStep.Location = locationFields.filter(
         field => !['zip', 'latitude', 'longitude'].includes(field)
       );
     }
     
-    // If spaceType is Transit, add the new fields to the mandatory list
     if (form.spaceType === 'Transit') {
-        mandatoryFieldsByStep.Basic.push('transitType', 'transitLine');
+      mandatoryFieldsByStep.Basic.push('transitType', 'transitLine');
     }
 
     const currentFields = mandatoryFieldsByStep[step] || [];
+    let hasErrors = false;
+
+    // Validate all current step fields
     for (const field of currentFields) {
-      if (!form[field] || form[field].toString().trim() === "") {
-        toast.error(`Please fill the required field: ${field}`);
-        return false;
+      const value = form[field];
+      const isValid = validateField(field, value, form);
+      
+      if (!isValid || !value || value.toString().trim() === "") {
+        hasErrors = true;
       }
     }
-    return true;
+
+    // Check for any existing field errors in current step
+    const currentStepErrors = Object.keys(fieldErrors).filter(field => 
+      currentFields.includes(field) && fieldErrors[field]
+    );
+
+    if (currentStepErrors.length > 0) {
+      hasErrors = true;
+    }
+
+    return !hasErrors;
   };
 
   const handleNext = () => {
@@ -155,9 +458,34 @@ export default function AddSpaceForm() {
     }
   };
 
+  // Enhanced file validation
+  const handleFileValidation = (files, fieldName) => {
+    if (!files) return true;
+    
+    const fileArray = Array.isArray(files) ? files : [files];
+    
+    for (const file of fileArray) {
+      if (!validators.isValidImageFile(file)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateCurrentStep()) return;
+
+    // Final validation of all critical fields
+    const criticalErrors = [];
+    Object.keys(form).forEach(key => {
+      const error = getValidationMessage(key, form[key], form);
+      if (error) criticalErrors.push(error);
+    });
+
+    if (criticalErrors.length > 0) {
+      return;
+    }
 
     const formData = new FormData();
     for (const key in form) {
@@ -165,6 +493,13 @@ export default function AddSpaceForm() {
         formData.append(key, form[key]);
       }
     }
+
+    // Validate and append files
+    if (form.mainPhoto && !handleFileValidation(form.mainPhoto, 'mainPhoto')) return;
+    if (form.longShot && !handleFileValidation(form.longShot, 'longShot')) return;
+    if (form.closeShot && !handleFileValidation(form.closeShot, 'closeShot')) return;
+    if (form.otherPhotos && !handleFileValidation(form.otherPhotos, 'otherPhotos')) return;
+
     if (form.mainPhoto) formData.append("mainPhoto", form.mainPhoto);
     if (form.longShot) formData.append("longShot", form.longShot);
     if (form.closeShot) formData.append("closeShot", form.closeShot);
@@ -187,19 +522,17 @@ export default function AddSpaceForm() {
     }
   };
 
-  // --- START: CASCADING DROPDOWN HANDLERS ---
-
+  // Cascading dropdown handlers (unchanged)
   const handleSpaceTypeChange = (e) => {
     const { value } = e.target;
-    handleInputChange(e); // Update form state for spaceType
+    handleValidatedInputChange(e);
 
-    // Reset dependent fields
     setTransitTypeOptions([]);
     setLineOptions([]);
     handleInputChange({ target: { name: 'transitType', value: '' } });
     handleInputChange({ target: { name: 'transitLine', value: '' } });
 
-     if (value === 'DOOH') {
+    if (value === 'DOOH') {
       handleInputChange({ target: { name: 'illumination', value: '' } });
     }
 
@@ -213,9 +546,8 @@ export default function AddSpaceForm() {
 
   const handleTransitTypeChange = (e) => {
     const { value } = e.target;
-    handleInputChange(e); // Update form state for transitType
+    handleValidatedInputChange(e);
     
-    // Reset the line selection
     setLineOptions([]);
     handleInputChange({ target: { name: 'transitLine', value: '' } });
 
@@ -225,8 +557,7 @@ export default function AddSpaceForm() {
     }
   };
 
-  // --- END: CASCADING DROPDOWN HANDLERS ---
-  
+  // Options arrays (unchanged)
   const audienceOptions = [
     { value: "", label: "Select..." }, { value: "Youth", label: "Youth" }, { value: "Working Professionals", label: "Working Professionals" }, { value: "Business Professional", label: "Business Professional" }, { value: "College Students", label: "College Students" }, { value: "Elite", label: "Elite" }, { value: "Families", label: "Families" }, { value: "Fashion Enthusiast", label: "Fashion Enthusiast" }, { value: "Female focused", label: "Female focused" }, { value: "Government official", label: "Government official" }, { value: "Male focused", label: "Male focused" }, { value: "Middle class", label: "Middle class" }, { value: "Rural", label: "Rural" }, { value: "Students", label: "Students" }, { value: "Tourists", label: "Tourists" }, { value: "Working", label: "Working" },
   ];
@@ -288,22 +619,35 @@ export default function AddSpaceForm() {
             <div className="flex w-full">
               <div className="grid grid-cols-1 text-xs lg:grid-cols-2">
                 <div className="space-y-4">
-                  <Input label="Space name" mandatory="true" name="spaceName" value={form.spaceName} onChange={handleInputChange} required />
-                  <Input label="Landlord" name="landlord" mandatory="true" value={form.landlord} onChange={handleInputChange} />
-                  <Input label="Inventory Owner (Organization)" name="organization" value={form.organization} onChange={handleInputChange} />
-                  <Input label="Peer Media Owner" name="peerMediaOwner" value={form.peerMediaOwner} onChange={handleInputChange} />
+                  <Input 
+                    label="Space name" 
+                    mandatory="true" 
+                    name="spaceName" 
+                    value={form.spaceName} 
+                    onChange={handleValidatedInputChange} 
+                    error={fieldErrors.spaceName}
+                    required 
+                  />
+                  <Input 
+                    label="Landlord" 
+                    name="landlord" 
+                    mandatory="true" 
+                    value={form.landlord} 
+                    onChange={handleValidatedInputChange}
+                    error={fieldErrors.landlord}
+                  />
+                  <Input label="Inventory Owner (Organization)" name="organization" value={form.organization} onChange={handleValidatedInputChange} />
+                  <Input label="Peer Media Owner" name="peerMediaOwner" value={form.peerMediaOwner} onChange={handleValidatedInputChange} />
                   
-                  {/* --- MODIFIED SPACETYPE SELECT --- */}
                   <CustomSelect
                     label="Space Type"
                     name="spaceType"
                     value={form.spaceType}
                     onChange={handleSpaceTypeChange}
-                    options={spaceOptions.map(({ transitTypes, ...rest }) => rest)} // Pass options without nested data
+                    options={spaceOptions.map(({ transitTypes, ...rest }) => rest)}
                     mandatory="true"
                   />
                   
-                  {/* --- START: CONDITIONALLY RENDERED DROPDOWNS --- */}
                   {form.spaceType === 'Transit' && (
                     <>
                       <CustomSelect
@@ -311,7 +655,7 @@ export default function AddSpaceForm() {
                         name="transitType"
                         value={form.transitType}
                         onChange={handleTransitTypeChange}
-                        options={transitTypeOptions.map(({ lines, ...rest }) => rest)} // Pass options without nested data
+                        options={transitTypeOptions.map(({ lines, ...rest }) => rest)}
                         mandatory="true"
                       />
                       {form.transitType && lineOptions.length > 0 && (
@@ -319,37 +663,87 @@ export default function AddSpaceForm() {
                           label="Transit Line"
                           name="transitLine"
                           value={form.transitLine}
-                          onChange={handleInputChange} // Uses the default handler
+                          onChange={handleValidatedInputChange}
                           options={lineOptions}
                           mandatory="true"
                         />
                       )}
                     </>
                   )}
-                  {/* --- END: CONDITIONALLY RENDERED DROPDOWNS --- */}
 
-                  <CustomSelect label="Ownership Type" name="ownershipType" value={form.ownershipType} onChange={handleInputChange} options={ownershipOptions} mandatory="true" />
-                  <Input mandatory="true" label={`${form.ownershipType || ""} Start Date`} name="startDate" type="date" value={formatForInput(form.startDate)} onChange={handleInputChange} required />
-                  <Input label={`${form.ownershipType || ""} End Date`} name="endDate" mandatory="true" type="date" value={formatForInput(form.endDate)} onChange={handleInputChange} required min={form.startDate ? formatForInput(form.startDate) : ""} />
-                  <CustomSelect label="Category" name="category" value={form.category} onChange={handleInputChange} options={categoryOptions} mandatory="false" />
-                  <CustomSelect label="Specification" name="specification" value={form.specification} onChange={handleInputChange} options={specificationOptions} mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} />
+                  <CustomSelect label="Ownership Type" name="ownershipType" value={form.ownershipType} onChange={handleValidatedInputChange} options={ownershipOptions} mandatory="true" />
+                  <Input 
+                    mandatory="true" 
+                    label={`${form.ownershipType || ""} Start Date`} 
+                    name="startDate" 
+                    type="date" 
+                    value={formatForInput(form.startDate)} 
+                    onChange={handleValidatedInputChange}
+                    error={fieldErrors.startDate}
+                    required 
+                  />
+                  <Input 
+                    label={`${form.ownershipType || ""} End Date`} 
+                    name="endDate" 
+                    mandatory="true" 
+                    type="date" 
+                    value={formatForInput(form.endDate)} 
+                    onChange={handleValidatedInputChange}
+                    error={fieldErrors.endDate}
+                    required 
+                    min={form.startDate ? formatForInput(form.startDate) : ""} 
+                  />
+                  <CustomSelect label="Category" name="category" value={form.category} onChange={handleValidatedInputChange} options={categoryOptions} mandatory="false" />
+                  <CustomSelect label="Specification" name="specification" value={form.specification} onChange={handleValidatedInputChange} options={specificationOptions} mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} />
                   
                   {form.spaceType === 'BQS' || form.spaceType === 'DigitalBQS' || form.spaceType === 'Transit' ? (
                     <>
-                      <Input label="Buying Price" name="buyingPrice" value={form.buyingPrice} onChange={handleInputChange} mandatory="true" />
+                      <Input 
+                        label="Buying Price" 
+                        name="buyingPrice" 
+                        value={form.buyingPrice} 
+                        onChange={handleValidatedInputChange}
+                        error={fieldErrors.buyingPrice}
+                        warning={fieldWarnings.buyingPrice}
+                        mandatory="true" 
+                      />
                     </>
                   ) : (
-                    <Input label="Price" name="price" value={form.price} onChange={handleInputChange} />
+                    <Input 
+                      label="Price" 
+                      name="price" 
+                      value={form.price} 
+                      onChange={handleValidatedInputChange}
+                      error={fieldErrors.price}
+                      warning={fieldWarnings.price}
+                    />
                   )}
 
-                  <Input label="Footfall" name="footfall" value={form.footfall} onChange={handleInputChange} />
-                  <MultiAudienceSelect label="Audience" name="audience" value={form.audience} onChange={handleInputChange} options={audienceOptions} mandatory="true" />
-                  <Select1 label="Demographics" name="demographics" value={form.demographics} onChange={handleInputChange} required>
+                  <Input 
+                    label="Footfall" 
+                    name="footfall" 
+                    value={form.footfall} 
+                    onChange={handleValidatedInputChange}
+                    error={fieldErrors.footfall}
+                    warning={fieldWarnings.footfall}
+                  />
+                  <MultiAudienceSelect label="Audience" name="audience" value={form.audience} onChange={handleValidatedInputChange} options={audienceOptions} mandatory="true" />
+                  <Select1 label="Demographics" name="demographics" value={form.demographics} onChange={handleValidatedInputChange} required>
                     <option value="">Select...</option> <option value="Urban">Urban</option> <option value="Rural">Rural</option>
                   </Select1>
                   <div>
                     <label className="text-sm">Description</label>
-                    <textarea name="description" value={form.description} onChange={handleInputChange} className="w-full border px-3 py-2 rounded mt-1" rows={4} maxLength={400} />
+                    <textarea 
+                      name="description" 
+                      value={form.description} 
+                      onChange={handleValidatedInputChange} 
+                      className="w-full border px-3 py-2 rounded mt-1" 
+                      rows={4} 
+                      maxLength={400} 
+                    />
+                    <div className="text-xs text-gray-500 mt-1">
+                      {form.description ? form.description.length : 0}/400 characters
+                    </div>
                   </div>
                 </div>
               </div>
@@ -376,47 +770,130 @@ export default function AddSpaceForm() {
           {step === "Specifications" && (
             <div className="space-y-6 w-full text-xs">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-{form.spaceType !== "DOOH" && (
-  <CustomSelect label="Illumination" name="illumination" value={form.illumination} onChange={handleInputChange} options={illuminationOptions} mandatory="true" />
-)}                {form.spaceType === "DOOH" && (
+                {form.spaceType !== "DOOH" && (
+                  <CustomSelect label="Illumination" name="illumination" value={form.illumination} onChange={handleValidatedInputChange} options={illuminationOptions} mandatory="true" />
+                )}
+                {form.spaceType === "DOOH" && (
                   <>
-                    <Input label="Slots" name="unit" mandatory="true" value={form.unit} onChange={(e) => { const { value } = e.target; const maxMap = { Billboard: 1, DOOH: 10, "Pole kiosk": 1, Gantry: 1, BQS: 1, DigitalBQS: 1 , Miscellaneous: 1, }; const max = maxMap[form.spaceType]; if (value === "" || Number(value) <= max) { handleInputChange(e); } else { toast.error(`Max units allowed for ${form.spaceType || "this type"} is ${max}`); } }} required />
-                    <Input label="Resolutions" mandatory="true" name="resolution" value={form.resolution} onChange={handleInputChange} />
+                    <Input 
+                      label="Slots" 
+                      name="unit" 
+                      mandatory="true" 
+                      value={form.unit} 
+                      onChange={handleValidatedInputChange}
+                      error={fieldErrors.unit}
+                      required 
+                    />
+                    <Input 
+                      label="Resolutions" 
+                      mandatory="true" 
+                      name="resolution" 
+                      value={form.resolution} 
+                      onChange={handleValidatedInputChange}
+                      error={fieldErrors.resolution}
+                      placeholder="e.g., 1920x1080"
+                    />
                   </>
                 )}
-                <Input label="Width (in ft)" mandatory={form.spaceType !== 'BQS'  &&  form.spaceType !== 'DigitalBQS'&& form.spaceType !== 'Transit' ? "true" : "false"} name="width" value={form.width} onChange={handleInputChange} />
-                <Input label="Height (in ft)" mandatory={form.spaceType !== 'BQS' &&  form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="height" value={form.height} onChange={handleInputChange} />
+                <Input 
+                  label="Width (in ft)" 
+                  mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS'&& form.spaceType !== 'Transit' ? "true" : "false"} 
+                  name="width" 
+                  value={form.width} 
+                  onChange={handleValidatedInputChange}
+                  error={fieldErrors.width}
+                  type="number"
+                  step="0.1"
+                  min="0"
+                />
+                <Input 
+                  label="Height (in ft)" 
+                  mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} 
+                  name="height" 
+                  value={form.height} 
+                  onChange={handleValidatedInputChange}
+                  error={fieldErrors.height}
+                  type="number"
+                  step="0.1"
+                  min="0"
+                />
               </div>
               <div className="space-y-4">
-                <Input label="Additional Tags" name="additionalTags" value={form.additionalTags} onChange={handleInputChange} />
-                <Input label="Previous brands" name="previousBrands" value={form.previousBrands} onChange={handleInputChange} />
-                <Input label="Tags" name="tags" value={form.tags} onChange={handleInputChange} />
+                <Input label="Additional Tags" name="additionalTags" value={form.additionalTags} onChange={handleValidatedInputChange} />
+                <Input label="Previous brands" name="previousBrands" value={form.previousBrands} onChange={handleValidatedInputChange} />
+                <Input label="Tags" name="tags" value={form.tags} onChange={handleValidatedInputChange} />
               </div>
             </div>
           )}
 
           {step === "Location" && (
             <div className="grid text-xs grid-cols-1 md:grid-cols-2 gap-6">
-              <Input label="Address" mandatory="true" name="address" value={form.address} onChange={handleInputChange} />
-              <Input label="City" mandatory="true" name="city" value={form.city} onChange={handleInputChange} required />
-              <CustomSelect label="State" name="state" value={form.state} onChange={handleInputChange} options={stateOptions} mandatory="true" />
-              <Input label="Pin-code" mandatory="false" name="zip" value={form.zip} onChange={handleInputChange} />
-              {/* MODIFICATION: Added Latitude input and made both Latitude/Longitude conditional */}
-              <Input label="Latitude" mandatory={form.spaceType !== 'BQS'  && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="latitude" value={form.latitude} onChange={handleInputChange} />
-              <Input label="Longitude" mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} name="longitude" value={form.longitude} onChange={handleInputChange} />              {form.latitude && form.longitude && !isNaN(parseFloat(form.latitude)) && !isNaN(parseFloat(form.longitude)) && (
-                <div className="md:col-span-2"> {/* Outer wrapper for the whole section */}
-    <label className="text-sm font-semibold mb-1 block">Map Preview</label>
-    <div className="h-80"> {/* Container with fixed height for the map ONLY */}
-      <MapPreview latitude={parseFloat(form.latitude)} longitude={parseFloat(form.longitude)} />
-    </div>
-    <p className="mt-1 text-xs text-gray-500">Real-time map preview from OpenStreetMap.</p>
-  </div>
-)}
-              <Input label="Landmark" name="landmark" value={form.landmark} onChange={handleInputChange} />
-              <CustomSelect label="Zone" name="zone" value={form.zone} onChange={handleInputChange} options={zoneOptions} />
-              <CustomSelect label="Tier" name="tier" value={form.tier} onChange={handleInputChange} options={tierOptions} mandatory="true" />
-              <CustomSelect label="Facing" name="facing" value={form.facing} onChange={handleInputChange} options={facingOptions} mandatory="true" />
-              <Input label="Facia towards" name="faciaTowards" value={form.faciaTowards} onChange={handleInputChange} />
+              <Input 
+                label="Address" 
+                mandatory="true" 
+                name="address" 
+                value={form.address} 
+                onChange={handleValidatedInputChange}
+                error={fieldErrors.address}
+              />
+              <Input 
+                label="City" 
+                mandatory="true" 
+                name="city" 
+                value={form.city} 
+                onChange={handleValidatedInputChange}
+                error={fieldErrors.city}
+                required 
+              />
+              <CustomSelect label="State" name="state" value={form.state} onChange={handleValidatedInputChange} options={stateOptions} mandatory="true" />
+              <Input 
+                label="Pin-code" 
+                mandatory="false" 
+                name="zip" 
+                value={form.zip} 
+                onChange={handleValidatedInputChange}
+                error={fieldErrors.zip}
+                type="text"
+                maxLength="6"
+                pattern="[1-9][0-9]{5}"
+                placeholder="e.g., 400001"
+              />
+              <Input 
+                label="Latitude" 
+                mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} 
+                name="latitude" 
+                value={form.latitude} 
+                onChange={handleValidatedInputChange}
+                error={fieldErrors.latitude}
+                type="number"
+                step="any"
+                placeholder="e.g., 19.0760"
+              />
+              <Input 
+                label="Longitude" 
+                mandatory={form.spaceType !== 'BQS' && form.spaceType !== 'DigitalBQS' && form.spaceType !== 'Transit' ? "true" : "false"} 
+                name="longitude" 
+                value={form.longitude} 
+                onChange={handleValidatedInputChange}
+                error={fieldErrors.longitude}
+                type="number"
+                step="any"
+                placeholder="e.g., 72.8777"
+              />
+              {form.latitude && form.longitude && !isNaN(parseFloat(form.latitude)) && !isNaN(parseFloat(form.longitude)) && (
+                <div className="md:col-span-2">
+                  <label className="text-sm font-semibold mb-1 block">Map Preview</label>
+                  <div className="h-80">
+                    <MapPreview latitude={parseFloat(form.latitude)} longitude={parseFloat(form.longitude)} />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">Real-time map preview from OpenStreetMap.</p>
+                </div>
+              )}
+              <Input label="Landmark" name="landmark" value={form.landmark} onChange={handleValidatedInputChange} />
+              <CustomSelect label="Zone" name="zone" value={form.zone} onChange={handleValidatedInputChange} options={zoneOptions} />
+              <CustomSelect label="Tier" name="tier" value={form.tier} onChange={handleValidatedInputChange} options={tierOptions} mandatory="true" />
+              <CustomSelect label="Facing" name="facing" value={form.facing} onChange={handleValidatedInputChange} options={facingOptions} mandatory="true" />
+              <Input label="Facia towards" name="faciaTowards" value={form.faciaTowards} onChange={handleValidatedInputChange} />
             </div>
           )}
         </div>
@@ -441,7 +918,8 @@ export default function AddSpaceForm() {
   );
 }
 
-function Input({ mandatory, label, ...props }) {
+// Enhanced Input component with error and warning display
+function Input({ mandatory, label, error, warning, ...props }) {
   return (
     <div className="mb-4">
       <label className="text-sm font-medium text-gray-700">
@@ -450,9 +928,13 @@ function Input({ mandatory, label, ...props }) {
       </label>
       <input
         {...props}
-        className="w-3/4 block border border-gray-300 px-3 py-2 rounded-lg shadow-sm mt-1 
-                   focus:ring-2 focus:ring-black focus:border-black text-sm"
+        className={`w-3/4 block border px-3 py-2 rounded-lg shadow-sm mt-1 text-sm
+                   focus:ring-2 focus:ring-black focus:border-black
+                   ${error ? 'border-red-500 bg-red-50' : 'border-gray-300'}
+                   ${warning ? 'border-orange-400' : ''}`}
       />
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+      {warning && <p className="text-orange-500 text-xs mt-1">⚠️ {warning}</p>}
     </div>
   );
 }
@@ -475,12 +957,27 @@ function Select1({ mandatory, label, children, ...props }) {
   );
 }
 
+// Enhanced ImageUpload component with file validation
 function ImageUpload({ label, name, multiple = false }) {
   const { form, setForm } = useSpaceForm();
+  const [uploadError, setUploadError] = useState('');
+
   const handleFileChange = (e) => {
     const files = multiple ? Array.from(e.target.files) : e.target.files[0];
+    setUploadError('');
+
+    // Validate files
+    const fileArray = multiple ? files : [files];
+    for (const file of fileArray) {
+      if (!validators.isValidImageFile(file)) {
+        setUploadError(`Invalid file: ${file.name}. Please upload JPG, PNG, or WebP images under 5MB.`);
+        return;
+      }
+    }
+
     setForm((prev) => ({ ...prev, [name]: files }));
   };
+
   const preview =
     multiple && Array.isArray(form[name])
       ? form[name].map((file, i) => URL.createObjectURL(file))
@@ -489,7 +986,7 @@ function ImageUpload({ label, name, multiple = false }) {
       : null;
 
   return (
-    <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 h-48 
+    <div className="border-2 border-dashed rounded-xl p-4 h-48 
                     relative bg-gray-50 flex flex-col items-center justify-center text-center 
                     hover:border-black transition">
       <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-sm text-gray-600">
@@ -521,6 +1018,10 @@ function ImageUpload({ label, name, multiple = false }) {
           </div>
         )}
       </label>
+      {uploadError && <p className="text-red-500 text-xs mt-2">{uploadError}</p>}
+      <div className="text-xs text-gray-400 mt-2">
+        Max 5MB • JPG, PNG, WebP
+      </div>
     </div>
   );
 }

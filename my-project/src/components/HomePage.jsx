@@ -18,7 +18,7 @@ dayjs.extend(isBetween);
 
 // Card is designed to be a flex container that fills its parent's height
 const Card = ({ children, className = '', ...props }) => (
-  <div className={`bg-white border shadow-sm rounded-xl w-full h-full flex flex-col ${className}`} {...props}>
+  <div className={`bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm rounded-xl w-full h-full flex flex-col ${className}`} {...props}>
     {children}
   </div>
 );
@@ -29,7 +29,7 @@ const CardContent = ({ children, className = '' }) => (
 );
 
 const ShimmerCard = ({ className = '' }) => (
-  <div className={`bg-gray-200 animate-pulse rounded-xl w-full h-[300px] ${className}`} />
+  <div className={`bg-[var(--color-muted-light)] animate-pulse rounded-xl w-full h-[300px] ${className}`} />
 );
 
 // The calendar itself renders a full-height Card
@@ -153,7 +153,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
       <Card className="h-full w-full">
         <CardContent>
           <div className="flex items-center w-full justify-between mb-4">
-            <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 gap-x-4 gap-y-1">
+            <div className="flex flex-wrap items-center text-xs sm:text-sm text-[var(--color-muted)] gap-x-4 gap-y-1">
               <span className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div> Campaign Starting
               </span>
@@ -162,23 +162,23 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={p} className="p-1 rounded-md hover:bg-gray-100">
+              <button onClick={p} className="p-1 rounded-md hover:bg-[var(--color-hover)]">
                 <FiChevronLeft />
               </button>
-              <span className="font-semibold text-sm sm:text-base">{currentDate.format('MMMM YYYY')}</span>
-              <button onClick={n} className="p-1 rounded-md hover:bg-gray-100">
+              <span className="font-semibold text-sm sm:text-base text-[var(--color-text)]">{currentDate.format('MMMM YYYY')}</span>
+              <button onClick={n} className="p-1 rounded-md hover:bg-[var(--color-hover)]">
                 <FiChevronRight />
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-7 text-center text-sm font-medium text-gray-500 border-b">
+          <div className="grid grid-cols-7 text-center text-sm font-medium text-[var(--color-muted)] border-b border-[var(--color-border)]">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
               <div key={d} className="py-2">
                 {d}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 border-l">
+          <div className="grid grid-cols-7 border-l border-[var(--color-border)]">
             {days.map((day, i) => {
               const k = day.format('YYYY-MM-DD');
               const e = events.get(k);
@@ -189,7 +189,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
               return (
                 <div
                   key={i}
-                  className={`h-24 border-b border-r p-1 relative ${!cm ? 'bg-gray-50 text-gray-400' : 'text-black'}`}
+                  className={`h-24 border-b border-r border-[var(--color-border)] p-1 relative ${!cm ? 'bg-[var(--color-muted-light)] text-[var(--color-muted)]' : 'text-[var(--color-text)]'}`}
                 >
                   <span
                     className={`text-sm absolute top-1.5 right-1.5 ${
@@ -606,13 +606,13 @@ const BookingGraphDashboard = () => {
   };
   
   return (
-    <div className="min-h-screen h-screen w-screen bg-gray-50 text-black flex flex-col">
+    <div className="min-h-screen h-screen w-screen bg-[var(--color-background)] text-[var(--color-text)] flex flex-col">
       <Navbar />
       <main className={`flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="flex flex-col md:flex-row mb-6 gap-4 items-center">
          <h2 className="text-2xl font-sans font-normal">Dashboard</h2>
 
-          <p className="text-lg font-medium text-gray-700 ml-auto">
+          <p className="text-lg font-medium text-[var(--color-text)] ml-auto">
             Welcome, {auth.userName}
           </p>
         </div>
@@ -630,18 +630,18 @@ const BookingGraphDashboard = () => {
             {/* ====== TOP SECTION ====== */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="flex flex-col gap-6">
-                <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium">Campaign Status</h2><div className="text-xs text-right text-gray-600"><p><strong>Completed:</strong> {statusData.completed}</p><p><strong>Ongoing:</strong> {statusData.ongoing}</p><p><strong>Upcoming:</strong> {statusData.upcoming}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: campaignStatusPieData, innerRadius: 40 }]} legend={{ hidden: true }} /></div></CardContent></Card>
-                <Card><CardContent><div className="flex justify-between items-start mb-2" ><h2 className="text-base font-medium">Ownership Distribution</h2><div className="text-xs text-right text-gray-600"><p><strong>Traded:</strong> {ownershipDistribution.traded}</p><p><strong>Owned:</strong> {ownershipDistribution.owned}</p><p><strong>Leased:</strong> {ownershipDistribution.leased}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: ownershipDistributionPieData, innerRadius: 40 }]} legend={{ hidden: true }} /></div></CardContent></Card>
+                <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium text-[var(--color-text)]">Campaign Status</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Completed:</strong> {statusData.completed}</p><p><strong>Ongoing:</strong> {statusData.ongoing}</p><p><strong>Upcoming:</strong> {statusData.upcoming}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: campaignStatusPieData, innerRadius: 40 }]} legend={{ hidden: true }} /></div></CardContent></Card>
+                <Card><CardContent><div className="flex justify-between items-start mb-2" ><h2 className="text-base font-medium text-[var(--color-text)]">Ownership Distribution</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Traded:</strong> {ownershipDistribution.traded}</p><p><strong>Owned:</strong> {ownershipDistribution.owned}</p><p><strong>Leased:</strong> {ownershipDistribution.leased}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: ownershipDistributionPieData, innerRadius: 40 }]} legend={{ hidden: true }} /></div></CardContent></Card>
 
               </div>
               <div className="lg:col-span-2"><DashboardCalendar campaigns={campaigns} currentDate={currentDate} setCurrentDate={setCurrentDate} /></div>
-              <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium">DOOH Availability</h2><div className="text-xs text-right text-gray-600"><p><strong>Available:</strong> {doohAvailabilityStatus.completelyAvailable}</p><p><strong>Partially:</strong> {doohAvailabilityStatus.partiallyAvailable}</p><p><strong>Booked:</strong> {doohAvailabilityStatus.completelyBooked}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: doohAvailabilityPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
-              <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium">DOOH Unit Utilization</h2><div className="text-xs text-right text-gray-600"><p><strong>Booked:</strong> {unitUtilizationStats.bookedUnits}</p><p><strong>Free:</strong> {unitUtilizationStats.freeUnits}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: unitUtilizationPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
-              <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium">Static Space Availability</h2><div className="text-xs text-right text-gray-600"><p><strong>Available:</strong> {availabilityStats.available}</p><p><strong>Booked:</strong> {availabilityStats.booked}</p><p><strong>Overlapping:</strong> {availabilityStats.overlapping}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: availabilityPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
+              <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium text-[var(--color-text)]">DOOH Availability</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Available:</strong> {doohAvailabilityStatus.completelyAvailable}</p><p><strong>Partially:</strong> {doohAvailabilityStatus.partiallyAvailable}</p><p><strong>Booked:</strong> {doohAvailabilityStatus.completelyBooked}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: doohAvailabilityPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
+              <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium text-[var(--color-text)]">DOOH Unit Utilization</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Booked:</strong> {unitUtilizationStats.bookedUnits}</p><p><strong>Free:</strong> {unitUtilizationStats.freeUnits}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: unitUtilizationPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
+              <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium text-[var(--color-text)]">Static Space Availability</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Available:</strong> {availabilityStats.available}</p><p><strong>Booked:</strong> {availabilityStats.booked}</p><p><strong>Overlapping:</strong> {availabilityStats.overlapping}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: availabilityPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
             </div>
             <div className="flex justify-end">
               <select
-                className="border px-1 py-1 rounded text-xs bg-white shadow-sm mb-1"
+                className="border border-[var(--color-border)] px-1 py-1 rounded text-xs bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm mb-1"
                 value={range}
                 onChange={(e) => setRange(e.target.value)}
               >
@@ -658,7 +658,7 @@ const BookingGraphDashboard = () => {
                 <Card className="h-80">
                   <CardContent>
                     <div className="flex justify-between items-center mb-4">
-                       <h2 className="text-base font-medium">Bookings and Open Proposals</h2>
+                       <h2 className="text-base font-medium text-[var(--color-text)]">Bookings and Open Proposals</h2>
                     </div>
                     <div className="flex flex-grow -mx-4">
                       <BarChart
@@ -682,9 +682,9 @@ const BookingGraphDashboard = () => {
                 <Card className="h-80">
                   <CardContent>
                     <div className="flex justify-between items-start mb-4">
-                       <h2 className="text-base font-medium">Payment Overview</h2>
+                       <h2 className="text-base font-medium text-[var(--color-text)]">Payment Overview</h2>
                        <div className="text-right">
-                         <div className="text-xs text-gray-600">
+                         <div className="text-xs text-[var(--color-muted)]">
                             <p><strong>Received:</strong> ₹{paymentData.received.toLocaleString()}</p>
                             <p><strong>Due:</strong> ₹{paymentData.due.toLocaleString()}</p>
                          </div>
@@ -708,7 +708,7 @@ const BookingGraphDashboard = () => {
                 <Card className="h-80">
                   <CardContent>
                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-base font-medium">Campaign Status Overview</h2>
+                        <h2 className="text-base font-medium text-[var(--color-text)]">Campaign Status Overview</h2>
                      </div>
                     <div className="flex flex-grow -mx-4">
                       <BarChart
@@ -729,8 +729,8 @@ const BookingGraphDashboard = () => {
                 <Card className="h-80">
                   <CardContent>
                     <div className="flex justify-between items-center mb-2">
-                      <h2 className="text-base font-medium">Revenue Graph</h2>
-                      <button onClick={() => setRevenueView(prev => prev === 'yearly' ? 'monthly' : 'yearly')} className="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-md">
+                      <h2 className="text-base font-medium text-[var(--color-text)]">Revenue Graph</h2>
+                      <button onClick={() => setRevenueView(prev => prev === 'yearly' ? 'monthly' : 'yearly')} className="bg-[var(--color-muted-light)] text-[var(--color-text)] text-xs px-2 py-1 rounded-md hover:bg-[var(--color-hover)]">
                         View By: {revenueView === 'yearly' ? 'Yearly' : 'Monthly'}
                       </button>
                     </div>

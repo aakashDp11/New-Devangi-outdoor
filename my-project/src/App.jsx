@@ -178,6 +178,8 @@ export default function App() {
                 </PipelineProvider>
               }
             />
+           
+            
 
             {/* 🆕 Notifications */}
             <Route path="/notifications" element={<NotificationsPage />} />

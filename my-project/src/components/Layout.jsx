@@ -6,14 +6,14 @@ import { FaBars } from 'react-icons/fa';
 const Layout = ({ children }) => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
 
-  const handleToggle = () => setIsCollapsed(prev => !prev);
+  const handleToggle = () => setIsCollapsed((prev) => !prev);
 
   return (
     <div
       className="flex min-h-screen transition-colors duration-300"
       style={{
         backgroundColor: 'var(--color-background)',
-        color: 'var(--color-text)',
+        color: 'var(--color-text)'
       }}
     >
       <Navbar />
@@ -28,7 +28,7 @@ const Layout = ({ children }) => {
         `}
         style={{
           backgroundColor: 'var(--color-background)',
-          color: 'var(--color-text)',
+          color: 'var(--color-text)'
         }}
       >
         {/* Mobile Header with Hamburger Menu */}
@@ -37,7 +37,7 @@ const Layout = ({ children }) => {
           style={{
             backgroundColor: 'var(--color-surface)',
             color: 'var(--color-text)',
-            border: '1px solid var(--color-border)',
+            border: '1px solid var(--color-border)'
           }}
         >
           <button
@@ -51,8 +51,10 @@ const Layout = ({ children }) => {
           <h1 className="text-xl font-bold ml-4">Dashboard</h1>
         </div>
 
-        {/* Page Content */}
-        {children}
+        {/* ✅ Scoped container for foreground theming (cards, charts, etc.) */}
+        <div id="dashboard-theme-scope" className="h-full w-full">
+          {children}
+        </div>
       </main>
     </div>
   );
