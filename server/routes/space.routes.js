@@ -18,7 +18,7 @@ const cpUpload = upload.fields([
 ]);
 
 
-router.post('/create', cpUpload, createSpace)
+router.post('/create', cpUpload, createSpace);
 
 function parseDate(dateString) {
   const [day, month, year] = dateString.split('-').map(Number);
