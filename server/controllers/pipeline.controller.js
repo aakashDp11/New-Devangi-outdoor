@@ -185,6 +185,182 @@ export const getPipelineByCampaignId = async (req, res) => {
   }
 };
 
+
+// export const getPipelineByCampaignId = async (req, res) => {
+//   const { campaignId } = req.params;
+//   try {
+//     if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+//       return res.status(400).json({ error: 'Invalid campaign ID' });
+//     }
+
+//     // 1) Load pipeline (with payment/artwork/bookingStatus/po/invoice/etc.) and campaign header
+//     const pipeline = await Pipeline.findOne({ campaign: campaignId }).lean();
+//     if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+
+//     const campaign = await Campaign.findById(campaignId).lean();
+//     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+//     // 2) Load mappings for this campaign (from the CampaignInventoryMapping model)
+//     const mappings = await CampaignInventoryMapping.find({ campaignId }, {
+//       spaceId: 1,
+//       displayCost: 1, buyingPrice: 1, sellingPrice: 1, invoiceNo: 1,
+//       printingCostPerSquareFeet: 1, mountingCostPerSquareFeet: 1, area: 1,
+//       digitalStatus: 1, // Ensure digitalStatus is included
+//       startDate: 1, endDate: 1, unitIds: 1,
+//       createdAt: 1, updatedAt: 1
+//     }).lean();
+
+//     const spaceIds = [...new Set(mappings.map(m => String(m.spaceId)))].map(id => new mongoose.Types.ObjectId(id));
+
+//     // 3) Load the Space docs we need to show in `spaces[]`
+//     const spaces = await Space.find({ _id: { $in: spaceIds } }).lean();
+//     const spaceMap = Object.fromEntries(spaces.map(s => [s._id.toString(), s]));
+
+//     // 4) (Optional but matches your sample): for each space, include all campaign windows (`campaignDates`)
+//     const allWindows = await CampaignInventoryMapping.find(
+//       { spaceId: { $in: spaceIds } },
+//       { spaceId: 1, campaignId: 1, startDate: 1, endDate: 1 }
+//     ).lean();
+
+//     const windowsBySpace = allWindows.reduce((acc, w) => {
+//       const key = w.spaceId.toString();
+//       (acc[key] ||= []).push({
+//         campaignId: w.campaignId?.toString(),
+//         startDate: w.startDate,
+//         endDate: w.endDate,
+//         _id: new mongoose.Types.ObjectId() // legacy array element id
+//       });
+//       return acc;
+//     }, {});
+// console.log("Mappings are",mappings);
+//     // 5) Build legacy `inventoryCosts[]` from mappings
+//     const inventoryCosts = mappings.map(m => ({
+//       id: m.spaceId.toString(),
+//       displayCost: m.displayCost ?? 0,
+//       buyingPrice: m.buyingPrice ?? 0,
+//       sellingPrice: m.sellingPrice ?? 0,
+//       invoiceNo: m.invoiceNo ?? '',
+//       // Legacy key names preserved:
+//       printingcostpersquareFeet: m.printingCostPerSquareFeet ?? 0,
+//       mountingcostpersquareFeet: m.mountingCostPerSquareFeet ?? 0,
+//       area: m.area ?? 0,
+//       digitalStatus: m.digitalStatus ?? [], // Include digitalStatus array
+//       _id: new mongoose.Types.ObjectId()
+//     }));
+
+//     // 6) Build `spaces[]` in the legacy shape from Space docs, plus synthesized fields
+//     const spacesResponse = mappings.map(m => {
+//       const s = spaceMap[m.spaceId.toString()];
+//       if (!s) return null; // early exit if no corresponding space
+
+//       const ds = m.digitalStatus || []; // Simplify digitalStatus handling
+//       const anyLive = ds.some(u => u?.isLive);
+//       const allConfirmed = ds.length > 0 ? ds.every(u => u?.confirmed) : false;
+//       const firstGoLive = ds.map(u => u?.goLiveDate).filter(Boolean).sort()[0] || '';
+//       const firstAssignedAgency = ds.map(u => u?.assignedAgency).filter(Boolean)[0] || '';
+
+//       const legacyDigitalStatus = {
+//         confirmed: allConfirmed,
+//         assignedAgency: firstAssignedAgency || '',
+//         isLive: anyLive,
+//         goLiveDate: firstGoLive,
+//         createdAt: (m.createdAt ?? s?.createdAt)?.toString?.() || (m.createdAt || ''),
+//         updatedAt: (m.updatedAt ?? s?.updatedAt)?.toString?.() || (m.updatedAt || '')
+//       };
+
+//       const legacyCampaignDates = windowsBySpace[m.spaceId.toString()] || [{
+//         campaignId: campaignId,
+//         startDate: m.startDate,
+//         endDate: m.endDate,
+//         _id: new mongoose.Types.ObjectId()
+//       }];
+
+//       return {
+//         _id: s?._id,
+//         spaceName: s?.spaceName,
+//         landlord: s?.landlord,
+//         peerMediaOwner: s?.peerMediaOwner,
+//         spaceType: s?.spaceType,
+//         traded: !!s?.traded,
+//         category: s?.category,
+//         mediaType: s?.mediaType ?? '',
+//         price: s?.price ?? null,
+//         footfall: s?.footfall ?? null,
+//         audience: Array.isArray(s?.audience) ? s.audience : [],
+//         demographics: s?.demographics,
+//         description: s?.description ?? '',
+//         unit: s?.unit ?? 1,
+//         specification: s?.specification,
+//         occupiedUnits: s?.occupiedUnits ?? 0,
+//         width: s?.width ?? null,
+//         height: s?.height ?? null,
+//         additionalTags: s?.additionalTags,
+//         previousBrands: s?.previousBrands ?? '',
+//         tags: s?.tags ?? '',
+//         address: s?.address,
+//         city: s?.city,
+//         state: s?.state,
+//         latitude: s?.latitude,
+//         longitude: s?.longitude,
+//         landmark: s?.landmark,
+//         zone: s?.zone,
+//         ownershipType: s?.ownershipType,
+//         tier: s?.tier,
+//         faciaTowards: s?.faciaTowards,
+//         overlappingBooking: !!s?.overlappingBooking,
+//         mainPhoto: s?.mainPhoto ?? null,
+//         longShot: s?.longShot ?? null,
+//         closeShot: s?.closeShot ?? null,
+//         printingStatus: s?.printingStatus ?? {
+//           confirmed: false, printingDate: '', printingMaterial: '',
+//           assignedPerson: '', assignedAgency: ''
+//         },
+//         numberOfBookings: s?.numberOfBookings ?? 0,
+//         totalBookingValue: s?.totalBookingValue ?? 0,
+//         mountingStatus: s?.mountingStatus ?? {
+//           confirmed: false, mountingDate: '',
+//           assignedPerson: '', assignedAgency: ''
+//         },
+//         otherPhotos: Array.isArray(s?.otherPhotos) ? s.otherPhotos : [],
+//         digitalStatus: legacyDigitalStatus, // Synthesized from mapping.digitalStatus
+//         availability: s?.availability,
+//         dates: Array.isArray(s?.dates) ? s.dates : [],
+//         campaignDates: legacyCampaignDates, // Synthesized from mappings across campaigns
+//         createdAt: s?.createdAt,
+//         updatedAt: s?.updatedAt,
+//         __v: s?.__v,
+//         isInventoryEnabled: s?.isInventoryEnabled
+//       };
+//     }).filter(Boolean); // Remove any null spaces
+
+//     // 7) Assemble final legacy response
+//     return res.json({
+//       // pipeline top-level fields first (payment, etc.)
+//       payment: pipeline.payment ?? { payments: [] },
+//       _id: pipeline._id,
+//       campaign: {
+//         _id: campaign._id,
+//         isFOC: !!campaign.isFOC,
+//         inventoryCosts // Populated from CampaignInventoryMapping
+//       },
+//       spaces: spacesResponse,
+//       artwork: pipeline.artwork ?? { confirmed: false },
+//       bookingStatus: pipeline.bookingStatus ?? {},
+//       po: pipeline.po ?? {},
+//       invoice: pipeline.invoice ?? [],
+//       cashMemo: pipeline.cashMemo ?? [],
+//       creditNote: pipeline.creditNote ?? [],
+//       createdAt: pipeline.createdAt,
+//       updatedAt: pipeline.updatedAt,
+//       __v: pipeline.__v
+//     });
+//   } catch (error) {
+//     console.error('getPipelineByCampaignId error:', error);
+//     return res.status(500).json({ error: error.message || 'Failed to fetch pipeline' });
+//   }
+// };
+
+
 export const createPipelineForCampaign = async (req, res) => {
   const { campaignId } = req.params;
   try {

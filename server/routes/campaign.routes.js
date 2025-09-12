@@ -99,6 +99,21 @@ router.get('/by-space/:spaceId', async (req, res) => {
       res.status(500).json({ error: 'Server error' });
     }
   });
+
+  router.get('/get-space-details', async (req, res) => {
+    const { tag } = req.body;
+    try {
+      const campaign = await Booking.findById(req.params.id);
+      if (!campaign) return res.status(404).json({ message: 'Not found' });
+  
+      const tagList = (campaign.tags || '').split(',').map(t => t.trim()).filter(t => t && t !== tag);
+      campaign.tags = tagList.join(', ');
+      await campaign.save();
+      res.status(200).json(campaign);
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
 router.post('/check-availability', authenticate, async (req, res) => {
     try {
         const { spaceIds, startDate, endDate, campaignIdToIgnore } = req.body;

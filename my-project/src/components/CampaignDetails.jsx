@@ -562,7 +562,7 @@ export default function CampaignDetails() {
               const printingCost = Number(currentCost?.printingcostpersquareFeet || 0);
               const mountingCost = Number(currentCost?.mountingcostpersquareFeet || 0);
               const area = Number(currentCost?.area || computedArea || 0);
-
+              console.log("Current cost is",currentCost);
               // --- MODIFIED SECTION: Total Cost Calculation Logic ---
               let totalCost = displayCost;
               switch (space.spaceType) {

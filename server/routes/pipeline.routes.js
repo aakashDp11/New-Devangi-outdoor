@@ -19,8 +19,8 @@ import moment from 'moment';
 import mongoose from 'mongoose';
 // import { assertUnitAvailableOrThrow } from '../controllers/pipeline.controller.js';
 import Space from '../models/space.model.js';
-router.get('/campaign/:campaignId', getPipelineByCampaignId);
 const { Types } = mongoose;
+router.get('/campaign/:campaignId', getPipelineByCampaignId);
 
 
 router.get('/finance', async (req, res) => {
@@ -774,9 +774,15 @@ router.put('/campaign/:campaignId/digital-status/:spaceId/:unitId', async (req, 
 //       return res.status(404).json({ error: 'Campaign not found' });
 //     }
 
-//     // Update the inventoryCosts in the campaign
+//     // Variables to store the total costs
+//     let totalAmount = 0;
+//     let totalPrintingAmount = 0;
+//     let totalMountingAmount = 0;
+//     let totalDisplayAmount = 0;
+
+//     // Loop through the inventoryCosts to update individual space costs
 //     for (const cost of inventoryCosts) {
-//       // Check if the cost belongs to an existing space and update accordingly
+//       // Update the inventory costs in the CampaignInventoryMapping
 //       const campaignInventoryMapping = await CampaignInventoryMapping.findOneAndUpdate(
 //         { campaignId: campaign._id, spaceId: cost.spaceId },
 //         {
@@ -791,19 +797,13 @@ router.put('/campaign/:campaignId/digital-status/:spaceId/:unitId', async (req, 
 //         },
 //         { new: true }
 //       );
+
 //       if (!campaignInventoryMapping) {
-//         // If the mapping doesn't exist, you might want to create it or handle the error accordingly.
+//         // If the mapping doesn't exist, log or handle accordingly
 //         console.log(`No inventory mapping found for space ${cost.spaceId} in campaign ${campaign._id}`);
 //       }
-//     }
 
-//     // 2. Calculate totalAmount from inventoryCosts
-//     let totalAmount = 0;
-//     let totalPrintingAmount = 0;
-//     let totalMountingAmount = 0;
-//     let totalDisplayAmount = 0;
-
-//     for (const cost of inventoryCosts) {
+//       // 2. Calculate costs for this individual space
 //       const display = cost.displayCost || 0;
 //       const printing = cost.printingcostpersquareFeet > 0
 //         ? (cost.printingcostpersquareFeet * cost.area)
@@ -812,7 +812,7 @@ router.put('/campaign/:campaignId/digital-status/:spaceId/:unitId', async (req, 
 //         ? (cost.mountingcostpersquareFeet * cost.area)
 //         : 0;
 
-//       // Add each amount to the respective totals
+//       // Add this space's costs to the total accumulators
 //       totalDisplayAmount += display;
 //       totalPrintingAmount += printing;
 //       totalMountingAmount += mounting;
@@ -824,7 +824,7 @@ router.put('/campaign/:campaignId/digital-status/:spaceId/:unitId', async (req, 
 //       totalAmount += withGST;
 //     }
 
-//     // 3. Update payment.totalAmount in the related pipeline
+//     // 3. After all spaces have been updated, update the payment.totalAmount in the related pipeline
 //     const pipeline = await Pipeline.findOneAndUpdate(
 //       { campaign: req.params.id },
 //       {
@@ -852,7 +852,7 @@ router.put('/campaign/:campaignId/digital-status/:spaceId/:unitId', async (req, 
 router.put('/campaign/:id/update-costs', async (req, res) => {
   try {
     const { inventoryCosts } = req.body;
-
+console.log("Inventory costs are",inventoryCosts);
     // 1. Update campaign inventoryCosts
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) {
@@ -869,7 +869,7 @@ router.put('/campaign/:id/update-costs', async (req, res) => {
     for (const cost of inventoryCosts) {
       // Update the inventory costs in the CampaignInventoryMapping
       const campaignInventoryMapping = await CampaignInventoryMapping.findOneAndUpdate(
-        { campaignId: campaign._id, spaceId: cost.spaceId },
+        { campaignId: campaign._id, spaceId: cost.id },
         {
           $set: {
             displayCost: cost.displayCost,
@@ -882,7 +882,7 @@ router.put('/campaign/:id/update-costs', async (req, res) => {
         },
         { new: true }
       );
-
+console.log("New campaign-Inventory mapping is",campaignInventoryMapping);
       if (!campaignInventoryMapping) {
         // If the mapping doesn't exist, log or handle accordingly
         console.log(`No inventory mapping found for space ${cost.spaceId} in campaign ${campaign._id}`);
@@ -933,6 +933,7 @@ router.put('/campaign/:id/update-costs', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 router.put('/campaign/:campaignId/payment', updatePayment);
 
