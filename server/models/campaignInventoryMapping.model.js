@@ -1,37 +1,4 @@
 
-  
-// import mongoose from 'mongoose';
-
-// const { Schema, model } = mongoose;
-
-// const campaignInventoryMappingSchema = new Schema({
-//   campaignId: { type: Schema.Types.ObjectId, ref: 'Campaign', required: true, index: true },
-//   spaceId: { type: Schema.Types.ObjectId, ref: 'Space', required: true, index: true },
-
-//   selectedUnits: { type: Number, required: true, min: 1 },
-//   startDate: { type: String, required: true },
-//   endDate: { type: String, required: true },
-
-
-//   displayCost: { type: Number, required: true },
-//   buyingPrice: { type: Number, default: 0 },
-//   sellingPrice: { type: Number, default: 0 },
-//   invoiceNo: { type: String, default: '' },
-//   printingCostPerSquareFeet: { type: Number, required: true },
-//   mountingCostPerSquareFeet: { type: Number, required: true },
-//   area: { type: Number, required: true },
-
-//   printingConfirmedAt: { type: String },
-//   mountingConfirmedAt: { type: String },
-  
-// }, { timestamps: true });
-
-// campaignInventoryMappingSchema.index({ campaignId: 1, spaceId: 1 }, { unique: true });
-// campaignInventoryMappingSchema.index({ spaceId: 1, startDate: 1, endDate: 1 });
-// campaignInventoryMappingSchema.index({ campaignId: 1, startDate: 1, endDate: 1 });
-
-// const CampaignInventoryMapping = model('CampaignInventoryMapping', campaignInventoryMappingSchema);
-// export default CampaignInventoryMapping;
 
 import mongoose from 'mongoose';
 
