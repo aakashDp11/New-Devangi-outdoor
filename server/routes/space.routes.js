@@ -34,7 +34,7 @@ router.get('/active-spaces', async (req, res) => {
 
     const fromDate = new Date(from);
     const toDate = new Date(to);
-    toDate.setDate(toDate.getDate() + 1); // include full day
+    toDate.setDate(toDate.getDate() + 1); 
 
     const campaigns = await Campaign.find({
       createdAt: {

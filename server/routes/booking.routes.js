@@ -11,32 +11,76 @@ import { authenticate } from '../middleware/authenticate.middleware.js';
 import BookingCampaign from '../models/bookingCampaignMapping.model.js';
 import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
 const router = express.Router();
+// export const updateCampaign = async (req, res) => {
+// const { id } = req.params;
+// const { campaignName, description, startDate, endDate, industry, isFOC } = req.body;
+// try {
+// const updated = await Campaign.findByIdAndUpdate(
+// id,
+// {
+// ...(campaignName && { campaignName }),
+// ...(description && { description }),
+// ...(startDate && { startDate }),
+// ...(endDate && { endDate }),
+// ...(industry && { industry }),
+// ...(isFOC !== undefined && { isFOC }),
+// },
+// { new: true }
+// );
+
+// if (!updated) {
+//   return res.status(404).json({ message: "Campaign not found" });
+// }
+
+// res.status(200).json(updated);
+// } catch (err) {
+// console.error("Error updating campaign:", err);
+// res.status(500).json({ message: "Internal server error" });
+// }
+// };
+
+
 export const updateCampaign = async (req, res) => {
-const { id } = req.params;
-const { campaignName, description, startDate, endDate, industry, isFOC } = req.body;
-try {
-const updated = await Campaign.findByIdAndUpdate(
-id,
-{
-...(campaignName && { campaignName }),
-...(description && { description }),
-...(startDate && { startDate }),
-...(endDate && { endDate }),
-...(industry && { industry }),
-...(isFOC !== undefined && { isFOC }),
-},
-{ new: true }
-);
+  const { id } = req.params;
+  const { campaignName, description, startDate, endDate, industry, isFOC } = req.body;
 
-if (!updated) {
-  return res.status(404).json({ message: "Campaign not found" });
-}
+  try {
+    // Update campaign
+    const updated = await Campaign.findByIdAndUpdate(
+      id,
+      {
+        ...(campaignName && { campaignName }),
+        ...(description && { description }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+        ...(industry && { industry }),
+        ...(isFOC !== undefined && { isFOC }),
+      },
+      { new: true }
+    );
 
-res.status(200).json(updated);
-} catch (err) {
-console.error("Error updating campaign:", err);
-res.status(500).json({ message: "Internal server error" });
-}
+    if (!updated) {
+      return res.status(404).json({ message: "Campaign not found" });
+    }
+
+    // --- Update all related CampaignInventoryMapping entries ---
+    const updateMapping = {};
+    if (startDate) updateMapping.startDate = startDate;
+    if (endDate) updateMapping.endDate = endDate;
+
+    if (Object.keys(updateMapping).length > 0) {
+      await CampaignInventoryMapping.updateMany(
+        { campaignId: id },
+        { $set: updateMapping }
+      );
+    }
+
+    res.status(200).json(updated);
+
+  } catch (err) {
+    console.error("Error updating campaign:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
 
 export const getPaymentReport = async (req, res) => {
