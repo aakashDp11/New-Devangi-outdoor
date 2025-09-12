@@ -89,11 +89,11 @@ export default function CloneCampaignPage() {
         
         // Set original items from the rich API response
         setOriginalBooking(campaignData.booking);
-        const originalInvs = campaignData.spaces.map(s => ({ ...s.id, selectedUnits: s.selectedUnits }));
-        setOriginalInventories(originalInvs);
+        // const originalInvs = campaignData.spaces.map(s => ({ ...s.id, selectedUnits: s.selectedUnits }));
+        // setOriginalInventories(originalInvs);
 
-        // Pre-select the original inventories by default
-        setSelectedInventories(originalInvs.map(inv => inv._id));
+        // // Pre-select the original inventories by default
+        // setSelectedInventories(originalInvs.map(inv => inv._id));
 
       } catch (error) {
         toast.error("Failed to fetch campaign details.");
@@ -160,6 +160,7 @@ export default function CloneCampaignPage() {
         inventoryIds: selectedInventories,
         isFOC: isFOC, // <--- Include the isFOC state here
     };
+    console.log("Clone payload is",clonePayload);
     const targetBookingIds = cloneOption === "same" ? [bookingId] : selectedBookings;
     if (cloneOption === "other" && targetBookingIds.length === 0) {
       toast.error("Please select at least one booking to clone into.");
@@ -179,11 +180,7 @@ export default function CloneCampaignPage() {
     }
   };
     
-  // Memoized lists to separate original items from others - otherBookings is no longer needed
-  // const otherBookings = useMemo(() => {
-  //   if (!originalBooking) return allBookings;
-  //   return allBookings.filter(b => b._id !== originalBooking._id);
-  // }, [allBookings, originalBooking]);
+ 
 
   const searchedInventories = useMemo(() => {
     if (!inventorySearch) return allInventories;
