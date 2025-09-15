@@ -700,7 +700,9 @@ export default function BookingDetails() {
                   >
                     <button
                       onClick={(e) => {
-                        e.stopPropagation();
+                        console.log("Booking id is ",booking._id);
+                        console.log("Campaign id is ",campaign._id);
+                        e.stopPropagation(); // Prevents navigation when clicking clone
                         navigate(
                           `/clone-campaign/${campaign._id}/from-booking/${booking._id}`
                         );

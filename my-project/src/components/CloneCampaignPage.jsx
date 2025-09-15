@@ -121,13 +121,12 @@ console.log("🔎 useParams:", { campaignId, bookingId });
         });
 
         setOriginalBooking(campaignData.booking);
-        const originalInvs = (campaignData.spaces || []).map((s) => ({
-          ...s,
-          _id: s._id || s.id,
-          selectedUnits: s.selectedUnits || 0,
-        }));
-        setOriginalInventories(originalInvs);
-        setSelectedInventories(originalInvs.map((inv) => inv._id));
+        // const originalInvs = campaignData.spaces.map(s => ({ ...s.id, selectedUnits: s.selectedUnits }));
+        // setOriginalInventories(originalInvs);
+
+        // // Pre-select the original inventories by default
+        // setSelectedInventories(originalInvs.map(inv => inv._id));
+
       } catch (error) {
         toast.error("Failed to fetch campaign details.");
         navigate(-1);
@@ -223,9 +222,8 @@ console.log("🔎 useParams:", { campaignId, bookingId });
       inventoryIds: selectedInventories,
       isFOC: isFOC,
     };
-
-    const targetBookingIds =
-      cloneOption === "same" ? [bookingId] : selectedBookings;
+    console.log("Clone payload is",clonePayload);
+    const targetBookingIds = cloneOption === "same" ? [bookingId] : selectedBookings;
     if (cloneOption === "other" && targetBookingIds.length === 0) {
       toast.error("Please select at least one booking to clone into.");
       setIsLoading(false);
@@ -258,8 +256,9 @@ console.log("🔎 useParams:", { campaignId, bookingId });
       setIsLoading(false);
     }
   };
+    
+ 
 
-  // 🔹 Memoized filters
   const searchedInventories = useMemo(() => {
     if (!inventorySearch) return allInventories;
     return allInventories.filter(
