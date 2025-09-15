@@ -673,67 +673,6 @@ export const getAllBookings = async (req, res) => {
 
 
 
-// export const getCampaignById = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       return res.status(400).json({ error: 'Invalid campaign ID' });
-//     }
-
-//     // Find the campaign itself
-//     const campaign = await Campaign.findById(id).lean();
-//     if (!campaign) {
-//       return res.status(404).json({ error: 'Campaign not found' });
-//     }
-
-//     // Find all mappings for this campaign
-//     const mappings = await CampaignInventoryMapping.find({ campaignId: id }).lean();
-
-//     // Optionally join with Space for names, city, etc.
-//     const spaceIds = mappings.map(m => m.spaceId);
-//     const spaces = await Space.find({ _id: { $in: spaceIds } }).lean();
-//     const spaceMap = Object.fromEntries(spaces.map(s => [s._id.toString(), s]));
-
-//     // Merge mapping + space info
-//     const inventory = mappings.map(m => ({
-//       ...m,
-//       space: spaceMap[m.spaceId.toString()] || null
-//     }));
-
-//     return res.status(200).json({
-//       ...campaign,
-//       inventory // all spaces, units, digital status, costs, etc.
-//     });
-//   } catch (error) {
-//     console.error('Error fetching campaign by ID:', error);
-//     return res.status(500).json({ error: 'Server error' });
-//   }
-// };
-
-
-
-// export const getCampaignById = async (req, res) => {
-// try {
-// const { id } = req.params;
-// console.log('id of campaign is', id);
-
-// if (!mongoose.Types.ObjectId.isValid(id)) {
-//   return res.status(400).json({ error: 'Invalid campaign ID' });
-// }
-
-// const campaign = await Campaign.findById(id).lean();
-// if (!campaign) {
-//   return res.status(404).json({ error: 'Campaign not found' });
-// }
-
-
-
-// return res.status(200).json(campaign);
-// } catch (error) {
-// console.error('Error fetching campaign by ID:', error);
-// return res.status(500).json({ error: 'Server error' });
-// }
-// };
 
 export const getCampaignById = async (req, res) => {
   try {
@@ -963,18 +902,18 @@ export const createBooking = async (req, res) => {
         }
 
         // Conflict check unless overlappingBooking=true
-        if (!space.overlappingBooking) {
-          const hasConflict = await assertNoUnitConflicts({
-            session,
-            spaceId: space._id,
-            unitIds,
-            startDate,
-            endDate
-          });
-          if (hasConflict) {
-            throw new Error(`Unit conflict for space ${space.spaceName}: some unit(s) already reserved in this window`);
-          }
-        }
+        // if (!space.overlappingBooking) {
+        //   const hasConflict = await assertNoUnitConflicts({
+        //     session,
+        //     spaceId: space._id,
+        //     unitIds,
+        //     startDate,
+        //     endDate
+        //   });
+        //   if (hasConflict) {
+        //     throw new Error(`Unit conflict for space ${space.spaceName}: some unit(s) already reserved in this window`);
+        //   }
+        // }
 
         // Mapping financials (coerce numbers / defaults)
         const mappingDoc = {
@@ -1196,62 +1135,6 @@ export const deleteBooking = async (req, res) => {
     return res.status(500).json({ error: error.message || 'Failed to delete booking' });
   }
 };
-// export const getBookingById = async (req, res) => {
-//   const { id: bookingId } = req.params;
-
-//   try {
-//     // Step 1: Fetch the booking by ID, populate the 'user' field
-//     const booking = await Booking.findById(bookingId).populate('user');
-
-//     if (!booking) {
-//       return res.status(404).json({ error: 'Booking not found' });
-//     }
-
-//     // Step 2: Fetch related BookingCampaigns for this booking
-//     const bookingCampaigns = await BookingCampaign.find({ bookingId }).populate({
-//       path: 'campaignId',
-//       model: 'Campaign',
-//       select: '_id campaignName startDate endDate industry isFOC',  // Populate Campaign details
-//     })
-//     .populate({
-//       path: 'pipeline',
-//       model: 'Pipeline',
-//       select: 'payment bookingStatus artwork po invoice',  // Populate Pipeline details
-//       strictPopulate: false,  // Allow populating even if not strictly defined in schema
-//     });
-//     console.log('Booking Campaigns:', bookingCampaigns);
-
-//     // Step 3: Prepare the response data exactly as the previous structure
-//     const result = {
-//       _id:bookingId,
-//       companyName: booking.companyName,
-//       clientName: booking.clientName,
-//       clientEmail: booking.clientEmail,
-//       clientContactNumber: booking.clientContactNumber,
-//       clientPanNumber: booking.clientPanNumber,
-//       brandDisplayName: booking.brandDisplayName,
-//       clientGstNumber: booking.clientGstNumber,
-//       bookingSource: booking.bookingSource,
-//       bookingMode: booking.bookingMode,
-//       clientType: booking.clientType,
-//       createdAt: booking.createdAt,
-//       campaigns: bookingCampaigns.map(bc => ({
-//         _id: bc.campaignId._id,
-//         campaignName: bc.campaignId.campaignName,
-//         startDate: bc.campaignId.startDate,
-//         endDate: bc.campaignId.endDate,
-//         industry: bc.campaignId.industry,
-//         isFOC: bc.campaignId.isFOC,
-//         // pipeline: bc.pipeline,  // Include the entire pipeline for each campaign
-//       }))
-//     };
-
-//     return res.status(200).json(result);
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({ error: error.message || 'Failed to fetch booking' });
-//   }
-// };
 
 export const getBookingById = async (req, res) => {
   const { id: bookingId } = req.params;
@@ -1587,82 +1470,6 @@ router.get('/inventories-for-selection', authenticate, async (req, res) => {
 router.get('/dashboard-stats', authenticate, getBookingDashboardStats);
 router.get('/campaign/:id', getCampaignById);
 router.patch('/campaign/:id', updateCampaign);
-// router.post('/:bookingId/campaigns', async (req, res) => {
-// const session = await mongoose.startSession();
-// session.startTransaction();
-// try {
-// const { bookingId } = req.params;
-// console.log("Booking id",bookingId);
-// const campaignData = req.body;
-
-// const [newCampaign] = await Campaign.create([campaignData], { session });
-
-// if (!newCampaign || !newCampaign._id) {
-//   throw new Error('Campaign creation failed');
-// }
-
-// await Booking.findByIdAndUpdate(
-//   bookingId,
-//   { $push: { campaigns: newCampaign._id } },
-//   { new: true, session }
-// );
-
-// for (const { id: spaceId, selectedUnits } of newCampaign.spaces) {
-//   console.log("id of campaign is", newCampaign._id);
-
-//   const space = await Space.findById(spaceId).session(session);
-//   if (!space) throw new Error(`Space not found: ${spaceId}`);
-
-//   const availableUnits = space.unit - space.occupiedUnits;
-//   if (selectedUnits > availableUnits && !space.overlappingBooking) {
-//     space.overlappingBooking = true;
-//   }
-
-//   space.occupiedUnits += selectedUnits;
-
-//   const isDOOH = space.spaceType === 'DOOH';
-//   const allUnitsBooked = space.occupiedUnits >= space.unit;
-//   const noUnitsBooked = space.occupiedUnits === 0;
-
-//   space.availability = isDOOH
-//     ? allUnitsBooked
-//       ? 'Completely booked'
-//       : noUnitsBooked
-//         ? 'Completely available'
-//         : 'Partialy available'
-//     : space.overlappingBooking
-//       ? 'Overlapping booking'
-//       : allUnitsBooked
-//         ? 'Booked'
-//         : 'Available';
-
-//   if (!Array.isArray(space.campaignDates)) {
-//     space.campaignDates = [];
-//   }
-
-//   for (let i = 0; i < selectedUnits; i++) {
-//     space.campaignDates.push({
-//       campaignId: newCampaign._id,
-//       startDate: newCampaign.startDate,
-//       endDate: newCampaign.endDate,
-//     });
-//   }
-
-//   space.numberOfBookings += 1;
-//   await space.save({ session });
-// }
-
-// await session.commitTransaction();
-// session.endSession();
-
-// res.status(201).json({ message: 'Campaign created and linked', campaign: newCampaign });
-// } catch (err) {
-// await session.abortTransaction();
-// session.endSession();
-// console.error('Error creating campaign:', err);
-// res.status(500).json({ message: err.message || 'Failed to create and link campaign' });
-// }
-// });
 async function hasUnitConflicts({ session, spaceId, unitIds, startDate, endDate, excludeId = null }) {
   const q = {
     spaceId,
@@ -1675,23 +1482,7 @@ async function hasUnitConflicts({ session, spaceId, unitIds, startDate, endDate,
   return Boolean(exists);
 }
 
-// helper: allocate first N free unitIds if client passes only selectedUnits
-// async function allocateUnitIds({ session, space, startDate, endDate, need }) {
-//   const maxUnits = Math.max(1, Number(space.unit || 1));
-//   const all = Array.from({ length: maxUnits }, (_, i) => i + 1);
 
-//   const cur = CampaignInventoryMapping.find({
-//     spaceId: space._id,
-//     startDate: { $lte: endDate },
-//     endDate:   { $gte: startDate },
-//   }, { unitIds: 1 }).session(session).lean();
-
-//   const booked = new Set();
-//   for await (const m of cur) for (const u of (m.unitIds || [])) booked.add(u);
-
-//   const free = all.filter(u => !booked.has(u));
-//   return free.length >= need ? free.slice(0, need) : null;
-// }
 router.put('/:id/add-tag', async (req, res) => {
   const { tag } = req.body;
   try {
