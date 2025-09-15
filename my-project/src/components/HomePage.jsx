@@ -16,10 +16,39 @@ import moment from 'moment';
 
 dayjs.extend(isBetween);
 
-// Card is designed to be a flex container that fills its parent's height
+// Enhanced color palette using blue shades with gradients
+const colorPalette = {
+  primary: '#1e40af',      // Blue-700
+  secondary: '#3b82f6',    // Blue-500
+  tertiary: '#60a5fa',     // Blue-400
+  quaternary: '#93c5fd',   // Blue-300
+  light: '#dbeafe',        // Blue-100
+  ultraLight: '#eff6ff',   // Blue-50
+  gradients: {
+    primary: 'linear-gradient(135deg, #1e40af 0%, #60a5fa 100%)',
+    secondary: 'linear-gradient(135deg, #3b82f6 0%, #93c5fd 100%)',
+    tertiary: 'linear-gradient(135deg, #60a5fa 0%, #dbeafe 100%)',
+    pie1: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+    pie2: 'linear-gradient(135deg, #1e40af 0%, #60a5fa 100%)',
+    pie3: 'linear-gradient(135deg, #3b82f6 0%, #93c5fd 100%)',
+    bar1: 'linear-gradient(180deg, #1e40af 0%, #60a5fa 100%)',
+    bar2: 'linear-gradient(180deg, #3b82f6 0%, #93c5fd 100%)',
+  }
+};
+
+// Enhanced Card with stronger gradient background
 const Card = ({ children, className = '', ...props }) => (
-  <div className={`bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm rounded-xl w-full h-full flex flex-col ${className}`} {...props}>
-    {children}
+  <div 
+    className={`relative border border-[var(--color-border)] shadow-lg rounded-xl w-full h-full flex flex-col overflow-hidden ${className}`} 
+    style={{
+      background: `linear-gradient(135deg, var(--color-surface) 0%, rgba(30, 64, 175, 0.06) 50%, rgba(59, 130, 246, 0.04) 100%)`,
+    }}
+    {...props}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 via-blue-400/4 to-blue-300/2 pointer-events-none"></div>
+    <div className="relative z-10 h-full flex flex-col">
+      {children}
+    </div>
   </div>
 );
 
@@ -29,10 +58,10 @@ const CardContent = ({ children, className = '' }) => (
 );
 
 const ShimmerCard = ({ className = '' }) => (
-  <div className={`bg-[var(--color-muted-light)] animate-pulse rounded-xl w-full h-[300px] ${className}`} />
+  <div className={`bg-gradient-to-r from-blue-100/60 via-blue-200/40 to-blue-300/20 animate-pulse rounded-xl w-full h-[300px] ${className}`} />
 );
 
-// The calendar itself renders a full-height Card
+// Enhanced calendar with gradient effects
 const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
   const [days, setDays] = useState([]);
   const [events, setEvents] = useState(new Map());
@@ -74,7 +103,6 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
     setEvents(eventMap);
   }, [campaigns]);
 
-
   useEffect(() => {
     const start = currentDate.startOf('month'),
       end = currentDate.endOf('month'),
@@ -105,7 +133,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
 
     const isStarting = type === 'starting';
     const title = isStarting ? 'Campaigns Starting Today:' : 'Campaigns Ending Today:';
-    const dotColorClass = isStarting ? 'bg-green-500' : 'bg-red-500';
+    const dotColorClass = isStarting ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-gradient-to-r from-blue-700 to-blue-800';
 
     const tooltipContent = (
       <div>
@@ -155,18 +183,18 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
           <div className="flex items-center w-full justify-between mb-4">
             <div className="flex flex-wrap items-center text-xs sm:text-sm text-[var(--color-muted)] gap-x-4 gap-y-1">
               <span className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div> Campaign Starting
+                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-400 shadow-sm"></div> Campaign Starting
               </span>
               <span className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div> Campaign Ending
+                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-700 to-blue-600 shadow-sm"></div> Campaign Ending
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={p} className="p-1 rounded-md hover:bg-[var(--color-hover)]">
+              <button onClick={p} className="p-1 rounded-md hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 transition-all duration-200">
                 <FiChevronLeft />
               </button>
               <span className="font-semibold text-sm sm:text-base text-[var(--color-text)]">{currentDate.format('MMMM YYYY')}</span>
-              <button onClick={n} className="p-1 rounded-md hover:bg-[var(--color-hover)]">
+              <button onClick={n} className="p-1 rounded-md hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 transition-all duration-200">
                 <FiChevronRight />
               </button>
             </div>
@@ -183,17 +211,16 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
               const k = day.format('YYYY-MM-DD');
               const e = events.get(k);
               const cm = day.month() === currentDate.month();
-              // Highlight the actual current day
               const t = day.isSame(dayjs(), 'day'); 
 
               return (
                 <div
                   key={i}
-                  className={`h-24 border-b border-r border-[var(--color-border)] p-1 relative ${!cm ? 'bg-[var(--color-muted-light)] text-[var(--color-muted)]' : 'text-[var(--color-text)]'}`}
+                  className={`h-24 border-b border-r border-[var(--color-border)] p-1 relative ${!cm ? 'bg-gradient-to-br from-blue-50/40 via-blue-100/25 to-blue-200/15 text-[var(--color-muted)]' : 'text-[var(--color-text)]'}`}
                 >
                   <span
                     className={`text-sm absolute top-1.5 right-1.5 ${
-                      t ? 'bg-blue-500 text-white rounded-full h-6 w-6 flex items-center justify-center' : ''
+                      t ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full h-6 w-6 flex items-center justify-center shadow-lg' : ''
                     }`}
                   >
                     {day.format('D')}
@@ -202,7 +229,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
                   <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1">
                     {e?.startingCampaigns?.length > 0 && (
                       <div
-                        className="w-2 h-2 rounded-full bg-green-500"
+                        className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-400 shadow-sm"
                         onMouseEnter={(event) => handleMouseOver(event, e.startingCampaigns, 'starting')}
                         onMouseLeave={handleMouseOut}
                       ></div>
@@ -210,7 +237,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
 
                     {e?.endingCampaigns?.length > 0 && (
                       <div
-                        className="w-2 h-2 rounded-full bg-red-500"
+                        className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-700 to-blue-600 shadow-sm"
                         onMouseEnter={(event) => handleMouseOver(event, e.endingCampaigns, 'ending')}
                         onMouseLeave={handleMouseOut}
                       ></div>
@@ -225,7 +252,7 @@ const DashboardCalendar = ({campaigns, currentDate, setCurrentDate }) => {
 
       {tooltip.visible && (
         <div
-            className="fixed z-50 bg-gray-800 text-white text-xs rounded-md px-3 py-2 shadow-lg"
+            className="fixed z-50 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-white text-xs rounded-md px-3 py-2 shadow-xl border border-blue-600"
             style={{
             top: `${tooltip.y + 15}px`,
             left: `${tooltip.x + 15}px`,
@@ -339,11 +366,7 @@ const BookingGraphDashboard = () => {
     fetchCampaigns();
   }, []); 
 
-  // =================================================================
-  // START: MODIFIED useEffect Blocks
-  // =================================================================
-
-  // useEffect for Payment Data (Depends on the date range filter)
+  // Payment Data useEffect
   useEffect(() => {
     if (bookingStats.length > 0) {
       const now = dayjs();
@@ -365,17 +388,12 @@ const BookingGraphDashboard = () => {
     }
   }, [range, bookingStats]);
 
-  // useEffect for Revenue Data (Independent of the date range filter)
+  // Revenue Data useEffect
   useEffect(() => {
     if (bookingStats.length > 0) {
-      // Process all booking stats for the revenue graph, ignoring the 'range' filter
       processRevenueData(bookingStats);
     }
   }, [revenueView, bookingStats]);
-
-  // =================================================================
-  // END: MODIFIED useEffect Blocks
-  // =================================================================
   
   useEffect(() => {
     if (tableBookings.length > 0 || proposals.length > 0) {
@@ -559,38 +577,42 @@ const BookingGraphDashboard = () => {
   
   const pipelineCounts = getPipelineStatusCounts();
 
+  // Create gradient definitions for charts
+  const createGradientId = (id) => `gradient-${id}`;
+
+  // Updated pie chart data with gradient references
   const ownershipDistributionPieData = [
-    { id: 0, value: ownershipDistribution.traded || 0.01, label: 'Traded', color: '#3b82f6' },
-    { id: 1, value: ownershipDistribution.owned || 0.01, label: 'Owned', color: '#f59e0b' },
-    { id: 2, value: ownershipDistribution.leased || 0.01, label: 'Leased', color: '#ef4444' },
+    { id: 0, value: ownershipDistribution.traded || 0.01, label: 'Traded', color: colorPalette.primary },
+    { id: 1, value: ownershipDistribution.owned || 0.01, label: 'Owned', color: colorPalette.secondary },
+    { id: 2, value: ownershipDistribution.leased || 0.01, label: 'Leased', color: colorPalette.tertiary },
   ];
 
   const campaignStatusPieData = [
-    { id: 0, value: statusData.completed, label: 'Completed', color: '#3b82f6' },
-    { id: 1, value: statusData.ongoing, label: 'Ongoing', color: '#ef4444' },
-    { id: 2, value: statusData.upcoming, label: 'Upcoming', color: '#f59e0b' },
+    { id: 0, value: statusData.completed, label: 'Completed', color: colorPalette.primary },
+    { id: 1, value: statusData.ongoing, label: 'Ongoing', color: colorPalette.secondary },
+    { id: 2, value: statusData.upcoming, label: 'Upcoming', color: colorPalette.tertiary },
   ];
   
   const doohAvailabilityPieData = [
-    { id: 0, value: doohAvailabilityStatus.completelyAvailable || 0.01, label: 'Available', color: '#3b82f6'},
-    { id: 1, value: doohAvailabilityStatus.partiallyAvailable || 0.01, label: 'Partially', color: '#f59e0b'},
-    { id: 2, value: doohAvailabilityStatus.completelyBooked || 0.01, label: 'Booked', color: '#ef4444'},
+    { id: 0, value: doohAvailabilityStatus.completelyAvailable || 0.01, label: 'Available', color: colorPalette.primary},
+    { id: 1, value: doohAvailabilityStatus.partiallyAvailable || 0.01, label: 'Partially', color: colorPalette.secondary},
+    { id: 2, value: doohAvailabilityStatus.completelyBooked || 0.01, label: 'Booked', color: colorPalette.tertiary},
   ];
 
   const unitUtilizationPieData = [
-    { id: 0, value: unitUtilizationStats.bookedUnits || 0.01, label: 'Booked Units', color: '#3b82f6'},
-    { id: 1, value: unitUtilizationStats.freeUnits || 0.01, label: 'Free Units', color: '#f59e0b'},
+    { id: 0, value: unitUtilizationStats.bookedUnits || 0.01, label: 'Booked Units', color: colorPalette.primary},
+    { id: 1, value: unitUtilizationStats.freeUnits || 0.01, label: 'Free Units', color: colorPalette.secondary},
   ];
 
   const availabilityPieData = [
-    { id: 0, value: availabilityStats.available || 0.01, label: 'Available', color: '#3b82f6'},
-    { id: 1, value: availabilityStats.booked || 0.01, label: 'Booked', color: '#f59e0b'},
-    { id: 2, value: availabilityStats.overlapping || 0.01, label: 'Overlapping', color: '#ef4444'},
+    { id: 0, value: availabilityStats.available || 0.01, label: 'Available', color: colorPalette.primary},
+    { id: 1, value: availabilityStats.booked || 0.01, label: 'Booked', color: colorPalette.secondary},
+    { id: 2, value: availabilityStats.overlapping || 0.01, label: 'Overlapping', color: colorPalette.tertiary},
   ];
 
   const paymentPieData = [
-    {id: 0, value: paymentData.received || 0.01, label: 'Received', color: '#4285F4' },
-    {id: 1, value: paymentData.due || 0.01, label: 'Due', color: '#FDBB2D' }
+    {id: 0, value: paymentData.received || 0.01, label: 'Received', color: colorPalette.primary },
+    {id: 1, value: paymentData.due || 0.01, label: 'Due', color: colorPalette.secondary }
   ];
 
   const pipelineBarData = {
@@ -606,15 +628,51 @@ const BookingGraphDashboard = () => {
   };
   
   return (
-    <div className="min-h-screen h-screen w-screen bg-[var(--color-background)] text-[var(--color-text)] flex flex-col">
+    <div className="min-h-screen h-screen w-screen bg-gradient-to-br from-blue-50/40 via-white to-blue-100/20 text-[var(--color-text)] flex flex-col">
+      {/* Add SVG definitions for gradients */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          {/* Gradient definitions for different chart elements */}
+          <linearGradient id="pieGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e3a8a" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+          <linearGradient id="pieGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e40af" />
+            <stop offset="100%" stopColor="#60a5fa" />
+          </linearGradient>
+          <linearGradient id="pieGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#93c5fd" />
+          </linearGradient>
+          <linearGradient id="barGradient1" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#1e40af" />
+            <stop offset="100%" stopColor="#60a5fa" />
+          </linearGradient>
+          <linearGradient id="barGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#93c5fd" />
+          </linearGradient>
+          <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={colorPalette.primary} stopOpacity={0.4} />
+            <stop offset="50%" stopColor={colorPalette.secondary} stopOpacity={0.2} />
+            <stop offset="100%" stopColor={colorPalette.tertiary} stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+      </svg>
+
       <Navbar />
       <main className={`flex-1 h-full overflow-y-auto px-4 md:px-6 py-6 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="flex flex-col md:flex-row mb-6 gap-4 items-center">
-         <h2 className="text-2xl font-sans font-normal">Dashboard</h2>
+          <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 text-white px-6 py-3 rounded-xl shadow-lg">
+            <h2 className="text-2xl font-sans font-medium">Dashboard</h2>
+          </div>
 
-          <p className="text-lg font-medium text-[var(--color-text)] ml-auto">
-            Welcome, {auth.userName}
-          </p>
+          <div className="ml-auto bg-gradient-to-r from-blue-50 via-blue-100 to-blue-200 px-4 py-2 rounded-lg shadow-lg">
+            <p className="text-lg font-medium text-blue-800">
+              Welcome, {auth.userName}
+            </p>
+          </div>
         </div>
 
         {loading ? (
@@ -630,18 +688,144 @@ const BookingGraphDashboard = () => {
             {/* ====== TOP SECTION ====== */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="flex flex-col gap-6">
-                <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium text-[var(--color-text)]">Campaign Status</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Completed:</strong> {statusData.completed}</p><p><strong>Ongoing:</strong> {statusData.ongoing}</p><p><strong>Upcoming:</strong> {statusData.upcoming}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: campaignStatusPieData, innerRadius: 40 }]} legend={{ hidden: true }} /></div></CardContent></Card>
-                <Card><CardContent><div className="flex justify-between items-start mb-2" ><h2 className="text-base font-medium text-[var(--color-text)]">Ownership Distribution</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Traded:</strong> {ownershipDistribution.traded}</p><p><strong>Owned:</strong> {ownershipDistribution.owned}</p><p><strong>Leased:</strong> {ownershipDistribution.leased}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: ownershipDistributionPieData, innerRadius: 40 }]} legend={{ hidden: true }} /></div></CardContent></Card>
-
+                <Card>
+                  <CardContent>
+                    <div className="flex justify-between items-start mb-2">
+                      <h2 className="text-base font-medium text-[var(--color-text)] bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Campaign Status</h2>
+                      <div className="text-xs text-right text-[var(--color-muted)]">
+                        <p><strong>Completed:</strong> {statusData.completed}</p>
+                        <p><strong>Ongoing:</strong> {statusData.ongoing}</p>
+                        <p><strong>Upcoming:</strong> {statusData.upcoming}</p>
+                      </div>
+                    </div>
+                    <div className="flex-grow -mx-4 flex items-center justify-center">
+                      <PieChart 
+                        series={[{ 
+                          data: campaignStatusPieData.map((item, index) => ({
+                            ...item,
+                            color: index === 0 ? 'url(#pieGradient1)' : index === 1 ? 'url(#pieGradient2)' : 'url(#pieGradient3)'
+                          })), 
+                          innerRadius: 40,
+                          highlightScope: { faded: 'global', highlighted: 'item' }
+                        }]} 
+                        legend={{ hidden: true }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent>
+                    <div className="flex justify-between items-start mb-2">
+                      <h2 className="text-base font-medium text-[var(--color-text)] bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Ownership Distribution</h2>
+                      <div className="text-xs text-right text-[var(--color-muted)]">
+                        <p><strong>Traded:</strong> {ownershipDistribution.traded}</p>
+                        <p><strong>Owned:</strong> {ownershipDistribution.owned}</p>
+                        <p><strong>Leased:</strong> {ownershipDistribution.leased}</p>
+                      </div>
+                    </div>
+                    <div className="flex-grow -mx-4 flex items-center justify-center">
+                      <PieChart 
+                        series={[{ 
+                          data: ownershipDistributionPieData.map((item, index) => ({
+                            ...item,
+                            color: index === 0 ? 'url(#pieGradient1)' : index === 1 ? 'url(#pieGradient2)' : 'url(#pieGradient3)'
+                          })), 
+                          innerRadius: 40,
+                          highlightScope: { faded: 'global', highlighted: 'item' }
+                        }]} 
+                        legend={{ hidden: true }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-              <div className="lg:col-span-2"><DashboardCalendar campaigns={campaigns} currentDate={currentDate} setCurrentDate={setCurrentDate} /></div>
-              <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium text-[var(--color-text)]">DOOH Availability</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Available:</strong> {doohAvailabilityStatus.completelyAvailable}</p><p><strong>Partially:</strong> {doohAvailabilityStatus.partiallyAvailable}</p><p><strong>Booked:</strong> {doohAvailabilityStatus.completelyBooked}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: doohAvailabilityPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
-              <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium text-[var(--color-text)]">DOOH Unit Utilization</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Booked:</strong> {unitUtilizationStats.bookedUnits}</p><p><strong>Free:</strong> {unitUtilizationStats.freeUnits}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: unitUtilizationPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
-              <Card><CardContent><div className="flex justify-between items-start mb-2"><h2 className="text-base font-medium text-[var(--color-text)]">Static Space Availability</h2><div className="text-xs text-right text-[var(--color-muted)]"><p><strong>Available:</strong> {availabilityStats.available}</p><p><strong>Booked:</strong> {availabilityStats.booked}</p><p><strong>Overlapping:</strong> {availabilityStats.overlapping}</p></div></div><div className="flex-grow -mx-4 flex items-center justify-center"><PieChart series={[{ data: availabilityPieData, innerRadius: 40 }]} legend={{ hidden: true }}/></div></CardContent></Card>
+              
+              <div className="lg:col-span-2">
+                <DashboardCalendar campaigns={campaigns} currentDate={currentDate} setCurrentDate={setCurrentDate} />
+              </div>
+              
+              <Card>
+                <CardContent>
+                  <div className="flex justify-between items-start mb-2">
+                    <h2 className="text-base font-medium text-[var(--color-text)] bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">DOOH Availability</h2>
+                    <div className="text-xs text-right text-[var(--color-muted)]">
+                      <p><strong>Available:</strong> {doohAvailabilityStatus.completelyAvailable}</p>
+                      <p><strong>Partially:</strong> {doohAvailabilityStatus.partiallyAvailable}</p>
+                      <p><strong>Booked:</strong> {doohAvailabilityStatus.completelyBooked}</p>
+                    </div>
+                  </div>
+                  <div className="flex-grow -mx-4 flex items-center justify-center">
+                    <PieChart 
+                      series={[{ 
+                        data: doohAvailabilityPieData.map((item, index) => ({
+                          ...item,
+                          color: index === 0 ? 'url(#pieGradient1)' : index === 1 ? 'url(#pieGradient2)' : 'url(#pieGradient3)'
+                        })), 
+                        innerRadius: 40,
+                        highlightScope: { faded: 'global', highlighted: 'item' }
+                      }]} 
+                      legend={{ hidden: true }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent>
+                  <div className="flex justify-between items-start mb-2">
+                    <h2 className="text-base font-medium text-[var(--color-text)] bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">DOOH Unit Utilization</h2>
+                    <div className="text-xs text-right text-[var(--color-muted)]">
+                      <p><strong>Booked:</strong> {unitUtilizationStats.bookedUnits}</p>
+                      <p><strong>Free:</strong> {unitUtilizationStats.freeUnits}</p>
+                    </div>
+                  </div>
+                  <div className="flex-grow -mx-4 flex items-center justify-center">
+                    <PieChart 
+                      series={[{ 
+                        data: unitUtilizationPieData.map((item, index) => ({
+                          ...item,
+                          color: index === 0 ? 'url(#pieGradient1)' : 'url(#pieGradient2)'
+                        })), 
+                        innerRadius: 40,
+                        highlightScope: { faded: 'global', highlighted: 'item' }
+                      }]} 
+                      legend={{ hidden: true }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent>
+                  <div className="flex justify-between items-start mb-2">
+                    <h2 className="text-base font-medium text-[var(--color-text)] bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Static Space Availability</h2>
+                    <div className="text-xs text-right text-[var(--color-muted)]">
+                      <p><strong>Available:</strong> {availabilityStats.available}</p>
+                      <p><strong>Booked:</strong> {availabilityStats.booked}</p>
+                      <p><strong>Overlapping:</strong> {availabilityStats.overlapping}</p>
+                    </div>
+                  </div>
+                  <div className="flex-grow -mx-4 flex items-center justify-center">
+                    <PieChart 
+                      series={[{ 
+                        data: availabilityPieData.map((item, index) => ({
+                          ...item,
+                          color: index === 0 ? 'url(#pieGradient1)' : index === 1 ? 'url(#pieGradient2)' : 'url(#pieGradient3)'
+                        })), 
+                        innerRadius: 40,
+                        highlightScope: { faded: 'global', highlighted: 'item' }
+                      }]} 
+                      legend={{ hidden: true }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
+            
             <div className="flex justify-end">
               <select
-                className="border border-[var(--color-border)] px-1 py-1 rounded text-xs bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm mb-1"
+                className="border border-blue-300 px-3 py-2 rounded-lg text-sm bg-gradient-to-r from-blue-50 via-blue-100 to-white text-blue-800 shadow-sm hover:shadow-md transition-all duration-200 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                 value={range}
                 onChange={(e) => setRange(e.target.value)}
               >
@@ -658,19 +842,35 @@ const BookingGraphDashboard = () => {
                 <Card className="h-80">
                   <CardContent>
                     <div className="flex justify-between items-center mb-4">
-                       <h2 className="text-base font-medium text-[var(--color-text)]">Bookings and Open Proposals</h2>
+                      <h2 className="text-base font-medium text-[var(--color-text)] bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Bookings and Open Proposals</h2>
                     </div>
                     <div className="flex flex-grow -mx-4">
                       <BarChart
-                        xAxis={[{ scaleType: 'band', data: bookingsAndProposalsData.xLabels , categoryGapRatio: 0.4 }]}
+                        xAxis={[{ scaleType: 'band', data: bookingsAndProposalsData.xLabels, categoryGapRatio: 0.4 }]}
                         series={[ 
-                          { data: bookingsAndProposalsData.bookingsData, label: 'Bookings', color: '#4caf50' },
-                          { data: bookingsAndProposalsData.proposalsData, label: 'Open Proposals', color: '#3b82f6' }
+                          { 
+                            data: bookingsAndProposalsData.bookingsData, 
+                            label: 'Bookings', 
+                            color: 'url(#barGradient1)'
+                          },
+                          { 
+                            data: bookingsAndProposalsData.proposalsData, 
+                            label: 'Open Proposals', 
+                            color: 'url(#barGradient2)'
+                          }
                         ]}
-                        borderRadius={5}
+                        borderRadius={8}
                         legend={{
                           direction: 'row',
                           position: { vertical: 'top', horizontal: 'right' },
+                        }}
+                        sx={{
+                          '& .MuiChartsAxis-tick': {
+                            stroke: colorPalette.tertiary,
+                          },
+                          '& .MuiChartsAxis-line': {
+                            stroke: colorPalette.light,
+                          },
                         }}
                       />
                     </div>
@@ -682,23 +882,30 @@ const BookingGraphDashboard = () => {
                 <Card className="h-80">
                   <CardContent>
                     <div className="flex justify-between items-start mb-4">
-                       <h2 className="text-base font-medium text-[var(--color-text)]">Payment Overview</h2>
-                       <div className="text-right">
-                         <div className="text-xs text-[var(--color-muted)]">
-                            <p><strong>Received:</strong> ₹{paymentData.received.toLocaleString()}</p>
-                            <p><strong>Due:</strong> ₹{paymentData.due.toLocaleString()}</p>
-                         </div>
-                       </div>
+                      <h2 className="text-base font-medium text-[var(--color-text)] bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Payment Overview</h2>
+                      <div className="text-right">
+                        <div className="text-xs text-[var(--color-muted)]">
+                          <p><strong>Received:</strong> ₹{paymentData.received.toLocaleString()}</p>
+                          <p><strong>Due:</strong> ₹{paymentData.due.toLocaleString()}</p>
+                        </div>
+                      </div>
                     </div>
                     <div className="flex flex-grow -mx-4 items-center justify-center">
-                        <PieChart
-                          series={[{ data: paymentPieData, innerRadius: 40 }]}
-                          legend={{
-                            direction: 'column',
-                            position: { vertical: 'middle', horizontal: 'right' },
-                            padding: 0,
-                          }}
-                        />
+                      <PieChart
+                        series={[{ 
+                          data: paymentPieData.map((item, index) => ({
+                            ...item,
+                            color: index === 0 ? 'url(#pieGradient1)' : 'url(#pieGradient2)'
+                          })), 
+                          innerRadius: 40,
+                          highlightScope: { faded: 'global', highlighted: 'item' }
+                        }]}
+                        legend={{
+                          direction: 'column',
+                          position: { vertical: 'middle', horizontal: 'right' },
+                          padding: 0,
+                        }}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -707,17 +914,29 @@ const BookingGraphDashboard = () => {
               <div className="lg:col-span-3">
                 <Card className="h-80">
                   <CardContent>
-                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-base font-medium text-[var(--color-text)]">Campaign Status Overview</h2>
-                     </div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-base font-medium text-[var(--color-text)] bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Campaign Status Overview</h2>
+                    </div>
                     <div className="flex flex-grow -mx-4">
                       <BarChart
                         xAxis={[{ scaleType: 'band', data: pipelineBarData.labels, categoryGapRatio: 0.6 }]}
-                        series={[{ data: pipelineBarData.values, label: 'Campaign Count', color: '#3b82f6'}]}
-                        borderRadius={5}
+                        series={[{ 
+                          data: pipelineBarData.values, 
+                          label: 'Campaign Count', 
+                          color: 'url(#barGradient1)'
+                        }]}
+                        borderRadius={8}
                         legend={{
                           direction: 'row',
                           position: { vertical: 'top', horizontal: 'right' },
+                        }}
+                        sx={{
+                          '& .MuiChartsAxis-tick': {
+                            stroke: colorPalette.tertiary,
+                          },
+                          '& .MuiChartsAxis-line': {
+                            stroke: colorPalette.light,
+                          },
                         }}
                       />
                     </div>
@@ -729,8 +948,11 @@ const BookingGraphDashboard = () => {
                 <Card className="h-80">
                   <CardContent>
                     <div className="flex justify-between items-center mb-2">
-                      <h2 className="text-base font-medium text-[var(--color-text)]">Revenue Graph</h2>
-                      <button onClick={() => setRevenueView(prev => prev === 'yearly' ? 'monthly' : 'yearly')} className="bg-[var(--color-muted-light)] text-[var(--color-text)] text-xs px-2 py-1 rounded-md hover:bg-[var(--color-hover)]">
+                      <h2 className="text-base font-medium text-[var(--color-text)] bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Revenue Graph</h2>
+                      <button 
+                        onClick={() => setRevenueView(prev => prev === 'yearly' ? 'monthly' : 'yearly')} 
+                        className="bg-gradient-to-r from-blue-100 via-blue-200 to-blue-300 text-blue-800 text-xs px-3 py-2 rounded-lg hover:from-blue-200 hover:via-blue-300 hover:to-blue-400 transition-all duration-200 shadow-sm hover:shadow-md border border-blue-300"
+                      >
                         View By: {revenueView === 'yearly' ? 'Yearly' : 'Monthly'}
                       </button>
                     </div>
@@ -742,14 +964,20 @@ const BookingGraphDashboard = () => {
                         return (
                           <LineChart
                             xAxis={[{ data: revenueChartData.xLabels, scaleType: 'point' }]}
-                            yAxis={[{ label: 'Amount in Lakhs', min: 0, max: yMax > 0 ? yMax * 1.2 : 100000, valueFormatter: yAxisFormatter }]}
+                            yAxis={[{ 
+                              label: 'Amount in Lakhs', 
+                              min: 0, 
+                              max: yMax > 0 ? yMax * 1.2 : 100000, 
+                              valueFormatter: yAxisFormatter 
+                            }]}
                             series={[{ 
-                                data: revenueChartData.yData, 
-                                label: 'Revenue', 
-                                color: '#8b5cf6', 
-                                showMark: true, 
-                                valueFormatter: tooltipFormatter,
-                                area: true
+                              data: revenueChartData.yData, 
+                              label: 'Revenue', 
+                              color: colorPalette.primary, 
+                              showMark: true, 
+                              valueFormatter: tooltipFormatter,
+                              area: true,
+                              curve: 'smooth'
                             }]}
                             grid={{ vertical: true, horizontal: true }} 
                             margin={{ top: 40, right: 20, bottom: 50, left: 60 }} 
@@ -757,6 +985,26 @@ const BookingGraphDashboard = () => {
                               direction: 'row',
                               position: { vertical: 'top', horizontal: 'middle' },
                               padding: 0,
+                            }}
+                            sx={{
+                              '& .MuiChartsAxis-tick': {
+                                stroke: colorPalette.tertiary,
+                              },
+                              '& .MuiChartsAxis-line': {
+                                stroke: colorPalette.light,
+                              },
+                              '& .MuiAreaElement-root': {
+                                fill: 'url(#areaGradient)',
+                              },
+                              '& .MuiLineElement-root': {
+                                stroke: colorPalette.primary,
+                                strokeWidth: 3,
+                              },
+                              '& .MuiMarkElement-root': {
+                                fill: colorPalette.primary,
+                                stroke: colorPalette.primary,
+                                strokeWidth: 2,
+                              },
                             }}
                           />
                         );

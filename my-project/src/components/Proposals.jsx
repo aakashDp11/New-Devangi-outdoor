@@ -8,14 +8,14 @@ import { useSidebar } from '../context/SidebarContext';
 
 const Input = ({ className = '', ...props }) => (
   <input
-    className={`border px-3 py-2 rounded w-full bg-background text-foreground border-border ${className}`}
+    className={`border px-3 py-2 rounded w-full bg-background text-foreground border-border focus:ring-2 focus:ring-ring focus:outline-none transition-all duration-200 hover:border-primary ${className}`}
     {...props}
   />
 );
 
 const Card = ({ children, className = '', ...props }) => (
   <div
-    className={`bg-card text-card-foreground border shadow-sm rounded-xl w-full ${className}`}
+    className={`bg-card text-card-foreground border shadow-sm rounded-xl w-full transition-all duration-300 hover:shadow-lg hover:scale-[1.01] cursor-pointer ${className}`}
     {...props}
   >
     {children}
@@ -31,6 +31,7 @@ const CardContent = ({ children, className = '' }) => (
  */
 const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
   const [pageInput, setPageInput] = useState(currentPage.toString());
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setPageInput(currentPage.toString());
@@ -39,11 +40,14 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPe
   const handlePageSubmit = (e) => {
     e.preventDefault();
     const pageNum = parseInt(pageInput, 10);
-    if (pageNum && pageNum > 0 && pageNum <= totalPages) {
-      onPageChange(pageNum);
-    } else {
+
+    if (!pageNum || pageNum < 1 || pageNum > totalPages) {
+      setError(`Please enter a number between 1 and ${totalPages}`);
       setPageInput(currentPage.toString());
+      return;
     }
+    setError('');
+    onPageChange(pageNum);
   };
 
   if (totalCount === 0) return null;
@@ -57,35 +61,42 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPe
         Showing {startItem} - {endItem} of {totalCount} results
       </span>
       {totalPages > 1 && (
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
-            className="px-3 py-1.5 rounded-md bg-card border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition"
-            disabled={currentPage === 1}
-          >
-            <FaArrowLeft className="inline" />
-          </button>
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
+              className="px-3 py-1.5 rounded-md bg-card border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              disabled={currentPage === 1}
+            >
+              <FaArrowLeft className="inline" />
+            </button>
 
-          <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
-            <span className="text-foreground">Page</span>
-            <input
-              type="text"
-              value={pageInput}
-              onChange={(e) => setPageInput(e.target.value)}
-              className="w-12 h-8 text-center border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground"
-            />
-            <span className="text-foreground">of {totalPages}</span>
-          </form>
+            <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
+              <span className="text-foreground">Page</span>
+              <input
+                type="text"
+                value={pageInput}
+                onChange={(e) => {
+                  // ✅ runtime validation: allow only digits
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setPageInput(value);
+                }}
+                className="w-12 h-8 text-center border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground transition"
+              />
+              <span className="text-foreground">of {totalPages}</span>
+            </form>
 
-          <button
-            onClick={() =>
-              onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)
-            }
-            className="px-3 py-1.5 rounded-md bg-card border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition"
-            disabled={currentPage === totalPages}
-          >
-            <FaArrowRight className="inline" />
-          </button>
+            <button
+              onClick={() =>
+                onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)
+              }
+              className="px-3 py-1.5 rounded-md bg-card border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              disabled={currentPage === totalPages}
+            >
+              <FaArrowRight className="inline" />
+            </button>
+          </div>
+          {error && <p className="text-red-500 text-xs">{error}</p>}
         </div>
       )}
     </div>
@@ -102,6 +113,7 @@ export default function ProposalsDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   const [isAnimated, setIsAnimated] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const perPage = 10;
 
   useEffect(() => {
@@ -148,29 +160,27 @@ export default function ProposalsDashboard() {
     return sortableItems;
   }, [proposals, sortConfig]);
 
-  const filteredData = useMemo(
-    () =>
-      sortedData.filter(
-        (item) =>
-          item.companyName?.toLowerCase().includes(search.toLowerCase()) ||
-          item.clientName?.toLowerCase().includes(search.toLowerCase()) ||
-          item.brandDisplayName?.toLowerCase().includes(search.toLowerCase()) ||
-          item.campaignName?.toLowerCase().includes(search.toLowerCase())
-      ),
-    [sortedData, search]
-  );
+  const filteredData = useMemo(() => {
+    return sortedData.filter((item) => {
+      const searchLower = search.toLowerCase();
+      return (
+        item.companyName?.toLowerCase().includes(searchLower) ||
+        item.clientName?.toLowerCase().includes(searchLower) ||
+        item.brandDisplayName?.toLowerCase().includes(searchLower) ||
+        item.campaignName?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [sortedData, search]);
 
   const paginatedData = useMemo(
-    () =>
-      filteredData.slice((currentPage - 1) * perPage, currentPage * perPage),
+    () => filteredData.slice((currentPage - 1) * perPage, currentPage * perPage),
     [filteredData, currentPage, perPage]
   );
 
+  // Animate on data change
   useEffect(() => {
     setIsAnimated(false);
-    const timeout = setTimeout(() => {
-      setIsAnimated(true);
-    }, 50);
+    const timeout = setTimeout(() => setIsAnimated(true), 50);
     return () => clearTimeout(timeout);
   }, [paginatedData]);
 
@@ -180,6 +190,18 @@ export default function ProposalsDashboard() {
     const [key, direction] = e.target.value.split(':');
     setSortConfig({ key, direction });
     setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    // ✅ runtime validation: block symbols like <, >, {, }
+    if (/[^a-zA-Z0-9\s]/.test(value)) {
+      setSearchError('Only letters and numbers are allowed in search');
+    } else {
+      setSearchError('');
+      setSearch(value);
+      setCurrentPage(1);
+    }
   };
 
   return (
@@ -198,18 +220,18 @@ export default function ProposalsDashboard() {
         </div>
 
         <div className="mt-6 text-sm flex flex-col md:flex-row justify-between gap-4 items-stretch md:items-center">
-          <Input
-            className="md:w-[30%] h-[2.2rem] text-xs"
-            placeholder="Search by Company, Client, Brand, or Campaign"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
+          <div className="w-full md:w-[30%]">
+            <Input
+              className="h-[2.2rem] text-xs"
+              placeholder="Search by Company, Client, Brand, or Campaign"
+              value={search}
+              onChange={handleSearchChange}
+            />
+            {searchError && <p className="text-red-500 text-xs mt-1">{searchError}</p>}
+          </div>
           <select
             onChange={handleSortChange}
-            className="px-3 py-2 border rounded-md w-full md:w-auto bg-card text-foreground border-border text-xs h-[2.2rem]"
+            className="px-3 py-2 border rounded-md w-full md:w-auto bg-card text-foreground border-border text-xs h-[2.2rem] transition-all duration-200 hover:border-primary"
             value={`${sortConfig.key}:${sortConfig.direction}`}
           >
             <option value="createdAt:desc">Sort by: Latest</option>
@@ -221,22 +243,19 @@ export default function ProposalsDashboard() {
 
         <div
           className={`mt-6 grid grid-cols-1 gap-4 w-full transform transition-all duration-500 ease-out ${
-            isAnimated
-              ? 'translate-x-0 opacity-100'
-              : '-translate-x-10 opacity-0'
+            isAnimated ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'
           }`}
         >
           {paginatedData.length > 0 ? (
             paginatedData.map((item) => (
               <Card
                 key={item._id}
-                className="transition hover:shadow-md cursor-pointer"
                 onClick={() => navigate(`/proposal/${item._id}`)}
               >
                 <CardContent className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="flex-1 flex flex-col gap-1">
                     <div className="text-sm font-semibold break-words">
-                      {item.companyName}
+                      {item.companyName || 'Unknown Company'}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       Client: {item.clientName || 'N/A'}

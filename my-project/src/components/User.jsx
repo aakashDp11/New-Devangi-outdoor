@@ -6,10 +6,9 @@ import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import { useSidebar } from '../context/SidebarContext';
 
 // --- UI HELPER COMPONENTS ---
-
 const Card = ({ children, className = '', ...props }) => (
   <div
-    className={`bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm rounded-xl w-full text-[var(--color-text)] ${className}`}
+    className={`bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm rounded-xl w-full text-[var(--color-text)] transition-all duration-300 hover:shadow-md hover:scale-[1.01] cursor-pointer ${className}`}
     {...props}
   >
     {children}
@@ -20,11 +19,10 @@ const CardContent = ({ children, className = '' }) => (
   <div className={`p-4 ${className}`}>{children}</div>
 );
 
-/**
- * Pagination component with page search functionality.
- */
+// --- PAGINATION COMPONENT ---
 const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
   const [pageInput, setPageInput] = useState(currentPage.toString());
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setPageInput(currentPage.toString());
@@ -33,16 +31,18 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPe
   const handlePageSubmit = (e) => {
     e.preventDefault();
     const pageNum = parseInt(pageInput, 10);
-    if (pageNum && pageNum > 0 && pageNum <= totalPages) {
-      onPageChange(pageNum);
-    } else {
+
+    if (!pageNum || pageNum < 1 || pageNum > totalPages) {
+      setError(`Enter a number between 1 and ${totalPages}`);
       setPageInput(currentPage.toString());
+      return;
     }
+
+    setError('');
+    onPageChange(pageNum);
   };
 
-  if (totalCount === 0) {
-    return null;
-  }
+  if (totalCount === 0) return null;
 
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalCount);
@@ -53,36 +53,43 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPe
         Showing {startItem} - {endItem} of {totalCount} results
       </span>
       {totalPages > 1 && (
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
-            className="px-3 py-1.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] hover:bg-[var(--color-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition"
-            disabled={currentPage === 1}
-          >
-            <FaArrowLeft className="inline" />
-          </button>
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
+              className="px-3 py-1.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] hover:bg-[var(--color-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              disabled={currentPage === 1}
+            >
+              <FaArrowLeft className="inline" />
+            </button>
 
-          <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
-            <span className="text-[var(--color-text)]">Page</span>
-            <input
-              type="text"
-              value={pageInput}
-              onChange={(e) => setPageInput(e.target.value)}
-              className="w-12 h-8 text-center border border-[var(--color-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-surface)] text-[var(--color-text)]"
-              aria-label="Go to page"
-            />
-            <span className="text-[var(--color-text)]">of {totalPages}</span>
-          </form>
+            <form onSubmit={handlePageSubmit} className="flex items-center gap-2">
+              <span className="text-[var(--color-text)]">Page</span>
+              <input
+                type="text"
+                value={pageInput}
+                onChange={(e) => {
+                  // ✅ only digits allowed
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setPageInput(value);
+                }}
+                className="w-12 h-8 text-center border border-[var(--color-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-surface)] text-[var(--color-text)] transition"
+                aria-label="Go to page"
+              />
+              <span className="text-[var(--color-text)]">of {totalPages}</span>
+            </form>
 
-          <button
-            onClick={() =>
-              onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)
-            }
-            className="px-3 py-1.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] hover:bg-[var(--color-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition"
-            disabled={currentPage === totalPages}
-          >
-            <FaArrowRight className="inline" />
-          </button>
+            <button
+              onClick={() =>
+                onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)
+              }
+              className="px-3 py-1.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] hover:bg-[var(--color-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              disabled={currentPage === totalPages}
+            >
+              <FaArrowRight className="inline" />
+            </button>
+          </div>
+          {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
         </div>
       )}
     </div>
@@ -90,12 +97,12 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPe
 };
 
 // --- MAIN USER COMPONENT ---
-
 export default function User() {
   const [users, setUsers] = useState([]);
   const navigate = useNavigate();
   const { isCollapsed } = useSidebar();
   const [search, setSearch] = useState('');
+  const [searchError, setSearchError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   const [isAnimated, setIsAnimated] = useState(false);
@@ -158,20 +165,19 @@ export default function User() {
     return sortableItems;
   }, [users, sortConfig]);
 
-  const filteredData = useMemo(
-    () =>
-      sortedData.filter(
-        (user) =>
-          user.name?.toLowerCase().includes(search.toLowerCase()) ||
-          user.email?.toLowerCase().includes(search.toLowerCase()) ||
-          user.phone?.includes(search)
-      ),
-    [sortedData, search]
-  );
+  const filteredData = useMemo(() => {
+    return sortedData.filter((user) => {
+      const s = search.toLowerCase();
+      return (
+        user.name?.toLowerCase().includes(s) ||
+        user.email?.toLowerCase().includes(s) ||
+        user.phone?.includes(s)
+      );
+    });
+  }, [sortedData, search]);
 
   const paginatedData = useMemo(
-    () =>
-      filteredData.slice((currentPage - 1) * perPage, currentPage * perPage),
+    () => filteredData.slice((currentPage - 1) * perPage, currentPage * perPage),
     [filteredData, currentPage, perPage]
   );
 
@@ -179,9 +185,7 @@ export default function User() {
 
   useEffect(() => {
     setIsAnimated(false);
-    const timeout = setTimeout(() => {
-      setIsAnimated(true);
-    }, 50);
+    const timeout = setTimeout(() => setIsAnimated(true), 50);
     return () => clearTimeout(timeout);
   }, [currentPage, paginatedData]);
 
@@ -189,6 +193,18 @@ export default function User() {
     const [key, direction] = e.target.value.split(':');
     setSortConfig({ key, direction });
     setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    // ✅ allow only letters, numbers, spaces, @ and .
+    if (/[^a-zA-Z0-9@\.\s]/.test(value)) {
+      setSearchError('Only letters, numbers, spaces, "@" and "." allowed');
+    } else {
+      setSearchError('');
+      setSearch(value);
+      setCurrentPage(1);
+    }
   };
 
   return (
@@ -201,27 +217,25 @@ export default function User() {
         }`}
       >
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-          <h2 className="text-2xl font-sans font-normal">
-            Users ({filteredData.length})
-          </h2>
+          <h2 className="text-2xl font-sans font-normal">Users ({filteredData.length})</h2>
         </div>
 
         {/* Search + Controls */}
         <div className="mt-6 text-sm flex flex-col md:flex-row justify-between gap-4 items-stretch md:items-center">
-          <input
-            type="text"
-            className="w-full md:w-1/3 px-4 py-2 text-xs border border-[var(--color-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] h-[2.2rem] bg-[var(--color-surface)] text-[var(--color-text)]"
-            placeholder="Search by name, email, or phone..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
+          <div className="w-full md:w-1/3">
+            <input
+              type="text"
+              className="w-full px-4 py-2 text-xs border border-[var(--color-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] h-[2.2rem] bg-[var(--color-surface)] text-[var(--color-text)] transition-all duration-200 hover:border-[var(--color-primary)]"
+              placeholder="Search by name, email, or phone..."
+              value={search}
+              onChange={handleSearchChange}
+            />
+            {searchError && <p className="text-red-500 text-xs mt-1">{searchError}</p>}
+          </div>
           <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
             <select
               onChange={handleSortChange}
-              className="px-3 py-2 border border-[var(--color-border)] rounded-md w-full md:w-auto bg-[var(--color-surface)] text-xs h-[2.2rem] text-[var(--color-text)]"
+              className="px-3 py-2 border border-[var(--color-border)] rounded-md w-full md:w-auto bg-[var(--color-surface)] text-xs h-[2.2rem] text-[var(--color-text)] hover:border-[var(--color-primary)] transition"
               value={`${sortConfig.key}:${sortConfig.direction}`}
             >
               <option value="createdAt:desc">Sort by: Newest</option>
@@ -246,14 +260,14 @@ export default function User() {
         >
           {paginatedData.length > 0 ? (
             paginatedData.map((user) => (
-              <Card key={user._id} className="transition hover:shadow-md relative">
+              <Card key={user._id}>
                 <CardContent className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="flex-1 flex flex-col gap-1">
                     <div className="text-sm font-semibold break-words">
-                      {user.name}
+                      {user.name || 'Unnamed User'}
                     </div>
                     <div className="text-xs text-[var(--color-muted)]">
-                      Email: {user.email}
+                      Email: {user.email || 'Not Provided'}
                     </div>
                     <div className="text-xs text-[var(--color-muted)]">
                       Phone: {user.phone || 'Not Provided'}
@@ -264,11 +278,11 @@ export default function User() {
                       {user.role || 'member'}
                     </span>
                     <span className="text-xs px-2 py-1 rounded-full bg-[var(--color-success-light)] text-[var(--color-success-text)] font-medium">
-                      Joined: {new Date(user.createdAt).toLocaleDateString()}
+                      Joined: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                     </span>
                     {user.role !== 'admin' && (
                       <button
-                        className="text-xs px-2 py-1 rounded-full bg-[var(--color-danger-light)] hover:bg-[var(--color-danger-hover)] text-[var(--color-danger-text)] font-medium"
+                        className="text-xs px-2 py-1 rounded-full bg-[var(--color-danger-light)] hover:bg-[var(--color-danger-hover)] text-[var(--color-danger-text)] font-medium transition-all duration-200"
                         onClick={() => {
                           setUserToDelete(user._id);
                           setShowModal(true);
@@ -303,21 +317,20 @@ export default function User() {
       {/* Confirmation Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-[var(--color-surface)] p-6 rounded-xl shadow-lg w-80 text-[var(--color-text)]">
+          <div className="bg-[var(--color-surface)] p-6 rounded-xl shadow-lg w-80 text-[var(--color-text)] transform transition-all duration-300 scale-95 hover:scale-100">
             <h2 className="text-lg font-semibold mb-4">Confirm Deletion</h2>
             <p className="text-sm text-[var(--color-muted)] mb-6">
-              Are you sure you want to delete this user? This action cannot be
-              undone.
+              Are you sure you want to delete this user? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2 text-sm">
               <button
-                className="px-4 py-2 bg-[var(--color-muted-light)] text-[var(--color-text)] rounded-md hover:opacity-80"
+                className="px-4 py-2 bg-[var(--color-muted-light)] text-[var(--color-text)] rounded-md hover:opacity-80 transition"
                 onClick={() => setShowModal(false)}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-[var(--color-danger)] text-white rounded-md hover:opacity-90"
+                className="px-4 py-2 bg-[var(--color-danger)] text-white rounded-md hover:opacity-90 transition"
                 onClick={handleDelete}
               >
                 Delete

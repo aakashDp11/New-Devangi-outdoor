@@ -5,18 +5,70 @@ import Navbar from "./Navbar";
 import { PieChart } from "@mui/x-charts/PieChart";
 import InventorySelector from "./BookingFormAddSpaces";
 import { useSidebar } from "../context/SidebarContext";
-import { FaArrowLeft } from "react-icons/fa";
+import { FaArrowLeft, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import axios from "axios";
 
-// A component for displaying key-value information
-const InfoDetail = ({ label, value }) => (
-  <div className="mb-3">
+// A component for displaying key-value information with fade-in animation
+const InfoDetail = ({ label, value, delay = 0 }) => (
+  <div 
+    className="mb-3 opacity-0 animate-[fadeInUp_0.6s_ease-out_forwards]"
+    style={{ animationDelay: `${delay}ms` }}
+  >
     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
       {label}
     </p>
     <p className="text-sm text-gray-800 break-words">{value || "N/A"}</p>
   </div>
 );
+
+// Validation helper functions
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const validatePhone = (phone) => {
+  const phoneRegex = /^[6-9]\d{9}$/;
+  return phoneRegex.test(phone);
+};
+
+const validatePAN = (pan) => {
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  return panRegex.test(pan);
+};
+
+const validateGST = (gst) => {
+  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+  return gstRegex.test(gst);
+};
+
+const validateDate = (startDate, endDate) => {
+  if (!startDate || !endDate) return { isValid: false, message: "Both dates are required" };
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  if (start < today) return { isValid: false, message: "Start date cannot be in the past" };
+  if (end <= start) return { isValid: false, message: "End date must be after start date" };
+  
+  return { isValid: true, message: "" };
+};
+
+// Validation message component
+const ValidationMessage = ({ message, type = "error" }) => {
+  if (!message) return null;
+  
+  return (
+    <div className={`flex items-center gap-1 mt-1 text-xs animate-[slideInDown_0.3s_ease-out] ${
+      type === "error" ? "text-red-600" : type === "success" ? "text-green-600" : "text-yellow-600"
+    }`}>
+      {type === "error" && <FaExclamationTriangle />}
+      {type === "success" && <FaCheck />}
+      <span>{message}</span>
+    </div>
+  );
+};
 
 export default function BookingDetails() {
   const { id } = useParams();
@@ -25,6 +77,8 @@ export default function BookingDetails() {
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [campaignDrafts, setCampaignDrafts] = useState([]);
   const [spaces, setSpaces] = useState([]);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
   const { isCollapsed } = useSidebar();
 
   useEffect(() => {
@@ -78,6 +132,7 @@ export default function BookingDetails() {
   useEffect(() => {
     // Fetches the main booking details
     const fetchBooking = async () => {
+      setIsLoading(true);
       try {
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL}/api/bookings/${id}`
@@ -96,6 +151,8 @@ export default function BookingDetails() {
       } catch (err) {
         console.error(err);
         toast.error(err.message || "Failed to load booking details");
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchBooking();
@@ -122,6 +179,43 @@ export default function BookingDetails() {
     { value: "Entertainment", label: "Entertainment" },
   ];
 
+  // Validate campaign draft
+  const validateCampaignDraft = (campaign, index) => {
+    const errors = {};
+    const key = `campaign_${index}`;
+
+    if (!campaign.campaignName?.trim()) {
+      errors[`${key}_campaignName`] = "Campaign name is required";
+    } else if (campaign.campaignName.length < 3) {
+      errors[`${key}_campaignName`] = "Campaign name must be at least 3 characters";
+    }
+
+    if (!campaign.industry) {
+      errors[`${key}_industry`] = "Industry is required";
+    }
+
+    if (!campaign.description?.trim()) {
+      errors[`${key}_description`] = "Description is required";
+    } else if (campaign.description.length < 10) {
+      errors[`${key}_description`] = "Description must be at least 10 characters";
+    }
+
+    const dateValidation = validateDate(campaign.startDate, campaign.endDate);
+    if (!dateValidation.isValid) {
+      errors[`${key}_dates`] = dateValidation.message;
+    }
+
+    if (!campaign.selectedSpaces || campaign.selectedSpaces.length === 0) {
+      errors[`${key}_spaces`] = "At least one space must be selected";
+    }
+
+    if (campaign.isFOC === undefined || campaign.isFOC === null) {
+      errors[`${key}_isFOC`] = "Please specify if this is a FOC campaign";
+    }
+
+    return errors;
+  };
+
   // Functions to manage campaign drafts
   const addDraftCampaign = () => {
     setCampaignDrafts([
@@ -143,15 +237,43 @@ export default function BookingDetails() {
     const updatedList = [...campaignDrafts];
     updatedList[index] = updated;
     setCampaignDrafts(updatedList);
+
+    // Clear validation errors for this campaign when updating
+    const newErrors = { ...validationErrors };
+    const campaignKey = `campaign_${index}`;
+    Object.keys(newErrors).forEach(key => {
+      if (key.startsWith(campaignKey)) {
+        delete newErrors[key];
+      }
+    });
+    setValidationErrors(newErrors);
   };
 
   const removeDraftCampaign = (index) => {
     setCampaignDrafts(campaignDrafts.filter((_, i) => i !== index));
+    
+    // Clear validation errors for removed campaign
+    const newErrors = { ...validationErrors };
+    const campaignKey = `campaign_${index}`;
+    Object.keys(newErrors).forEach(key => {
+      if (key.startsWith(campaignKey)) {
+        delete newErrors[key];
+      }
+    });
+    setValidationErrors(newErrors);
   };
 
   // Saves a new campaign draft to the current booking
   const saveDraftCampaign = async (index) => {
     const campaign = campaignDrafts[index];
+    const errors = validateCampaignDraft(campaign, index);
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(prev => ({ ...prev, ...errors }));
+      toast.error("Please fix all validation errors before saving");
+      return;
+    }
+
     const payload = {
       ...campaign,
       isFOC: campaign.isFOC,
@@ -160,6 +282,7 @@ export default function BookingDetails() {
         selectedUnits: space.selectedUnits,
       })),
     };
+    
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/bookings/${
@@ -170,6 +293,7 @@ export default function BookingDetails() {
       if (res.status === 201) {
         toast.success("Campaign added successfully");
         setCampaignDrafts([]);
+        setValidationErrors({});
         setBooking((prev) => ({
           ...prev,
           campaigns: [...(prev.campaigns || []), res.data.campaign],
@@ -248,8 +372,8 @@ export default function BookingDetails() {
     }
   };
 
-  // Loading state
-  if (!booking)
+  // Loading state with skeleton animation
+  if (isLoading)
     return (
       <div className="flex flex-col min-h-screen bg-[#fafafb]">
         <Navbar />
@@ -258,12 +382,17 @@ export default function BookingDetails() {
             isCollapsed ? "lg:ml-24" : "lg:ml-64"
           }`}
         >
-          <div className="text-xl text-gray-700">
-            Loading booking details...
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="text-xl text-gray-700 animate-pulse">
+              Loading booking details...
+            </div>
           </div>
         </main>
       </div>
     );
+
+  if (!booking) return null;
 
   const totalPaid =
     booking.campaigns?.reduce(
@@ -276,24 +405,28 @@ export default function BookingDetails() {
       0
     ) || 0;
   const grandTotal = totalPaid + totalDue;
+  
   const clientInfoData = [
     { key: "companyName", label: "Company Name", value: booking.companyName },
     { key: "clientName", label: "Client Name", value: booking.clientName },
-    { key: "clientEmail", label: "Client Email", value: booking.clientEmail },
+    { key: "clientEmail", label: "Client Email", value: booking.clientEmail, validator: validateEmail },
     {
       key: "clientContactNumber",
       label: "Client Contact Number",
       value: booking.clientContactNumber,
+      validator: validatePhone,
     },
     {
       key: "clientPanNumber",
       label: "Client Pan Number",
       value: booking.clientPanNumber,
+      validator: validatePAN,
     },
     {
       key: "clientGstNumber",
       label: "Client Gst Number",
       value: booking.clientGstNumber,
+      validator: validateGST,
     },
     {
       key: "brandDisplayName",
@@ -320,26 +453,102 @@ export default function BookingDetails() {
 
   return (
     <div className="min-h-screen bg-white w-screen text-base-content">
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes slideInDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        @keyframes slideInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        .animate-fadeInUp {
+          animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .animate-scaleIn {
+          animation: scaleIn 0.4s ease-out forwards;
+        }
+        
+        .animate-slideInLeft {
+          animation: slideInLeft 0.5s ease-out forwards;
+        }
+        
+        .hover-scale {
+          transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        
+        .hover-scale:hover {
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .button-hover {
+          transition: all 0.2s ease-in-out;
+        }
+        
+        .button-hover:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+      `}</style>
+      
       <Navbar />
       <main
         className={`h-full overflow-y-auto px-4 sm:px-6 py-6 transition-all duration-300 ${
           isCollapsed ? "lg:ml-24" : "lg:ml-64"
         }`}
       >
-        <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-4 opacity-0 animate-slideInLeft">
           <div>
             <h1 className="text-2xl font-semibold text-gray-800">
               Booking Details
             </h1>
             <button
               onClick={() => navigate("/booking-dashboard")}
-              className="flex items-center gap-2 text-sm mt-1 "
+              className="flex items-center gap-2 text-sm mt-1 button-hover hover:text-blue-600"
             >
               <FaArrowLeft className="inline" /> Back
             </button>
           </div>
           <button
-            className="bg-red-600 text-white px-4 py-2 text-xs rounded-md hover:bg-red-700 transition-colors duration-150 shadow-sm"
+            className="bg-red-600 text-white px-4 py-2 text-xs rounded-md hover:bg-red-700 transition-all duration-150 shadow-sm button-hover"
             onClick={() => setShowDeletePopup(true)}
           >
             Delete Booking
@@ -347,32 +556,46 @@ export default function BookingDetails() {
         </div>
 
         <div className="flex flex-col lg:flex-row w-full gap-6 mb-6">
-          <div className="card bg-white shadow-xl p-6 rounded-lg flex-grow lg:w-2/3">
+          <div className="card bg-white shadow-xl p-6 rounded-lg flex-grow lg:w-2/3 opacity-0 animate-scaleIn hover-scale">
             <h2 className="text-xl font-semibold text-gray-700 mb-6 border-b pb-3">
               Client Information
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6">
-              {clientInfoData.map(({ key, label, value }) => {
+              {clientInfoData.map(({ key, label, value, validator }, index) => {
+                const isValid = validator && value ? validator(value) : true;
+                
                 if (key === "bookingSource" && value === "Agency") {
                   return (
                     <React.Fragment key={key}>
-                      <InfoDetail label={label} value={value} />
-                      <div className="mb-3">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Agency Name
-                        </p>
-                        <p className="text-sm text-gray-800 break-words">
-                          {booking.agencyName ?? "NA"}
-                        </p>
-                      </div>
+                      <InfoDetail label={label} value={value} delay={index * 100} />
+                      <InfoDetail 
+                        label="Agency Name" 
+                        value={booking.agencyName ?? "NA"} 
+                        delay={(index + 1) * 100} 
+                      />
                     </React.Fragment>
                   );
                 }
-                return <InfoDetail key={key} label={label} value={value} />;
+                
+                return (
+                  <div key={key}>
+                    <InfoDetail label={label} value={value} delay={index * 100} />
+                    {validator && value && (
+                      <ValidationMessage 
+                        message={isValid ? "" : `Invalid ${label.toLowerCase()}`}
+                        type={isValid ? "success" : "error"}
+                      />
+                    )}
+                  </div>
+                );
               })}
             </div>
           </div>
-          <div className="card bg-white shadow-xl p-6 rounded-lg flex-grow lg:w-1/3 lg:max-w-md">
+          
+          <div 
+            className="card bg-white shadow-xl p-6 rounded-lg flex-grow lg:w-1/3 lg:max-w-md opacity-0 animate-scaleIn hover-scale"
+            style={{ animationDelay: "200ms" }}
+          >
             <h2 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-3">
               Payment Overview
             </h2>
@@ -459,7 +682,10 @@ export default function BookingDetails() {
         </div>
 
         {booking.campaigns && booking.campaigns.length > 0 && (
-          <div>
+          <div 
+            className="opacity-0 animate-fadeInUp"
+            style={{ animationDelay: "400ms" }}
+          >
             <h2 className="text-xl font-semibold text-gray-700 mb-4 mt-8 border-b pb-3">
               Campaigns ({booking.campaigns.length})
             </h2>
@@ -469,16 +695,17 @@ export default function BookingDetails() {
                 return (
                   <div
                     key={campaign._id || idx}
-                    className="card relative bg-white shadow-lg rounded-lg p-4 hover:shadow-xl transition-shadow duration-200 flex flex-col justify-between"
+                    className="card relative bg-white shadow-lg rounded-lg p-4 transition-all duration-300 flex flex-col justify-between hover-scale opacity-0 animate-scaleIn"
+                    style={{ animationDelay: `${500 + idx * 100}ms` }}
                   >
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevents navigation when clicking clone
+                        e.stopPropagation();
                         navigate(
                           `/clone-campaign/${campaign._id}/from-booking/${booking._id}`
                         );
                       }}
-                      className="absolute top-4 right-4 z-10 text-xs bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded-md transition-colors"
+                      className="absolute top-4 right-4 z-10 text-xs bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded-md transition-all duration-200 button-hover"
                       title="Clone this campaign"
                     >
                       Clone
@@ -498,17 +725,17 @@ export default function BookingDetails() {
                               alt={`${
                                 campaign.campaignName || "Campaign"
                               } artwork`}
-                              className="w-full h-full object-cover rounded-md bg-gray-200"
+                              className="w-full h-full object-cover rounded-md bg-gray-200 transition-transform duration-200 hover:scale-105"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md text-gray-400 text-xs text-center p-2">
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md text-gray-400 text-xs text-center p-2 transition-all duration-200 hover:bg-gray-200">
                               No Artwork Uploaded
                             </div>
                           )}
                         </div>
                         <div className="flex-grow">
                           <h3
-                            className="text-lg font-semibold text-blue-600 mb-3 truncate"
+                            className="text-lg font-semibold text-blue-600 mb-3 truncate transition-colors duration-200 hover:text-blue-800"
                             title={campaign.campaignName}
                           >
                             {campaign.campaignName || "Unnamed Campaign"}
@@ -550,7 +777,7 @@ export default function BookingDetails() {
                     <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-end">
                       <button
                         onClick={() => handleDeleteCampaign(campaign._id)}
-                        className="text-xs bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-md transition-colors"
+                        className="text-xs bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-md transition-all duration-200 button-hover"
                         title="Delete this campaign"
                       >
                         Delete
@@ -566,8 +793,13 @@ export default function BookingDetails() {
         {campaignDrafts.map((campaign, index) => (
           <div
             key={index}
-            className="border rounded mt-[5%] p-4 mb-6 shadow-sm"
+            className="border rounded mt-[5%] p-4 mb-6 shadow-sm opacity-0 animate-scaleIn hover-scale bg-white"
+            style={{ animationDelay: `${600 + index * 200}ms` }}
           >
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">
+              New Campaign Draft {index + 1}
+            </h3>
+            
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label="Campaign Name"
@@ -579,6 +811,8 @@ export default function BookingDetails() {
                   };
                   updateDraftCampaign(index, updated);
                 }}
+                error={validationErrors[`campaign_${index}_campaignName`]}
+                required
               />
               <CustomSelect
                 label="Industry"
@@ -589,6 +823,8 @@ export default function BookingDetails() {
                   updateDraftCampaign(index, updated);
                 }}
                 options={industryOptions}
+                error={validationErrors[`campaign_${index}_industry`]}
+                required
               />
               <Input
                 label="Start Date"
@@ -598,6 +834,9 @@ export default function BookingDetails() {
                   const updated = { ...campaign, startDate: e.target.value };
                   updateDraftCampaign(index, updated);
                 }}
+                min={new Date().toISOString().split('T')[0]}
+                error={validationErrors[`campaign_${index}_dates`]}
+                required
               />
               <Input
                 label="End Date"
@@ -607,9 +846,14 @@ export default function BookingDetails() {
                   const updated = { ...campaign, endDate: e.target.value };
                   updateDraftCampaign(index, updated);
                 }}
+                min={campaign.startDate || new Date().toISOString().split('T')[0]}
+                error={validationErrors[`campaign_${index}_dates`]}
+                required
               />
               <div className="col-span-2">
-                <label className="text-xs font-medium">Description</label>
+                <label className="text-xs font-medium">
+                  Description <span className="text-red-500">*</span>
+                </label>
                 <textarea
                   value={campaign.description}
                   onChange={(e) => {
@@ -619,12 +863,19 @@ export default function BookingDetails() {
                     };
                     updateDraftCampaign(index, updated);
                   }}
-                  className="w-full border rounded p-2"
+                  className={`w-full border rounded p-2 mt-1 transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    validationErrors[`campaign_${index}_description`] 
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                      : 'border-gray-300'
+                  }`}
+                  placeholder="Enter campaign description (minimum 10 characters)"
+                  rows={3}
                 />
+                <ValidationMessage message={validationErrors[`campaign_${index}_description`]} />
               </div>
               <div className="col-span-2">
                 <label className="text-xs font-medium block mb-2">
-                  Is this a FOC (Free of Cost) Campaign?
+                  Is this a FOC (Free of Cost) Campaign? <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center gap-6">
                   <div className="flex items-center">
@@ -645,7 +896,7 @@ export default function BookingDetails() {
                     />
                     <label
                       htmlFor={`foc-yes-${index}`}
-                      className="ml-2 text-xs font-medium"
+                      className="ml-2 text-xs font-medium cursor-pointer"
                     >
                       Yes
                     </label>
@@ -660,7 +911,7 @@ export default function BookingDetails() {
                       onChange={(e) => {
                         const updated = {
                           ...campaign,
-                          isFOC: e.target.value === "true",
+                          isFOC: e.target.value === "false",
                         };
                         updateDraftCampaign(index, updated);
                       }}
@@ -668,75 +919,88 @@ export default function BookingDetails() {
                     />
                     <label
                       htmlFor={`foc-no-${index}`}
-                      className="ml-2 text-xs font-medium"
+                      className="ml-2 text-xs font-medium cursor-pointer"
                     >
                       No
                     </label>
                   </div>
                 </div>
+                <ValidationMessage message={validationErrors[`campaign_${index}_isFOC`]} />
               </div>
             </div>
-            <InventorySelector
-              campaignIndex={index}
-              campaign={campaign}
-              spaces={spaces}
-              globalAvailability={{}}
-              startDate={campaign.startDate}
-              endDate={campaign.endDate}
-              onToggleSpaceSelection={(i, id) => {
-                const updated = { ...campaign };
-                const exists = updated.selectedSpaces?.find((s) => s.id === id);
-                updated.selectedSpaces = exists
-                  ? updated.selectedSpaces.filter((s) => s.id !== id)
-                  : [
-                      ...(updated.selectedSpaces || []),
-                      {
-                        ...spaces.find((s) => s.id === id),
-                        selectedUnits: 1,
-                      },
-                    ];
-                updateDraftCampaign(index, updated);
-              }}
-              onUpdateSelectedUnits={(i, id, units) => {
-                const updated = { ...campaign };
-                updated.selectedSpaces = updated.selectedSpaces.map((s) =>
-                  s.id === id ? { ...s, selectedUnits: units } : s
-                );
-                updateDraftCampaign(index, updated);
-              }}
-              onSearchChange={(i, query) => {
-                const updated = { ...campaign, searchQuery: query };
-                updateDraftCampaign(index, updated);
-              }}
-            />
-            <div className="flex mt-4">
+            
+            <div className="mt-4">
+              <InventorySelector
+                campaignIndex={index}
+                campaign={campaign}
+                spaces={spaces}
+                globalAvailability={{}}
+                startDate={campaign.startDate}
+                endDate={campaign.endDate}
+                onToggleSpaceSelection={(i, id) => {
+                  const updated = { ...campaign };
+                  const exists = updated.selectedSpaces?.find((s) => s.id === id);
+                  updated.selectedSpaces = exists
+                    ? updated.selectedSpaces.filter((s) => s.id !== id)
+                    : [
+                        ...(updated.selectedSpaces || []),
+                        {
+                          ...spaces.find((s) => s.id === id),
+                          selectedUnits: 1,
+                        },
+                      ];
+                  updateDraftCampaign(index, updated);
+                }}
+                onUpdateSelectedUnits={(i, id, units) => {
+                  const updated = { ...campaign };
+                  updated.selectedSpaces = updated.selectedSpaces.map((s) =>
+                    s.id === id ? { ...s, selectedUnits: units } : s
+                  );
+                  updateDraftCampaign(index, updated);
+                }}
+                onSearchChange={(i, query) => {
+                  const updated = { ...campaign, searchQuery: query };
+                  updateDraftCampaign(index, updated);
+                }}
+              />
+              <ValidationMessage message={validationErrors[`campaign_${index}_spaces`]} />
+            </div>
+            
+            <div className="flex mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={() => removeDraftCampaign(index)}
-                className="mr-auto text-red-500 hover:text-red-700"
+                className="mr-auto text-red-500 hover:text-red-700 transition-colors duration-200 p-2 rounded hover:bg-red-50"
+                title="Delete this draft"
               >
-                🗑️
+                🗑️ Remove Draft
               </button>
               <button
                 onClick={() => saveDraftCampaign(index)}
-                className="bg-blue-500 ml-auto text-white text-xs px-4 py-1 rounded hover:bg-blue-600"
+                className="bg-blue-500 ml-auto text-white text-xs px-4 py-2 rounded hover:bg-blue-600 transition-all duration-200 button-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={Object.keys(validateCampaignDraft(campaign, index)).length > 0}
               >
                 Save Campaign
               </button>
             </div>
           </div>
         ))}
+        
         <button
           onClick={addDraftCampaign}
-          className="border px-3 py-2 rounded text-sm mt-4"
+          className="border-2 border-dashed border-gray-300 px-4 py-3 rounded text-sm mt-4 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 flex items-center gap-2 text-gray-600 hover:text-blue-600"
         >
-          + Add Campaign
+          <span className="text-lg">+</span> Add New Campaign
         </button>
       </main>
 
       {showDeletePopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
-          <div className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 animate-[fadeIn_0.3s_ease-out]">
+          <div 
+            className="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-md animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <FaExclamationTriangle className="text-red-500" />
               Confirm Deletion
             </h2>
             <p className="mb-6 text-sm text-gray-600">
@@ -745,13 +1009,13 @@ export default function BookingDetails() {
             </p>
             <div className="flex justify-end gap-3 sm:gap-4">
               <button
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 button-hover"
                 onClick={() => setShowDeletePopup(false)}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                className="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 button-hover"
                 onClick={handleDelete}
               >
                 Yes, Delete
@@ -764,23 +1028,31 @@ export default function BookingDetails() {
   );
 }
 
-// A simple reusable input component
-function Input({ label, ...props }) {
+// Enhanced input component with validation
+function Input({ label, error, required = false, ...props }) {
   return (
-    <div>
-      <label className="text-xs font-medium">{label}</label>
-      <input {...props} className="w-full border px-3 py-2 rounded mt-1" />
+    <div className="flex flex-col">
+      <label className="text-xs font-medium mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input 
+        {...props} 
+        className={`w-full border px-3 py-2 rounded mt-1 transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+          error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+        }`}
+      />
+      <ValidationMessage message={error} />
     </div>
   );
 }
 
-// A simple reusable select component
-function CustomSelect({ label, name, value, onChange, options }) {
+// Enhanced select component with validation
+function CustomSelect({ label, name, value, onChange, options, error, required = false }) {
   return (
     <div className="flex flex-col text-sm w-full">
       {label && (
-        <label htmlFor={name} className="mb-1 text-gray-700 font-medium">
-          {label}
+        <label htmlFor={name} className="mb-1 text-xs font-medium">
+          {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
       <select
@@ -788,7 +1060,9 @@ function CustomSelect({ label, name, value, onChange, options }) {
         name={name}
         value={value}
         onChange={onChange}
-        className="px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm"
+        className={`px-3 py-2 mt-1 border rounded-md shadow-sm transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+          error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+        }`}
       >
         <option value="">Select {label}</option>
         {options.map((opt) => (
@@ -797,6 +1071,7 @@ function CustomSelect({ label, name, value, onChange, options }) {
           </option>
         ))}
       </select>
+      <ValidationMessage message={error} />
     </div>
   );
-}
+} 
