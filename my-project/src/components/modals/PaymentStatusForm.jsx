@@ -45,12 +45,12 @@ console.log("Payment data is ",data);
         let totalPrinting = data.printingAmount;
         let totalMounting = data.mountingAmount;
 
-        for (const cost of campaignCosts) {
-          const area = cost.area || 0;
-          totalDisplay += cost.displayCost || 0;
-          totalPrinting += (cost.printingcostpersquareFeet || 0) * area;
-          totalMounting += (cost.mountingcostpersquareFeet || 0) * area;
-        }
+        // for (const cost of campaignCosts) {
+        //   const area = cost.area || 0;
+        //   totalDisplay += cost.displayCost || 0;
+        //   totalPrinting += (cost.printingcostpersquareFeet || 0) * area;
+        //   totalMounting += (cost.mountingcostpersquareFeet || 0) * area;
+        // }
 
         const totalBeforeGST = totalDisplay + totalPrinting + totalMounting;
         const savedGst = data.gstValue || 0;
