@@ -385,6 +385,7 @@ export default function CreateOrderBasicInfo() {
               <option>Whatsapp</option>
               <option>Phone Call</option>
               <option>Email</option>
+              <option>Custom</option>
             </select>
             {errors.bookingMode && (
               <p className="text-red-500 text-[10px]">{errors.bookingMode}</p>

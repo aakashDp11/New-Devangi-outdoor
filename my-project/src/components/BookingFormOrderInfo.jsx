@@ -137,6 +137,7 @@ export default function BookingFormOrderInfo() {
     setOrderInfo({ ...orderInfo, campaigns });
   };
 
+  // UPDATED: Removed past date restriction for start date
   const validateCampaign = (campaign) => {
     const newErrors = {};
 
@@ -153,14 +154,16 @@ export default function BookingFormOrderInfo() {
 
     if (!campaign.startDate) {
       newErrors.startDate = 'Start date is required.';
-    } else if (new Date(campaign.startDate) < new Date(new Date().toDateString())) {
-      newErrors.startDate = 'Start date cannot be in the past.';
     }
+    // REMOVED: Past date validation for start date
+    // } else if (new Date(campaign.startDate) < new Date(new Date().toDateString())) {
+    //   newErrors.startDate = 'Start date cannot be in the past.';
+    // }
 
     if (!campaign.endDate) {
       newErrors.endDate = 'End date is required.';
     } else if (campaign.startDate && new Date(campaign.endDate) < new Date(campaign.startDate)) {
-      newErrors.endDate = 'End date must be after start date.';
+      newErrors.endDate = 'End date must be on or after start date.';
     }
 
     if (campaign.description && campaign.description.length < 10) {
@@ -186,6 +189,16 @@ export default function BookingFormOrderInfo() {
       ...orderInfo.campaigns[index],
       [name]: finalValue,
     };
+
+    // ENHANCED: Clear end date if it becomes invalid when start date changes
+    if (name === 'startDate' && updated.endDate) {
+      const startDate = new Date(value);
+      const endDate = new Date(updated.endDate);
+      if (endDate < startDate) {
+        updated.endDate = '';
+        toast.info('End date cleared because it was before the new start date.');
+      }
+    }
 
     updateCampaign(index, updated);
 
@@ -370,6 +383,7 @@ export default function BookingFormOrderInfo() {
                         value={campaign.startDate}
                         onChange={(e) => handleCampaignChange(index, e)}
                         error={errors[index]?.startDate}
+                        // NO min attribute - allows past dates
                       />
                       <Input
                         label="End Date"
@@ -378,6 +392,7 @@ export default function BookingFormOrderInfo() {
                         value={campaign.endDate}
                         onChange={(e) => handleCampaignChange(index, e)}
                         error={errors[index]?.endDate}
+                        min={campaign.startDate || ''} // End date must be >= start date
                       />
                       <div className="col-span-2">
                         <label className="text-xs font-medium">Description</label>
@@ -518,13 +533,14 @@ export default function BookingFormOrderInfo() {
   );
 }
 
-// --- Input and CustomSelect components updated to support error display ---
-function Input({ label, error, ...props }) {
+// --- UPDATED Input component to support min attribute for date inputs ---
+function Input({ label, error, min, ...props }) {
   return (
     <div>
       <label className="text-xs font-medium">{label}</label>
       <input
         {...props}
+        min={min}
         className={`w-full border px-3 py-2 rounded mt-1 text-xs ${
           error ? 'border-red-500' : ''
         }`}

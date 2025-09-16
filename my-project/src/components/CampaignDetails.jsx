@@ -379,11 +379,7 @@ export default function CampaignDetails() {
                 ))}
               </div>
 
-              {pipelineError && (
-                <p className="text-sm text-orange-600">
-                  ⚠ Pipeline data not found - showing default values
-                </p>
-              )}
+             
             </div>
           </div>
           <div className="my-6">

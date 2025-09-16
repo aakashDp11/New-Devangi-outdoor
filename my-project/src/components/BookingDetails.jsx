@@ -420,13 +420,13 @@ export default function BookingDetails() {
       key: "clientPanNumber",
       label: "Client Pan Number",
       value: booking.clientPanNumber,
-      validator: validatePAN,
+      
     },
     {
       key: "clientGstNumber",
       label: "Client Gst Number",
       value: booking.clientGstNumber,
-      validator: validateGST,
+      
     },
     {
       key: "brandDisplayName",
