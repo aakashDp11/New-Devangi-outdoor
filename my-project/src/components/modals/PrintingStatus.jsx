@@ -9,10 +9,60 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
   const [printingMaterial, setPrintingMaterial] = useState('');
   const [assignedPerson, setAssignedPerson] = useState('');
   const [assignedAgency, setAssignedAgency] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
   
   const username = localStorage.getItem('userName');
   const useremail = localStorage.getItem('userEmail');
   const userId = localStorage.getItem('userId');
+
+  // Validation functions
+  const validateAssignedPerson = (person) => {
+    if (!person || person.trim() === '') return null; // Optional field
+    if (person.trim().length < 2) return 'Name must be at least 2 characters';
+    if (person.trim().length > 50) return 'Name must be less than 50 characters';
+    // Check for valid name (letters, spaces, hyphens, apostrophes)
+    if (!/^[A-Za-z\s\-'\.]+$/.test(person.trim())) {
+      return 'Name can only contain letters, spaces, hyphens, apostrophes, and dots';
+    }
+    return null;
+  };
+
+  const validateAssignedAgency = (agency) => {
+    if (!agency || agency.trim() === '') return null; // Optional field
+    if (agency.trim().length < 2) return 'Agency name must be at least 2 characters';
+    if (agency.trim().length > 100) return 'Agency name must be less than 100 characters';
+    // Check for valid agency name (letters, numbers, spaces, common punctuation)
+    if (!/^[A-Za-z0-9\s\-'&\.\,\(\)]+$/.test(agency.trim())) {
+      return 'Agency name contains invalid characters';
+    }
+    return null;
+  };
+
+  const validateNote = (noteText) => {
+    if (!noteText || noteText.trim() === '') return null; // Optional field
+    if (noteText.trim().length > 500) return 'Note must be less than 500 characters';
+    // Check for potentially harmful content (basic XSS prevention)
+    if (/<script|javascript:|on\w+=/i.test(noteText)) {
+      return 'Note contains invalid content';
+    }
+    return null;
+  };
+
+  const validateAllFields = () => {
+    const errors = {};
+    
+    const personError = validateAssignedPerson(assignedPerson);
+    if (personError) errors.assignedPerson = personError;
+
+    const agencyError = validateAssignedAgency(assignedAgency);
+    if (agencyError) errors.assignedAgency = agencyError;
+
+    const noteError = validateNote(note);
+    if (noteError) errors.note = noteError;
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   useEffect(() => {
     if (existingData && existingData.confirmed) {
@@ -27,19 +77,41 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
     }
   }, [existingData]);
 
+  // Real-time validation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      validateAllFields();
+    }, 500); // Debounce validation
+    
+    return () => clearTimeout(timer);
+  }, [assignedPerson, assignedAgency, note]);
+
+  const handleAssignedPersonChange = (value) => {
+    setAssignedPerson(value);
+  };
+
+  const handleAssignedAgencyChange = (value) => {
+    setAssignedAgency(value);
+  };
+
+  const handleNoteChange = (value) => {
+    setNote(value);
+  };
+
   const handleSave = async () => {
-    if (!printingDate || !assignedPerson || !assignedAgency || !printingMaterial) {
-      toast.error('Please fill all mandatory fields before saving.');
+    // Validate before saving
+    if (!validateAllFields()) {
+      toast.error('Please fix all validation errors before saving.');
       return;
     }
 
     const newPrintingStatus = {
       confirmed: true,
       printingDate,
-      assignedPerson,
-      assignedAgency,
+      assignedPerson: assignedPerson.trim(),
+      assignedAgency: assignedAgency.trim(),
       printingMaterial,
-      note,
+      note: note.trim(),
     };
 
     const changeLogData = {
@@ -64,8 +136,6 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
     }
   };
 
-  const RedAsterisk = () => <span className="text-red-500 ml-1">*</span>;
-
   if (view === 'summary') {
     return (
       <div className="max-w-4xl w-full mx-auto p-6 bg-white rounded-lg">
@@ -78,9 +148,6 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
             {printingMaterial && <p><span className="font-medium">Material:</span> {printingMaterial}</p>}
             {note && <p className="md:col-span-2"><span className="font-medium">Note:</span> {note}</p>}
           </div>
-          {/* ================================================================= */}
-          {/* MODIFICATION: "Edit" button removed, "Close" button centered    */}
-          {/* ================================================================= */}
           <div className="flex justify-center mt-6">
             <button
               onClick={onClose}
@@ -101,7 +168,7 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Printing Date<RedAsterisk /></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Printing Date</label>
           <input
             type="date"
             value={printingDate}
@@ -110,27 +177,37 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Person<RedAsterisk /></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Person</label>
           <input
             type="text"
             placeholder="Enter name"
             value={assignedPerson}
-            onChange={(e) => setAssignedPerson(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => handleAssignedPersonChange(e.target.value)}
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              validationErrors.assignedPerson ? 'border-red-500' : 'border-gray-300'
+            }`}
           />
+          {validationErrors.assignedPerson && (
+            <p className="text-red-500 text-xs mt-1">{validationErrors.assignedPerson}</p>
+          )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Agency<RedAsterisk /></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Agency</label>
           <input
             type="text"
             placeholder="Enter agency name"
             value={assignedAgency}
-            onChange={(e) => setAssignedAgency(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => handleAssignedAgencyChange(e.target.value)}
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              validationErrors.assignedAgency ? 'border-red-500' : 'border-gray-300'
+            }`}
           />
+          {validationErrors.assignedAgency && (
+            <p className="text-red-500 text-xs mt-1">{validationErrors.assignedAgency}</p>
+          )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Material Type<RedAsterisk /></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Material Type</label>
           <select
             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={printingMaterial}
@@ -146,14 +223,27 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
           </select>
         </div>
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes (if any)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Notes (if any)
+            {note && (
+              <span className="text-xs text-gray-500 ml-2">
+                ({note.length}/500 characters)
+              </span>
+            )}
+          </label>
           <input
             type="text"
             placeholder="Add any relevant notes..."
             value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => handleNoteChange(e.target.value)}
+            maxLength="500"
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              validationErrors.note ? 'border-red-500' : 'border-gray-300'
+            }`}
           />
+          {validationErrors.note && (
+            <p className="text-red-500 text-xs mt-1">{validationErrors.note}</p>
+          )}
         </div>
       </div>
       
@@ -166,7 +256,12 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
         </button>
         <button
           onClick={handleSave}
-          className="w-1/3 text-sm bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+          disabled={Object.keys(validationErrors).length > 0}
+          className={`w-1/3 text-sm py-2 rounded-lg transition ${
+            Object.keys(validationErrors).length > 0 
+              ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
         >
           Save
         </button>

@@ -1,4 +1,4 @@
-// Updated InvoiceForm.jsx with non-mandatory uploads, consistent fields, and inline validations
+// Updated InvoiceForm.jsx with date validations removed
 
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
@@ -10,12 +10,6 @@ import { Plus, X, FileText, Receipt, CreditCard, AlertCircle } from 'lucide-reac
 const validateNumber = (value, min = 0) => {
   const num = parseFloat(value);
   return !isNaN(num) && num > min;
-};
-
-const validateDate = (dateString) => {
-  const date = new Date(dateString);
-  const today = new Date();
-  return date instanceof Date && !isNaN(date) && date <= today;
 };
 
 const validateRequired = (value) => {
@@ -144,8 +138,6 @@ function InvoiceForm({ campaignId, onConfirm, onClose }) {
       case 'creditNoteDate':
         if (!validateRequired(value)) {
           errorMessage = 'Date is required';
-        } else if (!validateDate(value)) {
-          errorMessage = 'Invalid date or future date';
         }
         break;
       
@@ -176,11 +168,11 @@ function InvoiceForm({ campaignId, onConfirm, onClose }) {
   const handleFileChange = (listSetter, index, file) => {
     // Validate file if provided
     if (file) {
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      const maxSize = 5 * 1024 * 1024; // 10MB
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
       
       if (file.size > maxSize) {
-        toast.error('File size should not exceed 10MB');
+        toast.error('File size should not exceed 5MB');
         return;
       }
       
@@ -328,7 +320,6 @@ function InvoiceForm({ campaignId, onConfirm, onClose }) {
                 value={item[`${section}Date`] || ''} 
                 onChange={(e) => handleChange(setItems, section, i, `${section}Date`, e.target.value)}
                 className={`w-full p-2 border rounded ${getErrorMessage(section, i, `${section}Date`) ? 'border-red-500' : 'border-gray-300'}`}
-                max={new Date().toISOString().split('T')[0]}
                 onBlur={() => validateField(section, i, `${section}Date`, item[`${section}Date`] || '')}
               />
               <ErrorMessage message={getErrorMessage(section, i, `${section}Date`)} />
