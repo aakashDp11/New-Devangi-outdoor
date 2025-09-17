@@ -25,24 +25,24 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
 
   // Validation functions
   const validateAmount = (amount) => {
-    if (!amount || amount.trim() === '') return 'Amount is required';
+    if (!amount || String(amount).trim() === '') return 'Amount is required';
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount)) return 'Amount must be a valid number';
     if (numAmount <= 0) return 'Amount must be greater than 0';
     // Check for more than 2 decimal places
-    if (amount.includes('.') && amount.split('.')[1].length > 2) {
+    if (String(amount).includes('.') && String(amount).split('.')[1].length > 2) {
       return 'Amount can have maximum 2 decimal places';
     }
     return null;
   };
 
   const validateReferenceNumber = (refNum, modeOfPayment) => {
-    if (!refNum || refNum.trim() === '') {
+    if (!refNum || String(refNum).trim() === '') {
       if (modeOfPayment === 'cash') return null; // Reference number optional for cash
       return 'Reference number is required for this payment mode';
     }
-    if (refNum.length < 3) return 'Reference number must be at least 3 characters';
-    if (refNum.length > 50) return 'Reference number must be less than 50 characters';
+    if (String(refNum).length < 3) return 'Reference number must be at least 3 characters';
+    if (String(refNum).length > 50) return 'Reference number must be less than 50 characters';
     // Check for special characters (allow alphanumeric, hyphens, underscores)
     if (!/^[A-Za-z0-9\-_]+$/.test(refNum)) {
       return 'Reference number can only contain letters, numbers, hyphens, and underscores';
@@ -51,12 +51,13 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
   };
 
   const validateGST = (gst) => {
-    if (!gst || gst.trim() === '') return null; // GST is optional
-    const numGst = parseFloat(gst);
+    const gstString = String(gst);
+    if (!gstString || gstString.trim() === '') return null; // GST is optional
+    const numGst = parseFloat(gstString);
     if (isNaN(numGst)) return 'GST must be a valid number';
     if (numGst < 0) return 'GST cannot be negative';
     // Check for more than 2 decimal places
-    if (gst.includes('.') && gst.split('.')[1].length > 2) {
+    if (gstString.includes('.') && gstString.split('.')[1].length > 2) {
       return 'GST can have maximum 2 decimal places';
     }
     return null;
@@ -91,7 +92,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
 
     // Check for duplicate reference numbers (non-cash payments)
     const nonCashPayments = payments.filter(p => p.modeOfPayment !== 'cash' && p.referenceNumber);
-    const refNumbers = nonCashPayments.map(p => p.referenceNumber.toLowerCase());
+    const refNumbers = nonCashPayments.map(p => String(p.referenceNumber).toLowerCase());
     const duplicateRefs = refNumbers.filter((ref, index) => refNumbers.indexOf(ref) !== index);
     
     if (duplicateRefs.length > 0) {
@@ -248,7 +249,7 @@ const PaymentStatusForm = ({ campaignId, onConfirm, onClose, existingData }) => 
 
     // Check if there are any unlocked payments without amounts
     const unlockedPayments = payments.filter(p => !p.locked);
-    const emptyPayments = unlockedPayments.filter(p => !p.amount || p.amount.trim() === '');
+    const emptyPayments = unlockedPayments.filter(p => !p.amount || String(p.amount).trim() === '');
     
     if (emptyPayments.length > 0) {
       toast.error('Please fill all payment amounts or remove empty payment records');

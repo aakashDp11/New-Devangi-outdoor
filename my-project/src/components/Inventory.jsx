@@ -253,6 +253,23 @@ const ImagePreviewModal = ({ imageUrl, onClose }) => {
 const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => {
     const [tagInputErrors, setTagInputErrors] = useState({});
 
+    const spaceTypeColors = {
+        Billboard: 'bg-blue-200 text-blue-800',
+        DOOH: 'bg-purple-200 text-purple-800',
+        'Pole Kiosk': 'bg-yellow-200 text-yellow-800',
+        Gantry: 'bg-red-200 text-red-800',
+        BQS: 'bg-green-200 text-green-800',
+        'Digital BQS': 'bg-indigo-200 text-indigo-800',
+        Transit: 'bg-pink-200 text-pink-800',
+        Miscellaneous: 'bg-gray-200 text-gray-800'
+    };
+
+    const ownershipColors = {
+        Owned: 'bg-green-200 text-green-800',
+        Leased: 'bg-red-200 text-red-800',
+        Traded: 'bg-yellow-200 text-yellow-800',
+    };
+
     const validateTag = (tag) => {
         if (!tag.trim()) return "Tag cannot be empty";
         if (tag.length < 2) return "Tag must be at least 2 characters";
@@ -303,11 +320,11 @@ const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => {
                                 </div>
                                 <p className="text-sm text-[var(--color-muted)] mt-1 mb-3">{item.address || 'No address'}</p>
                                 <div className="flex gap-2 text-xs flex-wrap mb-2">
-                                    <span className="text-xs px-2 py-1 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary-text)] transition-all duration-200 hover:scale-105">
-                                        {item.city || 'N/A'}
-                                    </span>
-                                    <span className="text-xs px-2 py-1 rounded-full bg-[var(--color-secondary-light)] text-[var(--color-secondary-text)] transition-all duration-200 hover:scale-105">
+                                    <span className={`text-xs px-2 py-1 rounded-full ${spaceTypeColors[item.spaceType] || 'bg-gray-200 text-gray-800'} transition-all duration-200 hover:scale-105`}>
                                         {item.spaceType || 'N/A'}
+                                    </span>
+                                    <span className={`text-xs px-2 py-1 rounded-full ${ownershipColors[item.ownershipType] || 'bg-gray-200 text-gray-800'} transition-all duration-200 hover:scale-105`}>
+                                        {item.ownershipType || 'N/A'}
                                     </span>
                                 </div>
                                 <div className="flex gap-1.5 flex-wrap">
@@ -359,6 +376,23 @@ const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => {
 const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, setSortConfig, onImageClick }) => {
     if (!data || data.length === 0) return null;
 
+    const spaceTypeColors = {
+        Billboard: 'bg-blue-200 text-blue-800',
+        DOOH: 'bg-purple-200 text-purple-800',
+        'Pole Kiosk': 'bg-yellow-200 text-yellow-800',
+        Gantry: 'bg-red-200 text-red-800',
+        BQS: 'bg-green-200 text-green-800',
+        'Digital BQS': 'bg-indigo-200 text-indigo-800',
+        Transit: 'bg-pink-200 text-pink-800',
+        Miscellaneous: 'bg-gray-200 text-gray-800'
+    };
+
+    const ownershipColors = {
+        Owned: 'bg-green-200 text-green-800',
+        Leased: 'bg-red-200 text-red-800',
+        Traded: 'bg-yellow-200 text-yellow-800',
+    };
+
     return (
         <Card className="shadow-lg rounded-xl animate-slideUp bg-gray-100 bg-opacity-90">
             <div className="overflow-x-auto">
@@ -408,14 +442,22 @@ const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, se
                                 </td>
                                 <td className="px-6 py-4 cursor-pointer text-[var(--color-text)] hover:text-[var(--color-primary)] transition-all duration-200"
                                     onClick={() => navigate(`/space/${item._id}`)}>{item.city}</td>
-                                <td className="px-6 py-4 cursor-pointer text-[var(--color-text)] hover:text-[var(--color-primary)] transition-all duration-200"
-                                    onClick={() => navigate(`/space/${item._id}`)}>{item.spaceType}</td>
+                                <td className="px-6 py-4 cursor-pointer"
+                                    onClick={() => navigate(`/space/${item._id}`)}>
+                                    <span className={`text-xs px-2.5 py-1 rounded-full ${spaceTypeColors[item.spaceType] || 'bg-gray-200 text-gray-800'} transition-all duration-200 hover:scale-105`}>
+                                        {item.spaceType}
+                                    </span>
+                                </td>
                                 <td className="px-6 py-4 cursor-pointer transition-all duration-200"
                                     onClick={() => navigate(`/space/${item._id}`)}>
                                     <AvailabilityBadge availabilityStatus={item.availability} />
                                 </td>
-                                <td className="px-6 py-4 cursor-pointer text-[var(--color-text)] hover:text-[var(--color-primary)] transition-all duration-200"
-                                    onClick={() => navigate(`/space/${item._id}`)}>{item.ownershipType}</td>
+                                <td className="px-6 py-4 cursor-pointer"
+                                    onClick={() => navigate(`/space/${item._id}`)}>
+                                    <span className={`text-xs px-2.5 py-1 rounded-full ${ownershipColors[item.ownershipType] || 'bg-gray-200 text-gray-800'} transition-all duration-200 hover:scale-105`}>
+                                        {item.ownershipType}
+                                    </span>
+                                </td>
                                 <td className="px-6 py-4 font-mono text-xs text-[var(--color-muted)] cursor-pointer hover:text-[var(--color-primary)] transition-all duration-200"
                                     onClick={() => navigate(`/space/${item._id}`)}>
                                     {item.inventoryId || item._id.slice(-8).toUpperCase()}

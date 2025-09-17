@@ -10,9 +10,6 @@ import { useSidebar } from '../context/SidebarContext';
 import {
   FaArrowLeft,
   FaArrowRight,
-  FaSortAlphaDown,
-  FaSortAlphaUp,
-  FaSort,
   FaExclamationTriangle,
   FaCheck,
 } from 'react-icons/fa';
@@ -23,8 +20,8 @@ import {
 const Card = ({ children, className = '', ...props }) => (
   <div
     className={`
-        bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
-        ${className}
+      bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
+      ${className}
     `}
     {...props}
   >
@@ -620,13 +617,13 @@ export default function BookingsDashboard() {
                           <td className='px-6 py-4 text-[var(--color-text)]'>
                             {item.clientName || 'No Client'}
                           </td>
-                          <td className='px-6 py-4 text-[var(--color-text)]'>
+                          <td className='px-6 py-4 text-pink-500'>
                             {formatDate(item.createdAt)}
                           </td>
-                          <td className='px-6 py-4 text-[var(--color-text)]'>
+                          <td className='px-6 py-4 text-green-500'>
                             {formatDate(upcomingStart)}
                           </td>
-                          <td className='px-6 py-4 text-[var(--color-text)]'>
+                          <td className='px-6 py-4 text-red-500'>
                             {formatDate(upcomingEnd)}
                           </td>
                         </tr>
