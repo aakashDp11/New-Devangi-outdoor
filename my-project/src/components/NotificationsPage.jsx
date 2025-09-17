@@ -24,6 +24,86 @@ import 'react-date-range/dist/theme/default.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
+// --- REUSABLE UI COMPONENTS (SHARED) ---
+
+// Card component with a flowing gradient animation on the background
+const Card = ({ children, className = '', ...props }) => (
+  <div
+    className={`
+      bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
+      ${className}
+    `}
+    {...props}
+  >
+    <div className='absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-20 animate-bg-gradient-flow-diagonal z-0'></div>
+    <div className='relative z-10 h-full flex flex-col'>{children}</div>
+  </div>
+);
+
+// CardContent component for consistent padding and layout
+const CardContent = ({ children, className = '' }) => (
+  <div className={`p-4 md:p-6 flex-grow flex flex-col ${className}`}>
+    {children}
+  </div>
+);
+
+// Button component with consistent styling and loading state
+const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
+  <button
+    className={`px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    disabled={disabled || loading}
+    {...props}
+  >
+    {loading ? (
+      <div className='flex items-center gap-2'>
+        <div className='w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
+        {children}
+      </div>
+    ) : (
+      children
+    )}
+  </button>
+);
+
+// Input component with a more polished look and error handling
+const Input = ({ className = '', error = null, ...props }) => (
+  <div className='relative'>
+    <input
+      className={`border ${
+        error ? 'border-red-300' : 'border-gray-200'
+      } px-4 py-2 rounded-xl w-full bg-white text-[var(--color-text)] focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:shadow-md ${className}`}
+      {...props}
+    />
+    {error && (
+      <p className='absolute -bottom-5 left-0 text-red-500 text-xs mt-1 animate-slideDown'>
+        {error}
+      </p>
+    )}
+  </div>
+);
+
+// Notification system component (for toasts)
+const Notification = ({ message, type = 'success', onClose }) => {
+  return (
+    <div
+      className={`px-4 py-3 rounded-lg shadow-lg animate-fadeIn ${
+        type === 'error' ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'
+      }`}
+    >
+      <div className='flex items-center gap-2'>
+        {type === 'error' ? <FaExclamationTriangle /> : <FaCheck />}
+        <span className='text-sm font-medium'>{message}</span>
+        <button
+          onClick={onClose}
+          className='ml-auto text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]'
+        >
+          &times;
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // --- Helpers ---
 const formatNotificationTitle = (type) => {
   if (!type) return 'Notification';
@@ -65,23 +145,29 @@ const groupNotificationsByDate = (notifications) => {
   return groups;
 };
 
-// --- UI Components ---
-const CardContent = ({ children, className = '' }) => (
-  <div className={`p-4 ${className}`}>{children}</div>
-);
-
+// --- Confirmation Dialogs (refactored with Button component) ---
 const DeleteConfirmationDialog = ({ isOpen, onConfirm, onCancel }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-[var(--color-surface)] rounded-lg shadow-xl p-6 w-full max-w-sm">
-        <h3 className="text-lg font-bold text-[var(--color-text)]">Confirm Deletion</h3>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Are you sure you want to delete this Notification? This action cannot be undone.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
+      <div className="bg-gray-100 p-6 rounded-2xl shadow-lg w-80 text-[var(--color-text)] transform transition-all duration-300 scale-95 hover:scale-100 animate-scaleIn">
+        <h2 className='text-lg font-semibold mb-4'>Confirm Deletion</h2>
+        <p className="text-sm text-[var(--color-muted)] mb-6">
+          Are you sure you want to delete this notification? This action cannot be undone.
         </p>
-        <div className="mt-6 flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-[var(--color-text)] bg-[var(--color-muted-light)] rounded-md hover:bg-[var(--color-hover)]">Cancel</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-danger)] rounded-md hover:bg-[var(--color-danger-hover)]">Delete</button>
+        <div className='flex justify-end gap-2 text-sm'>
+          <Button
+            className='bg-gray-700 text-white'
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            className='bg-red-500 hover:bg-red-600'
+            onClick={onConfirm}
+          >
+            Delete
+          </Button>
         </div>
       </div>
     </div>
@@ -91,13 +177,25 @@ const DeleteConfirmationDialog = ({ isOpen, onConfirm, onCancel }) => {
 const MarkAsReadConfirmationDialog = ({ isOpen, onConfirm, onCancel }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-[var(--color-surface)] rounded-lg shadow-xl p-6 w-full max-w-sm">
-        <h3 className="text-lg font-bold text-[var(--color-text)]">Confirm Mark as Read</h3>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">Are you sure you want to mark this notification as read? This action cannot be undone.</p>
-        <div className="mt-6 flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-[var(--color-text)] bg-[var(--color-muted-light)] rounded-md hover:bg-[var(--color-hover)]">Cancel</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:opacity-90">Confirm</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
+      <div className="bg-gray-100 p-6 rounded-2xl shadow-lg w-80 text-[var(--color-text)] transform transition-all duration-300 scale-95 hover:scale-100 animate-scaleIn">
+        <h2 className='text-lg font-semibold mb-4'>Confirm Mark as Read</h2>
+        <p className="text-sm text-[var(--color-muted)] mb-6">
+          Are you sure you want to mark this notification as read?
+        </p>
+        <div className='flex justify-end gap-2 text-sm'>
+          <Button
+            className='bg-gray-700 text-white'
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            className='bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]'
+            onClick={onConfirm}
+          >
+            Confirm
+          </Button>
         </div>
       </div>
     </div>
@@ -107,13 +205,25 @@ const MarkAsReadConfirmationDialog = ({ isOpen, onConfirm, onCancel }) => {
 const MarkAllReadConfirmationDialog = ({ isOpen, onConfirm, onCancel }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-[var(--color-surface)] rounded-lg shadow-xl p-6 w-full max-w-sm">
-        <h3 className="text-lg font-bold text-[var(--color-text)]">Confirm Mark All as Read</h3>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">Are you sure you want to mark all notifications as read? This action cannot be undone.</p>
-        <div className="mt-6 flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-[var(--color-text)] bg-[var(--color-muted-light)] rounded-md hover:bg-[var(--color-hover)]">Cancel</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-md hover:opacity-90">Confirm</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
+      <div className="bg-gray-100 p-6 rounded-2xl shadow-lg w-80 text-[var(--color-text)] transform transition-all duration-300 scale-95 hover:scale-100 animate-scaleIn">
+        <h2 className='text-lg font-semibold mb-4'>Confirm Mark All as Read</h2>
+        <p className="text-sm text-[var(--color-muted)] mb-6">
+          Are you sure you want to mark all notifications as read?
+        </p>
+        <div className='flex justify-end gap-2 text-sm'>
+          <Button
+            className='bg-gray-700 text-white'
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            className='bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]'
+            onClick={onConfirm}
+          >
+            Confirm
+          </Button>
         </div>
       </div>
     </div>
@@ -126,7 +236,6 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const { isCollapsed } = useSidebar();
 
-  // State for filters
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
@@ -139,14 +248,21 @@ export default function NotificationsPage() {
   const [endDate, setEndDate] = useState('');
   const [dateError, setDateError] = useState('');
 
-  // State for confirmation dialogs
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [markAsReadTarget, setMarkAsReadTarget] = useState(null);
   const [isMarkAllReadConfirming, setIsMarkAllReadConfirming] = useState(false);
 
-  // State for date picker modal
   const [showDateModal, setShowDateModal] = useState(false);
   const [tempDateRange, setTempDateRange] = useState([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
+
+  const addNotification = useCallback((message, type = 'success') => {
+    const id = Date.now();
+    const notification = { id, message, type };
+    setNotifications((prev) => [...prev, notification]);
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    }, 5000);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -158,16 +274,15 @@ export default function NotificationsPage() {
         setNotifications(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error('Error fetching notifications:', err);
-        toast.error('Failed to load notifications');
+        addNotification('Failed to load notifications', 'error');
       } finally {
         if (mounted) setLoading(false);
       }
     };
     loadNotifications();
     return () => { mounted = false; };
-  }, []);
+  }, [addNotification]);
 
-  // --- UPDATED: ROBUST AND RELIABLE DATE FORMATTING ---
   const formatDate = (date) => {
     if (!date) return '';
     const year = date.getFullYear();
@@ -176,7 +291,6 @@ export default function NotificationsPage() {
     return `${year}-${month}-${day}`;
   };
 
-  // Debounce search input (inline runtime validation: require >=2 chars or empty)
   useEffect(() => {
     setSearchError('');
     const tid = setTimeout(() => {
@@ -190,7 +304,6 @@ export default function NotificationsPage() {
     return () => clearTimeout(tid);
   }, [searchQuery]);
 
-  // --- DATE FILTER LOGIC ---
   const handleQuickDateChange = (e) => {
     const value = e.target.value;
     setQuickDateFilter(value);
@@ -268,7 +381,6 @@ export default function NotificationsPage() {
     setDateError('');
   };
 
-  // --- NOTIFICATION ACTION HANDLERS ---
   const requestMarkAsRead = (id) => setMarkAsReadTarget(id);
   const cancelMarkAsRead = () => setMarkAsReadTarget(null);
   const confirmMarkAsRead = async () => {
@@ -318,7 +430,6 @@ export default function NotificationsPage() {
     }
   };
 
-  // --- FILTERING AND SORTING LOGIC ---
   const processedNotifications = useMemo(() => {
     let filtered = [...notifications];
 
@@ -356,7 +467,6 @@ export default function NotificationsPage() {
     return groupNotificationsByDate(filtered);
   }, [notifications, filter, sort, debouncedQuery, startDate, endDate]);
 
-  // animation variants
   const cardVariants = {
     hidden: { opacity: 0, y: 6 },
     visible: { opacity: 1, y: 0 },
@@ -364,91 +474,89 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-text)] h-screen w-screen flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-screen text-[var(--color-text)] flex flex-col lg:flex-row overflow-hidden">
       <Navbar />
-      <main className={`flex-1 h-full overflow-y-auto px-4 md:px-8 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+      <main className={`flex-1 h-full overflow-y-auto px-4 md:px-6 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 animate-slideDown">
           <h2 className="text-2xl font-sans font-normal">Notifications</h2>
-          <div className="flex items-center gap-3">
-            <button onClick={handleMarkAllRead} className="px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-md hover:opacity-90 transition-colors text-xs font-medium">
-              Mark All as Read
-            </button>
-          </div>
+          <Button onClick={handleMarkAllRead}>
+            Mark All as Read
+          </Button>
         </div>
 
         {/* Filter Bar */}
-        <div className="p-4 bg-[var(--color-surface)] rounded-lg shadow-sm border border-[var(--color-border)] mb-8">
-          <div className="flex flex-col md:flex-row gap-2 items-center">
-            <div className="flex-1 w-full">
-              <input
-                type="text"
-                placeholder="Search by campaign, company, space or message..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-                aria-label="Search notifications"
-              />
-              {searchError && <p className="mt-1 text-xs text-red-500">{searchError}</p>}
+        <Card className='mt-6 shadow-xl animate-slideUp bg-gray-100 bg-opacity-80'>
+          <CardContent>
+            <div className='flex flex-col md:flex-row items-center justify-between gap-4'>
+              <div className='w-full flex-1'>
+                <Input
+                  className='h-[2.2rem] text-xs'
+                  placeholder="Search by campaign, company, space or message..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  error={searchError}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <select
+                  id="filter"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="w-full sm:w-auto px-4 py-2 rounded-xl bg-white text-xs text-[var(--color-text)] focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  <option value="all">All Status</option>
+                  <option value="unread">Unread</option>
+                  <option value="read">Read</option>
+                </select>
+
+                <select
+                  id="sort"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  className="w-full sm:w-auto px-4 py-2 rounded-xl bg-white text-xs text-[var(--color-text)] focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                </select>
+
+                <select
+                  id="quickDateFilter"
+                  value={quickDateFilter}
+                  onChange={handleQuickDateChange}
+                  className="w-full sm:w-auto px-4 py-2 rounded-xl bg-white text-xs text-[var(--color-text)] focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  <option value="all">All Time</option>
+                  <option value="thisWeek">This Week</option>
+                  <option value="thisMonth">This Month</option>
+                  <option value="last3Months">Last 3 Months</option>
+                </select>
+
+                <Button
+                  onClick={handleShowDateModal}
+                  className="w-full sm:w-auto text-xs whitespace-nowrap bg-white text-[var(--color-text)] hover:bg-gray-50 shadow-sm hover:shadow-md"
+                >
+                  {isCustomDate && startDate && endDate ? `${startDate} to ${endDate}` : 'Date Filter'}
+                </Button>
+
+                <Button
+                  onClick={handleResetFilters}
+                  className="w-full sm:w-auto text-xs bg-gray-700 hover:bg-gray-800 shadow-sm hover:shadow-md"
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
-
-            <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-              <select
-                id="filter"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-              >
-                <option value="all">All Status</option>
-                <option value="unread">Unread</option>
-                <option value="read">Read</option>
-              </select>
-
-              <select
-                id="sort"
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-              </select>
-
-              <select
-                id="quickDateFilter"
-                value={quickDateFilter}
-                onChange={handleQuickDateChange}
-                className="w-full sm:w-auto px-3 py-2 border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-              >
-                <option value="all">All Time</option>
-                <option value="thisWeek">This Week</option>
-                <option value="thisMonth">This Month</option>
-                <option value="last3Months">Last 3 Months</option>
-              </select>
-
-              <button
-                onClick={handleShowDateModal}
-                className="w-full sm:w-auto px-3 py-2 border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] rounded-md hover:bg-[var(--color-hover)] text-xs whitespace-nowrap"
-              >
-                {isCustomDate && startDate && endDate ? `${startDate} to ${endDate}` : 'Date Filter'}
-              </button>
-
-              <button
-                onClick={handleResetFilters}
-                className="w-full sm:w-auto px-4 py-2 bg-[var(--color-muted-light)] text-[var(--color-text)] rounded-md hover:bg-[var(--color-hover)] text-xs font-medium"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-          {dateError && <p className="mt-2 text-xs text-red-500">{dateError}</p>}
-        </div>
+            {dateError && <p className="mt-2 text-xs text-red-500">{dateError}</p>}
+          </CardContent>
+        </Card>
 
         {/* Notification List */}
-        <div className="space-y-8">
+        <div className="space-y-8 mt-6">
           {loading ? (
             <div className="animate-pulse space-y-2">
-              <div className="h-6 w-1/4 bg-[var(--color-muted-light)] rounded" />
-              <div className="h-32 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg" />
+              <div className="h-6 w-1/4 bg-gray-200 rounded" />
+              <div className="h-32 bg-gray-100 border border-gray-200 rounded-lg" />
             </div>
           ) : Object.values(processedNotifications).every((arr) => arr.length === 0) ? (
             <div className="text-center text-[var(--color-muted)] py-16">
@@ -471,10 +579,10 @@ export default function NotificationsPage() {
                           exit="exit"
                           variants={cardVariants}
                           transition={{ duration: 0.18 }}
-                          className={`border shadow-sm rounded-lg w-full group ${!notif.read ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-[var(--color-border)]'}`}
+                          className={`rounded-2xl border shadow-sm w-full group ${!notif.read ? 'bg-white border-[var(--color-primary)]' : 'bg-gray-100 bg-opacity-80 border-gray-200'}`}
                           layout
                         >
-                          <CardContent className="flex items-start justify-between gap-4">
+                          <CardContent className="flex items-start justify-between gap-4 p-4 md:p-6">
                             <div className="flex items-start gap-4">
                               {!notif.read && (
                                 <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-primary)] mt-1.5 flex-shrink-0 animate-pulse" />
@@ -517,23 +625,38 @@ export default function NotificationsPage() {
 
       {showDateModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={handleCancelDateFilter}>
-          <motion.div onClick={(e) => e.stopPropagation()} initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }} className="bg-[var(--color-surface)] rounded-xl shadow-lg p-2">
+          <motion.div onClick={(e) => e.stopPropagation()} initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }} className="bg-white rounded-xl shadow-lg p-2">
             <DateRange
               editableDateInputs={true}
               onChange={(item) => setTempDateRange([item.selection])}
               moveRangeOnFirstSelection={false}
               ranges={tempDateRange}
-              rangeColors={['#000000']}
+              rangeColors={['#6366f1']}
               months={1}
               direction="horizontal"
             />
-            <div className="flex justify-end gap-2 p-2 border-t border-[var(--color-border)]">
-              <button onClick={handleCancelDateFilter} className="px-4 py-1.5 rounded-md bg-[var(--color-muted-light)] text-[var(--color-text)] hover:bg-[var(--color-hover)] font-medium text-sm">Cancel</button>
-              <button onClick={handleApplyDateFilter} className="px-4 py-1.5 rounded-md bg-[var(--color-primary)] text-white hover:opacity-90 font-medium text-sm">Apply</button>
+            <div className="flex justify-end gap-2 p-2 border-t border-gray-200">
+              <Button onClick={handleCancelDateFilter} className="bg-gray-700 text-white hover:bg-gray-800">Cancel</Button>
+              <Button onClick={handleApplyDateFilter} className="bg-[var(--color-primary)] text-white hover:opacity-90">Apply</Button>
             </div>
           </motion.div>
         </div>
       )}
+      
+      <style jsx>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes bg-gradient-flow-diagonal { 0% { background-position: 0% 0%; } 100% { background-position: 100% 100%; } }
+        .animate-bg-gradient-flow-diagonal { background-size: 200% 200%; animation: bg-gradient-flow-diagonal 10s linear infinite; }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        .animate-slideUp { animation: slideUp 0.4s ease-out; }
+        .animate-slideDown { animation: slideDown 0.4s ease-out; }
+        .animate-slideIn { animation: slideIn 0.4s ease-out; }
+        .animate-scaleIn { animation: scaleIn 0.3s ease-out; }
+      `}</style>
     </div>
   );
 }

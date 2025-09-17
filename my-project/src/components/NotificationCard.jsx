@@ -11,10 +11,10 @@ const NotificationCard = ({ notification, onMarkRead, onDelete }) => {
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.25 }}
       whileHover={{ scale: 1.01 }}
-      className={`p-4 rounded shadow mb-3 cursor-pointer transition-colors ${
+      className={`p-4 rounded-2xl shadow mb-3 cursor-pointer transition-colors ${
         notification.read
-          ? "bg-[var(--color-surface)] border border-[var(--color-border)]"
-          : "bg-[var(--color-surface)] border-l-4 border-[var(--color-primary)] shadow-sm"
+          ? "bg-gray-100 bg-opacity-80 border-l-4 border-gray-200"
+          : "bg-white border-l-4 border-[var(--color-primary)] shadow-sm"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -23,7 +23,7 @@ const NotificationCard = ({ notification, onMarkRead, onDelete }) => {
           <h4 className="font-semibold text-[var(--color-text)]">
             {notification.title}
           </h4>
-          <p className="text-sm text-[var(--color-text-light)]">
+          <p className="text-sm text-[var(--color-muted)]">
             {notification.message}
           </p>
           <p className="text-xs text-[var(--color-muted)] mt-1">
@@ -33,14 +33,14 @@ const NotificationCard = ({ notification, onMarkRead, onDelete }) => {
             {!notification.read && (
               <button
                 onClick={() => onMarkRead(notification.id)}
-                className="text-xs text-[var(--color-primary)] hover:underline"
+                className="text-xs text-green-600 hover:text-green-800 transition-colors"
               >
                 Mark as Read
               </button>
             )}
             <button
               onClick={() => onDelete(notification.id)}
-              className="text-xs text-[var(--color-danger)] hover:underline"
+              className="text-xs text-red-600 hover:text-red-800 transition-colors"
             >
               Delete
             </button>

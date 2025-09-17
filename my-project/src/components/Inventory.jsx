@@ -25,7 +25,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 // Card component with a flowing gradient animation on the background
 const Card = ({ children, className = '', ...props }) => (
     <div className={`
-        bg-white bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
+        bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
         ${className}
     `} {...props}>
         <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-20 animate-bg-gradient-flow-diagonal z-0"></div>
@@ -281,7 +281,7 @@ const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => {
                 return (
                     <div
                         key={item._id}
-                        className="bg-white shadow-lg rounded-xl text-xs hover:shadow-xl cursor-pointer transition-all duration-300 flex flex-col hover:scale-105 hover:-translate-y-1 animate-slideUp"
+                        className="bg-gray-100 shadow-lg rounded-xl text-xs hover:shadow-xl cursor-pointer transition-all duration-300 flex flex-col hover:scale-105 hover:-translate-y-1 animate-slideUp"
                         style={{ animationDelay: `${index * 50}ms` }}
                     >
                         <div className="relative overflow-hidden rounded-t-xl">
@@ -331,7 +331,7 @@ const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => {
                             <div className="mt-4 text-xs">
                                 <input
                                     placeholder="+ Add Tag"
-                                    className={`px-2 py-1 w-full rounded-lg bg-white text-[var(--color-text)] focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:shadow-md ${
+                                    className={`px-2 py-1 w-full rounded-lg bg-gray-50 text-[var(--color-text)] focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:shadow-md ${
                                         tagInputErrors[item._id] ? 'ring-red-300' : 'ring-[var(--color-primary)]'
                                     }`}
                                     onKeyDown={(e) => {
@@ -360,7 +360,7 @@ const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, se
     if (!data || data.length === 0) return null;
 
     return (
-        <Card className="shadow-lg rounded-xl animate-slideUp bg-gray-50 bg-opacity-90">
+        <Card className="shadow-lg rounded-xl animate-slideUp bg-gray-100 bg-opacity-90">
             <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left text-[var(--color-muted)]">
                     <thead className="text-xs text-[var(--color-text)] uppercase bg-gray-100">
@@ -378,7 +378,7 @@ const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, se
                         {data.map((item, index) => (
                             <tr
                                 key={item._id}
-                                className="bg-white hover:bg-gray-50 transition-all duration-200 animate-slideIn"
+                                className="bg-white hover:bg-gray-50 transition-all duration-200 animate-slideIn border-b border-gray-200"
                                 style={{ animationDelay: `${index * 50}ms` }}
                             >
                                 <td className="px-6 py-4 text-[var(--color-muted)] cursor-pointer transition-all duration-200 hover:text-[var(--color-primary)]"
@@ -481,7 +481,7 @@ const InventoryMapView = ({ spaces, navigate }) => {
     }, [spaces, navigate, mapLoading]);
 
     return (
-        <Card className="relative h-[65vh] shadow-xl animate-slideUp bg-gray-50 bg-opacity-90">
+        <Card className="relative h-[65vh] shadow-xl animate-slideUp bg-gray-100 bg-opacity-90">
             <CardContent>
                 {mapLoading && (
                     <div className="absolute inset-0 bg-white rounded-lg flex items-center justify-center z-10">
@@ -857,7 +857,7 @@ export default function InventoryDashboard() {
                     </div>
                 </div>
 
-                <Card className="mt-6 shadow-xl animate-slideUp bg-white bg-opacity-80">
+                <Card className="mt-6 shadow-xl animate-slideUp bg-gray-100 bg-opacity-80">
                     <CardContent>
                         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                             <div className="w-full md:w-[50%]">
@@ -892,7 +892,7 @@ export default function InventoryDashboard() {
                                         </button>
                                     ))}
                                 </div>
-                                <Button onClick={resetFilters} className="bg-white text-[var(--color-text)] hover:bg-gray-100 shadow-sm hover:shadow-md">
+                                <Button onClick={resetFilters} className="bg-gray-700 text-white hover:bg-gray-800 shadow-md hover:shadow-lg">
                                     Reset Filters
                                 </Button>
                             </div>
