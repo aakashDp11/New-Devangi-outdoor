@@ -43,16 +43,18 @@ const InvoiceItemSchema = new Schema({
 }, { _id: false, timestamps: true });
 
 const CashMemoItemSchema = new Schema({
-  reference: String,
-  value: Number,
-  documentUrl: String,
+  cashMemoNumber: { type: String },
+  cashMemoDate: { type: String },
+  cashMemoValue: { type: Number },
+  documentUrl: { type: String },
   completedAt: { type: Date }
 }, { _id: false, timestamps: true });
 
 const CreditNoteItemSchema = new Schema({
-  reference: String,
-  value: Number,
-  documentUrl: String,
+  creditNoteNumber: { type: String },
+  creditNoteDate: { type: String },
+  creditNoteValue: { type: Number },
+  documentUrl: { type: String },
   completedAt: { type: Date }
 }, { _id: false, timestamps: true });
 

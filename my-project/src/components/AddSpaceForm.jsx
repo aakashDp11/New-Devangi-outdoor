@@ -51,16 +51,8 @@ const validators = {
     return value === '' || /^\d{6}$/.test(value);
   },
   
-  date: (value) => {
-    if (!value) return false;
-    const date = new Date(value);
-    return date instanceof Date && !isNaN(date);
-  },
   
-  futureDate: (value, comparisonDate) => {
-    if (!value || !comparisonDate) return true;
-    return new Date(value) > new Date(comparisonDate);
-  },
+
   
   resolution: (value) => {
     return value === '' || /^\d+x\d+$/.test(value);
@@ -102,8 +94,7 @@ const getValidationMessage = (fieldName, validationType, additionalInfo = '') =>
     latitude: `Latitude must be between -90 and 90 degrees`,
     longitude: `Longitude must be between -180 and 180 degrees`,
     pincode: `Pin-code must be exactly 6 digits`,
-    date: `${fieldName} must be a valid date`,
-    futureDate: `End date must be after start date`,
+    
     resolution: `Resolution must be in format like 1920x1080`,
     spaceName: `Space name can only contain letters, numbers, spaces, and basic punctuation`,
     organization: `Organization name contains invalid characters`,
@@ -275,6 +266,7 @@ export default function AddSpaceForm() {
       );
     } else {
       mandatoryFields.Location.push("latitude", "longitude");
+      mandatoryFields.Basic.push("price"); // ADD THIS LINE
     }
 
     if (formData.spaceType === 'Transit') {
@@ -323,20 +315,7 @@ export default function AddSpaceForm() {
         }
         break;
 
-      case 'startDate':
-        if (value && !validators.date(value)) {
-          errors.push(getValidationMessage('Start date', 'date'));
-        }
-        break;
-
-      case 'endDate':
-        if (value && !validators.date(value)) {
-          errors.push(getValidationMessage('End date', 'date'));
-        }
-        if (value && formData.startDate && !validators.futureDate(value, formData.startDate)) {
-          errors.push(getValidationMessage('End date', 'futureDate'));
-        }
-        break;
+     
 
       case 'price':
       case 'buyingPrice':
@@ -453,13 +432,7 @@ export default function AddSpaceForm() {
     }));
 
     // Special validation for dependent fields
-    if (name === 'startDate' && form.endDate) {
-      const endDateErrors = validateField('endDate', form.endDate, { ...form, [name]: value });
-      setFieldErrors(prev => ({
-        ...prev,
-        endDate: endDateErrors.length > 0 ? endDateErrors[0] : null
-      }));
-    }
+    
   };
 
   // Handle blur events for validation
@@ -844,6 +817,7 @@ export default function AddSpaceForm() {
                       onChange={handleValidatedInputChange}
                       onBlur={handleBlur}
                       error={touched.price && fieldErrors.price}
+                      mandatory="true"  // ADD THIS LINE
                     />
                   )}
 

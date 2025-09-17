@@ -39,7 +39,6 @@ import Report from "./components/Report.jsx";
 import PrivacyPolicy from "./components/PrivacyPolicy";
 import DisclaimerPolicy from "./components/DisclaimerPolicy";
 import NotificationsPage from "./components/NotificationsPage";
-import Settings from "./components/Settings";
 import EditProposal from "./components/EditProposal";
 import CloneCampaignPage from "./components/CloneCampaignPage"; 
 
@@ -47,8 +46,6 @@ import CloneCampaignPage from "./components/CloneCampaignPage";
 import NotFound from "./components/NotFound";
 import InternalServerError from "./components/InternalServerError";
 
-// --- Theme Controls ---
-import ThemeControls from "./components/ThemeControls";  // ✅ import theme switcher
 
 export default function App() {
   return (
@@ -56,8 +53,6 @@ export default function App() {
       <SidebarProvider>
         <Toaster position="top-right" />
         
-        {/* ✅ Theme Switcher visible globally */}
-        <ThemeControls />
 
         <Routes>
           {/* ======= Public Routes ======= */}
@@ -76,7 +71,6 @@ export default function App() {
             <Route path="/reports" element={<Report />} />
             <Route path="/proposal-dashboard" element={<ProposalDashboard />} />
             <Route path="/finances" element={<FinancePage />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="/booking/:id" element={<BookingDetails />} />
             <Route
               path="/clone-campaign/:campaignId/from-booking/:bookingId"

@@ -47,61 +47,74 @@ export default function BookingPreview() {
   const grandTotalPrice = computeTotalPrice();
 
   const handleSubmitBooking = async () => {
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      Object.entries(basicInfo).forEach(([key, value]) => {
-        if (key !== "companyLogo") {
-          formData.append(key, value);
-        }
-      });
-      
-      // --- START OF CHANGE ---
-      const campaignsPayload = orderInfo.campaigns.map((c) => ({
-        campaignName: c.campaignName,
-        industry: c.industry,
-        description: c.description,
-        startDate: c.startDate,
-        endDate: c.endDate,
-        isFOC: c.isFOC, // <-- This is the important part
-        selectedSpaces: c.selectedSpaces.map((s) => ({
-          id: s.id,
-          selectedUnits: s.selectedUnits,
-        })),
-      }));
-
-      // *** ADD THIS LOG TO VERIFY ***
-      console.log("FRONTEND IS SENDING THIS PAYLOAD:", JSON.stringify(campaignsPayload, null, 2));
-
-      formData.append("campaigns", JSON.stringify(campaignsPayload));
-      // --- END OF CHANGE ---
-      
-      if (basicInfo.companyLogo && basicInfo.companyLogo.file) {
-        formData.append("companyLogo", basicInfo.companyLogo.file);
+  setLoading(true);
+  try {
+    const formData = new FormData();
+    Object.entries(basicInfo).forEach(([key, value]) => {
+      if (key !== "companyLogo") {
+        formData.append(key, value);
       }
+    });
+    
+    // --- START OF CHANGE ---
+    const campaignsPayload = orderInfo.campaigns.map((c) => ({
+      campaignName: c.campaignName,
+      industry: c.industry,
+      description: c.description,
+      startDate: c.startDate,
+      endDate: c.endDate,
+      isFOC: c.isFOC, // <-- This is the important part
+      selectedSpaces: c.selectedSpaces.map((s) => ({
+        id: s.id,
+        selectedUnits: s.selectedUnits,
+      })),
+    }));
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/bookings`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+    // *** ADD THIS LOG TO VERIFY ***
+    console.log("FRONTEND IS SENDING THIS PAYLOAD:", JSON.stringify(campaignsPayload, null, 2));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to submit booking");
-      }
-      toast.success("Booking submitted successfully!");
-      resetForm();
-      navigate("/");
-    } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Something went wrong!");
-    } finally {
-      setLoading(false);
+    formData.append("campaigns", JSON.stringify(campaignsPayload));
+    // --- END OF CHANGE ---
+    
+    if (basicInfo.companyLogo && basicInfo.companyLogo.file) {
+      formData.append("companyLogo", basicInfo.companyLogo.file);
     }
-  };
+
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/api/bookings`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to submit booking");
+    }
+
+    // Get the response data which should contain the booking ID
+   // Replace the current navigation logic with:
+// NEW CODE
+const responseData = await response.json();
+toast.success("Booking submitted successfully!");
+resetForm();
+
+// Navigate to booking details page using the returned booking ID
+if (responseData.bookingId) {
+   navigate(`/booking/${responseData.bookingId}`); 
+} else {
+  // Fallback to booking dashboard if no ID found
+  navigate("/booking-dashboard");
+}
+
+  } catch (error) {
+    console.error(error);
+    toast.error(error.message || "Something went wrong!");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSaveProposal = async () => {
     setLoading(true);

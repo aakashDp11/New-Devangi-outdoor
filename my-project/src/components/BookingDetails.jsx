@@ -409,12 +409,12 @@ export default function BookingDetails() {
   const clientInfoData = [
     { key: "companyName", label: "Company Name", value: booking.companyName },
     { key: "clientName", label: "Client Name", value: booking.clientName },
-    { key: "clientEmail", label: "Client Email", value: booking.clientEmail, validator: validateEmail },
+    { key: "clientEmail", label: "Client Email", value: booking.clientEmail },
     {
       key: "clientContactNumber",
       label: "Client Contact Number",
       value: booking.clientContactNumber,
-      validator: validatePhone,
+      
     },
     {
       key: "clientPanNumber",

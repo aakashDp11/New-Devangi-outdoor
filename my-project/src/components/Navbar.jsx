@@ -4,7 +4,6 @@ import { useSidebar } from "../context/SidebarContext";
 import { useAuth } from "../context/AuthContext";
 import logo1 from "../assets/d3.png";
 import { getUnreadNotificationsCount } from "../services/notificationService";
-import ThemeControls from "./ThemeControls"; // ✅ Theme switcher
 import {
   FaHome,
   FaBoxOpen,
@@ -44,7 +43,6 @@ export default function Navbar() {
       icon: <FaBell />,
       badge: unreadCount,
     },
-    { label: "Settings", path: "/settings", icon: <FaShieldAlt /> }, // ✅ NEW
   ];
 
   useEffect(() => {

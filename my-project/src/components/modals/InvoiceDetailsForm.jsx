@@ -1,13 +1,36 @@
-
-
-// // Updated InvoiceForm.jsx with data pre-fill from backend
-
+// Updated InvoiceForm.jsx with non-mandatory uploads, consistent fields, and inline validations
 
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
 import { PipelineContext } from '../../context/PipelineContext';
 import { toast } from 'sonner';
-import { Plus, X, FileText, Receipt, CreditCard } from 'lucide-react';
+import { Plus, X, FileText, Receipt, CreditCard, AlertCircle } from 'lucide-react';
+
+// Validation utility functions
+const validateNumber = (value, min = 0) => {
+  const num = parseFloat(value);
+  return !isNaN(num) && num > min;
+};
+
+const validateDate = (dateString) => {
+  const date = new Date(dateString);
+  const today = new Date();
+  return date instanceof Date && !isNaN(date) && date <= today;
+};
+
+const validateRequired = (value) => {
+  return value && value.toString().trim().length > 0;
+};
+
+// Error message component
+const ErrorMessage = ({ message }) => (
+  message ? (
+    <div className="flex items-center text-red-500 text-xs mt-1">
+      <AlertCircle className="w-3 h-3 mr-1" />
+      {message}
+    </div>
+  ) : null
+);
 
 // Memoized SectionCard Component with added margin for spacing
 const SectionCard = React.memo(({ title, children, onRemove }) => (
@@ -22,7 +45,7 @@ const SectionCard = React.memo(({ title, children, onRemove }) => (
   </div>
 ));
 
-// Memoized AddButton Component with updated logic for sequential enabling
+// Memoized AddButton Component
 const AddButton = React.memo(({ onClick, icon: Icon, title, description, isActive, isDisabled = false }) => {
   const finalIsDisabled = isActive || isDisabled;
 
@@ -63,20 +86,16 @@ const AddButton = React.memo(({ onClick, icon: Icon, title, description, isActiv
   );
 });
 
-
 function InvoiceForm({ campaignId, onConfirm, onClose }) {
   const [invoices, setInvoices] = useState([]);
   const [cashMemos, setCashMemos] = useState([]);
   const [creditNotes, setCreditNotes] = useState([]);
+  const [errors, setErrors] = useState({});
 
   const [showInvoice, setShowInvoice] = useState(false);
   const [showCashMemo, setShowCashMemo] = useState(false);
   const [showCreditNote, setShowCreditNote] = useState(false);
   const { setPipelineData } = useContext(PipelineContext);
-
-  // Conditions for enabling the next section
-  const isInvoiceSectionComplete = invoices.some(inv => inv.invoiceNumber && inv.invoiceDate && inv.invoiceValue && (inv.file || inv.documentUrl));
-  const isCashMemoSectionComplete = cashMemos.some(memo => memo.reference && memo.value && (memo.file || memo.documentUrl));
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,11 +123,80 @@ function InvoiceForm({ campaignId, onConfirm, onClose }) {
     fetchData();
   }, [campaignId]);
 
+  // Validation function for individual fields
+  const validateField = (section, index, field, value) => {
+    const errorKey = `${section}_${index}_${field}`;
+    let errorMessage = '';
+
+    switch (field) {
+      case 'invoiceNumber':
+      case 'cashMemoNumber':
+      case 'creditNoteNumber':
+        if (!validateRequired(value)) {
+          errorMessage = 'This field is required';
+        } else if (value.length < 2) {
+          errorMessage = 'Must be at least 2 characters';
+        }
+        break;
+      
+      case 'invoiceDate':
+      case 'cashMemoDate':
+      case 'creditNoteDate':
+        if (!validateRequired(value)) {
+          errorMessage = 'Date is required';
+        } else if (!validateDate(value)) {
+          errorMessage = 'Invalid date or future date';
+        }
+        break;
+      
+      case 'invoiceValue':
+      case 'cashMemoValue':
+      case 'creditNoteValue':
+        if (!validateRequired(value)) {
+          errorMessage = 'Value is required';
+        } else if (!validateNumber(value, 0)) {
+          errorMessage = 'Must be a positive number';
+        } else if (parseFloat(value) > 10000000) {
+          errorMessage = 'Value seems too high';
+        }
+        break;
+      
+      default:
+        break;
+    }
+
+    setErrors(prev => ({
+      ...prev,
+      [errorKey]: errorMessage
+    }));
+
+    return errorMessage === '';
+  };
+
   const handleFileChange = (listSetter, index, file) => {
+    // Validate file if provided
+    if (file) {
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      
+      if (file.size > maxSize) {
+        toast.error('File size should not exceed 10MB');
+        return;
+      }
+      
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Only PDF, JPEG, PNG files are allowed');
+        return;
+      }
+    }
+    
     listSetter(prev => prev.map((item, i) => i === index ? { ...item, file } : item));
   };
 
-  const handleChange = (listSetter, index, field, value) => {
+  const handleChange = (listSetter, section, index, field, value) => {
+    // Validate field
+    validateField(section, index, field, value);
+    
     listSetter(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
   };
 
@@ -116,28 +204,55 @@ function InvoiceForm({ campaignId, onConfirm, onClose }) {
     listSetter(prev => [...prev, { ...template }]);
   };
 
-  const handleRemoveRow = (listSetter, index) => {
+  const handleRemoveRow = (listSetter, index, section) => {
+    // Clear errors for removed row
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      Object.keys(newErrors).forEach(key => {
+        if (key.startsWith(`${section}_${index}_`)) {
+          delete newErrors[key];
+        }
+      });
+      return newErrors;
+    });
+    
     listSetter(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
-    const validateRows = (rows, type) => {
-      for (const row of rows) {
-        if (type === 'invoice' && (!row.invoiceNumber || !row.invoiceDate || !row.invoiceValue || (!row.file && !row.documentUrl))) {
-          toast.error('Please complete all fields for each invoice, including the file.');
-          return false;
-        }
-        if (type !== 'invoice' && (!row.reference || !row.value || (!row.file && !row.documentUrl))) {
-           toast.error(`Please complete all fields for each ${type === 'cashMemo' ? 'cash memo' : 'credit note'}, including the file.`);
-           return false;
-        }
-      }
-      return true;
+    let hasErrors = false;
+    const newErrors = {};
+
+    // Validate all sections
+    const validateSection = (items, sectionName, fields) => {
+      items.forEach((item, index) => {
+        fields.forEach(field => {
+          const isValid = validateField(sectionName, index, field, item[field]);
+          if (!isValid) hasErrors = true;
+        });
+      });
     };
 
-    if (showInvoice && !validateRows(invoices, 'invoice')) return;
-    if (showCashMemo && !validateRows(cashMemos, 'cashMemo')) return;
-    if (showCreditNote && !validateRows(creditNotes, 'creditNote')) return;
+    if (showInvoice && invoices.length > 0) {
+      validateSection(invoices, 'invoice', ['invoiceNumber', 'invoiceDate', 'invoiceValue']);
+    }
+    if (showCashMemo && cashMemos.length > 0) {
+      validateSection(cashMemos, 'cashMemo', ['cashMemoNumber', 'cashMemoDate', 'cashMemoValue']);
+    }
+    if (showCreditNote && creditNotes.length > 0) {
+      validateSection(creditNotes, 'creditNote', ['creditNoteNumber', 'creditNoteDate', 'creditNoteValue']);
+    }
+
+    if (hasErrors) {
+      toast.error('Please fix all validation errors before saving');
+      return;
+    }
+
+    // Check if at least one section has data
+    if (!showInvoice && !showCashMemo && !showCreditNote) {
+      toast.error('Please add at least one document section');
+      return;
+    }
 
     try {
       const uploadSection = async (endpoint, dataList) => {
@@ -159,9 +274,9 @@ function InvoiceForm({ campaignId, onConfirm, onClose }) {
         });
       };
 
-      if (showInvoice) await uploadSection('invoice/upload', invoices);
-      if (showCashMemo) await uploadSection('cash-memo/upload', cashMemos);
-      if (showCreditNote) await uploadSection('credit-note/upload', creditNotes);
+      if (showInvoice && invoices.length > 0) await uploadSection('invoice/upload', invoices);
+      if (showCashMemo && cashMemos.length > 0) await uploadSection('cash-memo/upload', cashMemos);
+      if (showCreditNote && creditNotes.length > 0) await uploadSection('credit-note/upload', creditNotes);
 
       toast.success('All documents saved successfully!');
       onConfirm();
@@ -173,102 +288,187 @@ function InvoiceForm({ campaignId, onConfirm, onClose }) {
 
   const RedAsterisk = () => <span className="text-red-500 ml-1">*</span>;
 
+  const getErrorMessage = (section, index, field) => {
+    return errors[`${section}_${index}_${field}`] || '';
+  };
+
+  const renderDocumentSection = (items, setItems, section, title, template) => (
+    <SectionCard title={title} onRemove={() => {
+      if (section === 'invoice') setShowInvoice(false);
+      else if (section === 'cashMemo') setShowCashMemo(false);
+      else setShowCreditNote(false);
+    }}>
+      {items.map((item, i) => (
+        <div key={i} className="p-3 border rounded-md relative">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {section === 'invoice' ? 'Invoice Number' : 
+                 section === 'cashMemo' ? 'Cash Memo Number' : 'Credit Note Number'}
+                <RedAsterisk />
+              </label>
+              <input 
+                type="text" 
+                placeholder="Number" 
+                value={item[`${section}Number`] || ''} 
+                onChange={(e) => handleChange(setItems, section, i, `${section}Number`, e.target.value)}
+                className={`w-full p-2 border rounded ${getErrorMessage(section, i, `${section}Number`) ? 'border-red-500' : 'border-gray-300'}`}
+                onBlur={() => validateField(section, i, `${section}Number`, item[`${section}Number`] || '')}
+              />
+              <ErrorMessage message={getErrorMessage(section, i, `${section}Number`)} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {section === 'invoice' ? 'Invoice Date' : 
+                 section === 'cashMemo' ? 'Cash Memo Date' : 'Credit Note Date'}
+                <RedAsterisk />
+              </label>
+              <input 
+                type="date" 
+                value={item[`${section}Date`] || ''} 
+                onChange={(e) => handleChange(setItems, section, i, `${section}Date`, e.target.value)}
+                className={`w-full p-2 border rounded ${getErrorMessage(section, i, `${section}Date`) ? 'border-red-500' : 'border-gray-300'}`}
+                max={new Date().toISOString().split('T')[0]}
+                onBlur={() => validateField(section, i, `${section}Date`, item[`${section}Date`] || '')}
+              />
+              <ErrorMessage message={getErrorMessage(section, i, `${section}Date`)} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {section === 'invoice' ? 'Invoice Value (₹)' : 
+                 section === 'cashMemo' ? 'Cash Memo Value (₹)' : 'Credit Note Value (₹)'}
+                <RedAsterisk />
+              </label>
+              <input 
+                type="number" 
+                placeholder="0.00" 
+                value={item[`${section}Value`] || ''} 
+                onChange={(e) => handleChange(setItems, section, i, `${section}Value`, e.target.value)}
+                className={`w-full p-2 border rounded ${getErrorMessage(section, i, `${section}Value`) ? 'border-red-500' : 'border-gray-300'}`}
+                min="0"
+                step="0.01"
+                onBlur={() => validateField(section, i, `${section}Value`, item[`${section}Value`] || '')}
+              />
+              <ErrorMessage message={getErrorMessage(section, i, `${section}Value`)} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Upload File <span className="text-gray-400">(Optional)</span>
+              </label>
+              {item.documentUrl && !item.file && (
+                <a href={item.documentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 block mb-1">
+                  View Uploaded File
+                </a>
+              )}
+              <input 
+                type="file" 
+                onChange={(e) => handleFileChange(setItems, i, e.target.files[0])} 
+                className="w-full text-sm"
+                accept=".pdf,.jpeg,.jpg,.png"
+              />
+              <div className="text-xs text-gray-400 mt-1">PDF, JPEG, PNG (max 10MB)</div>
+            </div>
+          </div>
+          {items.length > 1 && (
+            <button 
+              onClick={() => handleRemoveRow(setItems, i, section)} 
+              className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+      ))}
+      <button 
+        onClick={() => handleAddRow(setItems, template)} 
+        className="text-sm text-blue-600 mt-2 hover:text-blue-800"
+      >
+        + Add Another {title.replace(' Details', '')}
+      </button>
+    </SectionCard>
+  );
+
   return (
     <div className="max-w-4xl mx-auto">
       <h2 className="text-2xl font-semibold mb-4">Upload Billing Documents</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <AddButton onClick={() => setShowInvoice(true)} icon={FileText} title="Invoices" description="Add invoice section" isActive={showInvoice} />
-        <AddButton onClick={() => setShowCashMemo(true)} icon={Receipt} title="Cash Memos" isActive={showCashMemo}  />
-        <AddButton onClick={() => setShowCreditNote(true)} icon={CreditCard} title="Credit Notes"  isActive={showCreditNote} />
+        <AddButton 
+          onClick={() => {
+            setShowInvoice(true);
+            if (invoices.length === 0) {
+              setInvoices([{ invoiceNumber: '', invoiceDate: '', invoiceValue: '', file: null, documentUrl: '' }]);
+            }
+          }} 
+          icon={FileText} 
+          title="Invoices" 
+          description="Add invoice section" 
+          isActive={showInvoice} 
+        />
+        <AddButton 
+          onClick={() => {
+            setShowCashMemo(true);
+            if (cashMemos.length === 0) {
+              setCashMemos([{ cashMemoNumber: '', cashMemoDate: '', cashMemoValue: '', file: null, documentUrl: '' }]);
+            }
+          }} 
+          icon={Receipt} 
+          title="Cash Memos" 
+          description="Add cash memo section"
+          isActive={showCashMemo} 
+        />
+        <AddButton 
+          onClick={() => {
+            setShowCreditNote(true);
+            if (creditNotes.length === 0) {
+              setCreditNotes([{ creditNoteNumber: '', creditNoteDate: '', creditNoteValue: '', file: null, documentUrl: '' }]);
+            }
+          }} 
+          icon={CreditCard} 
+          title="Credit Notes" 
+          description="Add credit note section"
+          isActive={showCreditNote} 
+        />
       </div>
       
-      {showInvoice && (
-        <SectionCard title="Invoice Details" onRemove={() => setShowInvoice(false)}>
-          {invoices.map((inv, i) => (
-            <div key={i} className="p-3 border rounded-md relative">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Invoice Number<RedAsterisk /></label>
-                  <input type="text" placeholder="Number" value={inv.invoiceNumber} onChange={(e) => handleChange(setInvoices, i, 'invoiceNumber', e.target.value)} className="w-full p-2 border rounded" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Invoice Date<RedAsterisk /></label>
-                  <input type="date" value={inv.invoiceDate} onChange={(e) => handleChange(setInvoices, i, 'invoiceDate', e.target.value)} className="w-full p-2 border rounded" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Invoice Value (₹)<RedAsterisk /></label>
-                  <input type="number" placeholder="Value" value={inv.invoiceValue} onChange={(e) => handleChange(setInvoices, i, 'invoiceValue', e.target.value)} className="w-full p-2 border rounded" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Upload File<RedAsterisk /></label>
-                  {inv.documentUrl && !inv.file && <a href={inv.documentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500">View Uploaded</a>}
-                  <input type="file" onChange={(e) => handleFileChange(setInvoices, i, e.target.files[0])} className="w-full text-sm" required={!inv.documentUrl} />
-                </div>
-              </div>
-              {invoices.length > 1 && <button onClick={() => handleRemoveRow(setInvoices, i)} className="absolute top-2 right-2 text-red-500 hover:text-red-700"><X size={18} /></button>}
-            </div>
-          ))}
-          <button onClick={() => handleAddRow(setInvoices, { invoiceNumber: '', invoiceDate: '', invoiceValue: '', file: null, documentUrl: '' })} className="text-sm text-blue-600 mt-2">+ Add Another Invoice</button>
-        </SectionCard>
+      {showInvoice && renderDocumentSection(
+        invoices, 
+        setInvoices, 
+        'invoice', 
+        'Invoice Details',
+        { invoiceNumber: '', invoiceDate: '', invoiceValue: '', file: null, documentUrl: '' }
       )}
 
-      {showCashMemo && (
-        <SectionCard title="Cash Memo Details" onRemove={() => setShowCashMemo(false)}>
-          {cashMemos.map((memo, i) => (
-            <div key={i} className="p-3 border rounded-md relative">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Reference<RedAsterisk /></label>
-                  <input type="text" placeholder="Reference" value={memo.reference} onChange={(e) => handleChange(setCashMemos, i, 'reference', e.target.value)} className="w-full p-2 border rounded" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Value (₹)<RedAsterisk /></label>
-                  <input type="number" placeholder="Value" value={memo.value} onChange={(e) => handleChange(setCashMemos, i, 'value', e.target.value)} className="w-full p-2 border rounded" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Upload File<RedAsterisk /></label>
-                  {memo.documentUrl && !memo.file && <a href={memo.documentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500">View Uploaded</a>}
-                  <input type="file" onChange={(e) => handleFileChange(setCashMemos, i, e.target.files[0])} className="w-full text-sm" required={!memo.documentUrl}/>
-                </div>
-              </div>
-              {cashMemos.length > 1 && <button onClick={() => handleRemoveRow(setCashMemos, i)} className="absolute top-2 right-2 text-red-500 hover:text-red-700"><X size={18} /></button>}
-            </div>
-          ))}
-          <button onClick={() => handleAddRow(setCashMemos, { reference: '', value: '', file: null, documentUrl: '' })} className="text-sm text-blue-600 mt-2">+ Add Another Cash Memo</button>
-        </SectionCard>
+      {showCashMemo && renderDocumentSection(
+        cashMemos, 
+        setCashMemos, 
+        'cashMemo', 
+        'Cash Memo Details',
+        { cashMemoNumber: '', cashMemoDate: '', cashMemoValue: '', file: null, documentUrl: '' }
       )}
 
-      {showCreditNote && (
-        <SectionCard title="Credit Note Details" onRemove={() => setShowCreditNote(false)}>
-          {creditNotes.map((note, i) => (
-            <div key={i} className="p-3 border rounded-md relative">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Reference<RedAsterisk /></label>
-                  <input type="text" placeholder="Reference" value={note.reference} onChange={(e) => handleChange(setCreditNotes, i, 'reference', e.target.value)} className="w-full p-2 border rounded" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Value (₹)<RedAsterisk /></label>
-                  <input type="number" placeholder="Value" value={note.value} onChange={(e) => handleChange(setCreditNotes, i, 'value', e.target.value)} className="w-full p-2 border rounded" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Upload File<RedAsterisk /></label>
-                  {note.documentUrl && !note.file && <a href={note.documentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500">View Uploaded</a>}
-                  <input type="file" onChange={(e) => handleFileChange(setCreditNotes, i, e.target.files[0])} className="w-full text-sm" required={!note.documentUrl}/>
-                </div>
-              </div>
-              {creditNotes.length > 1 && <button onClick={() => handleRemoveRow(setCreditNotes, i)} className="absolute top-2 right-2 text-red-500 hover:text-red-700"><X size={18} /></button>}
-            </div>
-          ))}
-          <button onClick={() => handleAddRow(setCreditNotes, { reference: '', value: '', file: null, documentUrl: '' })} className="text-sm text-blue-600 mt-2">+ Add Another Credit Note</button>
-        </SectionCard>
+      {showCreditNote && renderDocumentSection(
+        creditNotes, 
+        setCreditNotes, 
+        'creditNote', 
+        'Credit Note Details',
+        { creditNoteNumber: '', creditNoteDate: '', creditNoteValue: '', file: null, documentUrl: '' }
       )}
 
       {(showInvoice || showCashMemo || showCreditNote) && (
         <div className="flex justify-center gap-4 mt-6">
-          <button onClick={onClose} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Cancel</button>
-          <button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save All</button>
+          <button 
+            onClick={onClose} 
+            className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={handleSave} 
+            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Save All
+          </button>
         </div>
       )}
     </div>
@@ -276,12 +476,3 @@ function InvoiceForm({ campaignId, onConfirm, onClose }) {
 }
 
 export default React.memo(InvoiceForm);
-
-
-
-
-
-
-
-
-

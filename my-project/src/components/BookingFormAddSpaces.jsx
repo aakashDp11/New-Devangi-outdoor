@@ -40,7 +40,7 @@ export default function InventorySelector({
     return rangeStart <= targetEnd && rangeEnd >= targetStart;
   };
 
-  // Enhanced date validation helper
+  // UPDATED: Enhanced date validation helper - now allows past dates
   const validateDateRange = (startDate, endDate) => {
     if (!startDate || !endDate) {
       return { isValid: false, error: 'Both start and end dates are required' };
@@ -54,7 +54,8 @@ export default function InventorySelector({
       return { isValid: false, error: 'Invalid date format' };
     }
     
-    // Only requirement: end date >= start date (allows past dates)
+    // UPDATED: Only requirement: end date >= start date (ALLOWS PAST DATES)
+    // Removed any restriction on past dates
     if (end < start) {
       return { isValid: false, error: 'End date must be on or after start date' };
     }
@@ -79,7 +80,10 @@ export default function InventorySelector({
       
       const spaceStart = parseDDMMYY(space.availableFrom);
       const spaceEnd = parseDDMMYY(space.availableTo);
-      if (!spaceStart || !spaceEnd) return false;
+      if (!spaceStart || !spaceEnd) {
+        space.status = "Space dates unavailable";
+        return false;
+      }
       
       const selectedStart = new Date(startDate);
       const selectedEnd = new Date(endDate);
@@ -99,16 +103,26 @@ export default function InventorySelector({
       } else if (space.spaceType === "DOOH" && withinRange) {
         const occupied = space.occupiedUnits || 0;
         space.status = occupied === 0 ? "Completely available" : occupied < space.unit ? "Partially available" : "Completely booked";
+      } else if (!withinRange) {
+        // UPDATED: More descriptive status for dates outside space availability
+        if (selectedStart < spaceStart) {
+          space.status = "Not available (too early)";
+        } else if (selectedEnd > spaceEnd) {
+          space.status = "Not available (too late)";
+        } else {
+          space.status = "Not available";
+        }
       }
       
       return withinRange;
     } catch (err) {
       console.error("Error checking availability range:", err);
+      space.status = "Error checking availability";
       return false;
     }
   };
   
-  // Enhanced filtering logic with date validation
+  // UPDATED: Enhanced filtering logic with better past date support
   const filteredSpaces = useMemo(() => {
     // Only process spaces if both dates are selected and valid
     if (!startDate || !endDate) {
@@ -128,10 +142,12 @@ export default function InventorySelector({
         return newSpace;
     });
 
-    // Filter by availability when dates are selected
-    const availableSpaces = spacesWithStatus.filter(space => isSpaceAvailableInRange(space));
+    // UPDATED: Show all spaces with their availability status, not just available ones
+    // This allows users to see why certain spaces aren't available
+    const allSpacesWithStatus = spacesWithStatus;
 
-    return availableSpaces.filter(space => {
+    return allSpacesWithStatus.filter(space => {
+      // Apply other filters
       if (statusFilter && space.status !== statusFilter) return false;
       if (ownershipFilter && space.ownershipType !== ownershipFilter) return false;
       if (spaceTypeFilter && space.spaceType !== spaceTypeFilter) return false;
@@ -211,7 +227,7 @@ export default function InventorySelector({
     return validateDateRange(startDate, endDate).isValid;
   }, [startDate, endDate]);
 
-  // Get date range validation message
+  // UPDATED: Get date range validation message - now more user-friendly for past dates
   const getDateValidationMessage = () => {
     if (!startDate && !endDate) {
       return "Select both start and end dates to view available spaces";
@@ -220,7 +236,7 @@ export default function InventorySelector({
       return "Please select a start date";
     }
     if (!endDate) {
-      return "Please select an end date (must be on or after start date)";
+      return "Please select an end date";
     }
     const validation = validateDateRange(startDate, endDate);
     if (!validation.isValid) {
@@ -237,6 +253,14 @@ export default function InventorySelector({
     const diffTime = Math.abs(end - start);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     return diffDays;
+  };
+
+  // UPDATED: Add helper to check if dates are in the past
+  const isDateRangeInPast = () => {
+    if (!isDateRangeValid) return false;
+    const today = new Date();
+    const endDateObj = new Date(endDate);
+    return endDateObj < today;
   };
 
   // Event handlers
@@ -276,6 +300,7 @@ export default function InventorySelector({
     const canSelectUnits = remainingUnits > 0;
     const isDOOH = space.spaceType === 'DOOH';
     const isSelected = campaign.selectedSpaces?.some(s => s.id === space.id);
+    const isAvailable = space.status?.includes("available") || space.status === "Available";
     const rowClass = isSelectedRow 
       ? "text-center hover:bg-blue-100 bg-blue-50 transition-colors duration-200" 
       : "text-center hover:bg-gray-50 transition-colors duration-200";
@@ -288,7 +313,8 @@ export default function InventorySelector({
               type="checkbox" 
               className="cursor-pointer w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 transition-colors" 
               checked={isSelected} 
-              onChange={() => onToggleSpaceSelection(campaignIndex, space.id)} 
+              onChange={() => onToggleSpaceSelection(campaignIndex, space.id)}
+              disabled={!isAvailable}
             />
             {isSelected && (
               <button
@@ -319,7 +345,9 @@ export default function InventorySelector({
                 ? "bg-yellow-100 text-yellow-700" 
                 : space.status === "Date range invalid"
                   ? "bg-red-100 text-red-700"
-                  : "bg-red-100 text-red-700"
+                  : space.status?.includes("Not available")
+                    ? "bg-gray-100 text-gray-700"
+                    : "bg-red-100 text-red-700"
           }`}>
             {space.status}
           </span>
@@ -342,7 +370,7 @@ export default function InventorySelector({
           {!isDOOH ? <span className="text-gray-400 italic">N/A</span> : space.unit}
         </td>
         <td className="px-3 py-2">
-          {!isDOOH || isActuallyBooked || !canSelectUnits ? (
+          {!isDOOH || isActuallyBooked || !canSelectUnits || !isAvailable ? (
             <span className="text-gray-400 italic">N/A</span>
           ) : (
             <input 
@@ -372,7 +400,7 @@ export default function InventorySelector({
             </span>
           ) : (
             <span className="ml-3 text-green-600 text-xs">
-              (Campaign duration: {getDateRangeDuration()} days)
+              (Campaign duration: {getDateRangeDuration()} days{isDateRangeInPast() ? ' - Historical Campaign' : ''})
             </span>
           )}
         </div>
@@ -446,6 +474,19 @@ export default function InventorySelector({
       {/* Show table only when both dates are selected and valid */}
       {isDateRangeValid ? (
         <>
+          {/* UPDATED: Show notification for historical campaigns */}
+          {isDateRangeInPast() && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center">
+                <div className="text-blue-600 mr-2">ℹ️</div>
+                <div className="text-sm text-blue-800">
+                  <strong>Historical Campaign:</strong> You're viewing availability for past dates. 
+                  Some spaces may show as "Not available" if they weren't active during this period.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Pagination controls and items per page */}
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center space-x-2">
@@ -462,7 +503,7 @@ export default function InventorySelector({
                 <option value={100}>100</option>
               </select>
               <span className="text-sm text-gray-600">
-                Showing {Math.min(startIndex + 1, totalUnselectedSpaces)}-{Math.min(endIndex, totalUnselectedSpaces)} of {totalUnselectedSpaces} unselected spaces
+                Showing {Math.min(startIndex + 1, totalUnselectedSpaces)}-{Math.min(endIndex, totalUnselectedSpaces)} of {totalUnselectedSpaces} spaces
               </span>
             </div>
             
@@ -534,7 +575,7 @@ export default function InventorySelector({
                 {filteredSpaces.length === 0 && (
                   <tr>
                     <td colSpan={spaceTypeFilter === 'Transit' ? 16 : 14} className="py-8 text-center text-gray-500">
-                      No spaces found matching your criteria
+                      No spaces found matching your criteria for the selected date range
                     </td>
                   </tr>
                 )}

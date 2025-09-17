@@ -376,23 +376,22 @@ export default function BookingFormOrderInfo() {
                         options={industryOptions}
                         error={errors[index]?.industry}
                       />
-                      <Input
+                      <DateInput
                         label="Start Date"
                         name="startDate"
-                        type="date"
                         value={campaign.startDate}
                         onChange={(e) => handleCampaignChange(index, e)}
                         error={errors[index]?.startDate}
-                        // NO min attribute - allows past dates
+                        allowPastDates={true}
                       />
-                      <Input
+                      <DateInput
                         label="End Date"
                         name="endDate"
-                        type="date"
                         value={campaign.endDate}
                         onChange={(e) => handleCampaignChange(index, e)}
                         error={errors[index]?.endDate}
-                        min={campaign.startDate || ''} // End date must be >= start date
+                        minDate={campaign.startDate}
+                        allowPastDates={false}
                       />
                       <div className="col-span-2">
                         <label className="text-xs font-medium">Description</label>
@@ -533,7 +532,7 @@ export default function BookingFormOrderInfo() {
   );
 }
 
-// --- UPDATED Input component to support min attribute for date inputs ---
+// --- UPDATED Input component (kept for non-date inputs) ---
 function Input({ label, error, min, ...props }) {
   return (
     <div>
@@ -544,6 +543,57 @@ function Input({ label, error, min, ...props }) {
         className={`w-full border px-3 py-2 rounded mt-1 text-xs ${
           error ? 'border-red-500' : ''
         }`}
+      />
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+  );
+}
+
+// --- NEW DateInput component to handle date restrictions properly ---
+function DateInput({ label, error, allowPastDates = false, minDate, ...props }) {
+  const getMinDate = () => {
+    if (minDate) {
+      return minDate;
+    }
+    if (!allowPastDates) {
+      // For end date, don't allow past dates
+      const today = new Date();
+      return today.toISOString().split('T')[0];
+    }
+    // For start date with allowPastDates=true, no minimum restriction
+    return undefined;
+  };
+
+  // Handle focus to ensure native date picker behavior
+  const handleFocus = (e) => {
+    // Force native date picker on mobile/custom implementations
+    if (e.target.showPicker) {
+      e.target.showPicker();
+    }
+  };
+
+  return (
+    <div>
+      <label className="text-xs font-medium">{label}</label>
+      <input
+        {...props}
+        type="date"
+        min={getMinDate()}
+        onFocus={handleFocus}
+        className={`w-full border px-3 py-2 rounded mt-1 text-xs ${
+          error ? 'border-red-500' : ''
+        }`}
+        // Override any third-party library restrictions
+        style={{
+          // Force native appearance
+          WebkitAppearance: 'none',
+          MozAppearance: 'textfield',
+          // Ensure past dates are not disabled visually
+          ...(allowPastDates && {
+            color: 'inherit',
+            backgroundColor: 'white'
+          })
+        }}
       />
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
