@@ -33,8 +33,8 @@ const campaignInventoryMappingSchema = new Schema({
   buyingPrice: { type: Number, default: 0 },
   sellingPrice:{ type: Number, default: 0 },
   invoiceNo:   { type: String, default: '' },            // For traded-inv
-  printingCostPerSquareFeet: { type: Number, required: true },
-  mountingCostPerSquareFeet: { type: Number, required: true },
+  printingCostPerSquareFeet: { type: Number, },
+  mountingCostPerSquareFeet: { type: Number, },
   area:        { type: Number, required: true },
 
   // Optional per-link summaries
