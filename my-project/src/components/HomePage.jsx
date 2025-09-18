@@ -16,26 +16,21 @@ import moment from 'moment';
 
 dayjs.extend(isBetween);
 
-// Updated Card with a running color animation
 const Card = ({ children, className = '', ...props }) => (
     <div className={`
-        bg-white border-0 shadow-lg rounded-2xl w-full flex flex-col relative overflow-hidden group
-        animate-gradient-flow-diagonal 
+        bg-white border border-gray-200 shadow-md rounded-2xl w-full flex flex-col relative overflow-hidden
         ${className}
     `} {...props}>
-        <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
         <div className="relative z-10 h-full flex flex-col">
             {children}
         </div>
     </div>
 );
 
-// Enhanced CardContent with better spacing
 const CardContent = ({ children, className = '' }) => (
     <div className={`p-3 md:p-4 flex-grow flex flex-col ${className}`}>{children}</div>
 );
 
-// Enhanced ShimmerCard with gradient animation
 const ShimmerCard = ({ className = '' }) => (
     <div className={`
         bg-gray-200 animate-shimmer rounded-2xl w-full h-full 
@@ -45,7 +40,6 @@ const ShimmerCard = ({ className = '' }) => (
     </div>
 );
 
-// Enhanced Calendar Component
 const DashboardCalendar = ({ campaigns, currentDate, setCurrentDate }) => {
     const [days, setDays] = useState([]);
     const [events, setEvents] = useState(new Map());
@@ -122,7 +116,7 @@ const DashboardCalendar = ({ campaigns, currentDate, setCurrentDate }) => {
         const tooltipContent = (
             <div>
                 <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-2.5 h-2.5 rounded-full ${dotColorClass} animate-pulse`}></div>
+                    <div className={`w-2.5 h-2.5 rounded-full ${dotColorClass}`}></div>
                     <p className="font-bold text-white">{title}</p>
                 </div>
                 <div className="space-y-1.5 pl-1">
@@ -166,30 +160,30 @@ const DashboardCalendar = ({ campaigns, currentDate, setCurrentDate }) => {
                 <CardContent>
                     <div className="flex items-center w-full justify-between mb-3">
                         <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-600 gap-x-4 gap-y-1">
-                            <span className="flex items-center gap-1.5 transition-all duration-300 hover:scale-105">
-                                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 animate-pulse"></div>
-                                <span className="bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent font-medium">Campaign Starting</span>
+                            <span className="flex items-center gap-1.5 transition-all duration-300">
+                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                                <span className="text-emerald-600 font-medium">Campaign Starting</span>
                             </span>
-                            <span className="flex items-center gap-1.5 transition-all duration-300 hover:scale-105">
-                                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-rose-400 to-rose-600 animate-pulse"></div>
-                                <span className="bg-gradient-to-r from-rose-600 to-rose-700 bg-clip-text text-transparent font-medium">Campaign Ending</span>
+                            <span className="flex items-center gap-1.5 transition-all duration-300">
+                                <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+                                <span className="text-rose-600 font-medium">Campaign Ending</span>
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button onClick={p} className="p-2 rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 hover:scale-110">
-                                <FiChevronLeft className="text-gray-600 hover:text-blue-600" />
+                            <button onClick={p} className="p-2 rounded-lg hover:bg-gray-100 transition-all duration-300 hover:scale-110">
+                                <FiChevronLeft className="text-gray-500" />
                             </button>
-                            <span className="font-semibold text-sm sm:text-base bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            <span className="font-semibold text-sm sm:text-base text-gray-800">
                                 {currentDate.format('MMMM YYYY')}
                             </span>
-                            <button onClick={n} className="p-2 rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 hover:scale-110">
-                                <FiChevronRight className="text-gray-600 hover:text-blue-600" />
+                            <button onClick={n} className="p-2 rounded-lg hover:bg-gray-100 transition-all duration-300 hover:scale-110">
+                                <FiChevronRight className="text-gray-500" />
                             </button>
                         </div>
                     </div>
                     <div className="grid grid-cols-7 text-center text-sm font-medium text-gray-500 border-b border-gray-200">
                         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                            <div key={d} className="py-2 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200">
+                            <div key={d} className="py-2 hover:bg-gray-100 transition-all duration-200">
                                 {d}
                             </div>
                         ))}
@@ -204,11 +198,11 @@ const DashboardCalendar = ({ campaigns, currentDate, setCurrentDate }) => {
                             return (
                                 <div
                                     key={i}
-                                    className={`h-24 border-b border-r border-gray-200 p-1 relative transition-all duration-300 hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 ${!cm ? 'bg-gray-50 text-gray-400' : 'text-black hover:shadow-inner'}`}
+                                    className={`h-24 border-b border-r border-gray-200 p-1 relative transition-all duration-300 hover:bg-gray-50 ${!cm ? 'bg-gray-50 text-gray-400' : 'text-black hover:shadow-inner'}`}
                                 >
                                     <span
                                         className={`text-sm absolute top-1.5 right-1.5 transition-all duration-300 ${
-                                            t ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full h-6 w-6 flex items-center justify-center font-bold shadow-lg animate-pulse' : ''
+                                            t ? 'bg-gray-800 text-white rounded-full h-6 w-6 flex items-center justify-center font-bold shadow-lg' : ''
                                         }`}
                                     >
                                         {day.format('D')}
@@ -217,7 +211,7 @@ const DashboardCalendar = ({ campaigns, currentDate, setCurrentDate }) => {
                                     <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1">
                                         {e?.startingCampaigns?.length > 0 && (
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 animate-bounce hover:scale-150 transition-transform duration-300"
+                                                className="w-2 h-2 rounded-full bg-emerald-500 hover:scale-150 transition-transform duration-300"
                                                 onMouseEnter={(event) => handleMouseOver(event, e.startingCampaigns, 'starting')}
                                                 onMouseLeave={handleMouseOut}
                                             ></div>
@@ -225,7 +219,7 @@ const DashboardCalendar = ({ campaigns, currentDate, setCurrentDate }) => {
 
                                         {e?.endingCampaigns?.length > 0 && (
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gradient-to-r from-rose-400 to-rose-600 animate-bounce hover:scale-150 transition-transform duration-300"
+                                                className="w-2 h-2 rounded-full bg-rose-500 hover:scale-150 transition-transform duration-300"
                                                 onMouseEnter={(event) => handleMouseOver(event, e.endingCampaigns, 'ending')}
                                                 onMouseLeave={handleMouseOut}
                                             ></div>
@@ -240,7 +234,7 @@ const DashboardCalendar = ({ campaigns, currentDate, setCurrentDate }) => {
 
             {tooltip.visible && (
                 <div
-                    className="fixed z-50 bg-gradient-to-r from-gray-800 to-gray-900 text-white text-xs rounded-xl px-3 py-2 shadow-2xl transform transition-all duration-300 scale-105 border border-gray-700"
+                    className="fixed z-50 bg-gray-900 text-white text-xs rounded-xl px-3 py-2 shadow-2xl transform transition-all duration-300 scale-105"
                     style={{
                         top: `${tooltip.y + 15}px`,
                         left: `${tooltip.x + 15}px`,
@@ -564,37 +558,37 @@ const BookingGraphDashboard = () => {
     const pipelineCounts = getPipelineStatusCounts();
 
     const ownershipDistributionPieData = [
-        { id: 0, value: ownershipDistribution.traded || 0.01, label: 'Traded', color: '#6366f1' },
-        { id: 1, value: ownershipDistribution.owned || 0.01, label: 'Owned', color: '#f59e0b' },
-        { id: 2, value: ownershipDistribution.leased || 0.01, label: 'Leased', color: '#ef4444' },
+        { id: 0, value: ownershipDistribution.traded || 0.01, label: 'Traded', color: '#B2EBF2' }, // Light Cyan
+        { id: 1, value: ownershipDistribution.owned || 0.01, label: 'Owned', color: '#FFD7A5' }, // Pale Gold
+        { id: 2, value: ownershipDistribution.leased || 0.01, label: 'Leased', color: '#F2B6D4' }, // Pastel Pink
     ];
 
     const campaignStatusPieData = [
-        { id: 0, value: statusData.completed, label: 'Completed', color: '#10b981' },
-        { id: 1, value: statusData.ongoing, label: 'Ongoing', color: '#3b82f6' },
-        { id: 2, value: statusData.upcoming, label: 'Upcoming', color: '#f59e0b' },
+        { id: 0, value: statusData.completed, label: 'Completed', color: '#A5D6A7' }, // Soft Green
+        { id: 1, value: statusData.ongoing, label: 'Ongoing', color: '#64B5F6' }, // Light Blue
+        { id: 2, value: statusData.upcoming, label: 'Upcoming', color: '#FFD54F' }, // Light Amber
     ];
 
     const doohAvailabilityPieData = [
-        { id: 0, value: doohAvailabilityStatus.completelyAvailable || 0.01, label: 'Available', color: '#10b981' },
-        { id: 1, value: doohAvailabilityStatus.partiallyAvailable || 0.01, label: 'Partially', color: '#f59e0b' },
-        { id: 2, value: doohAvailabilityStatus.completelyBooked || 0.01, label: 'Booked', color: '#ef4444' },
+        { id: 0, value: doohAvailabilityStatus.completelyAvailable || 0.01, label: 'Available', color: '#AED581' }, // Muted Lime Green
+        { id: 1, value: doohAvailabilityStatus.partiallyAvailable || 0.01, label: 'Partially', color: '#FFB74D' }, // Pastel Orange
+        { id: 2, value: doohAvailabilityStatus.completelyBooked || 0.01, label: 'Booked', color: '#E57373' }, // Soft Red
     ];
 
     const unitUtilizationPieData = [
-        { id: 0, value: unitUtilizationStats.bookedUnits || 0.01, label: 'Booked Units', color: '#8b5cf6' },
-        { id: 1, value: unitUtilizationStats.freeUnits || 0.01, label: 'Free Units', color: '#06b6d4' },
+        { id: 0, value: unitUtilizationStats.bookedUnits || 0.01, label: 'Booked Units', color: '#90CAF9' }, // Light Blue
+        { id: 1, value: unitUtilizationStats.freeUnits || 0.01, label: 'Free Units', color: '#A5D6A7' }, // Soft Green
     ];
 
     const availabilityPieData = [
-        { id: 0, value: availabilityStats.available || 0.01, label: 'Available', color: '#10b981' },
-        { id: 1, value: availabilityStats.booked || 0.01, label: 'Booked', color: '#f59e0b' },
-        { id: 2, value: availabilityStats.overlapping || 0.01, label: 'Overlapping', color: '#ef4444' },
+        { id: 0, value: availabilityStats.available || 0.01, label: 'Available', color: '#C8E6C9' }, // Pale Green
+        { id: 1, value: availabilityStats.booked || 0.01, label: 'Booked', color: '#F8BBD0' }, // Light Pink
+        { id: 2, value: availabilityStats.overlapping || 0.01, label: 'Overlapping', color: '#FFCC80' }, // Pale Orange
     ];
 
     const paymentPieData = [
-        { id: 0, value: paymentData.received || 0.01, label: 'Received', color: '#10b981' },
-        { id: 1, value: paymentData.due || 0.01, label: 'Due', color: '#f59e0b' }
+        { id: 0, value: paymentData.received || 0.01, label: 'Received', color: '#80CBC4' }, // Teal
+        { id: 1, value: paymentData.due || 0.01, label: 'Due', color: '#FFAB91' } // Light Coral
     ];
 
     const pipelineBarData = {
@@ -639,25 +633,24 @@ const BookingGraphDashboard = () => {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">
-                        {/* ====== TOP SECTION ====== */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <div className="flex flex-col gap-4">
                                 <Card className="h-60">
                                     <CardContent>
                                         <div className="flex justify-between items-start mb-2">
-                                            <h2 className="text-base font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Campaign Status</h2>
+                                            <h2 className="text-base font-bold text-gray-800">Campaign Status</h2>
                                             <div className="text-xs text-right text-gray-600 space-y-1">
                                                 <p className="flex items-center gap-1">
-                                                    <span className="w-2 h-2 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full animate-pulse"></span>
-                                                    <strong>Completed:</strong> <span className="text-emerald-600 font-bold">{statusData.completed}</span>
+                                                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                                    <strong>Completed:</strong> <span className="text-green-600 font-bold">{statusData.completed}</span>
                                                 </p>
                                                 <p className="flex items-center gap-1">
-                                                    <span className="w-2 h-2 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full animate-pulse"></span>
+                                                    <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
                                                     <strong>Ongoing:</strong> <span className="text-blue-600 font-bold">{statusData.ongoing}</span>
                                                 </p>
                                                 <p className="flex items-center gap-1">
-                                                    <span className="w-2 h-2 bg-gradient-to-r from-amber-400 to-amber-600 rounded-full animate-pulse"></span>
-                                                    <strong>Upcoming:</strong> <span className="text-amber-600 font-bold">{statusData.upcoming}</span>
+                                                    <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                                                    <strong>Upcoming:</strong> <span className="text-yellow-600 font-bold">{statusData.upcoming}</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -678,19 +671,19 @@ const BookingGraphDashboard = () => {
                                 <Card className="h-60">
                                     <CardContent>
                                         <div className="flex justify-between items-start mb-2">
-                                            <h2 className="text-base font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Ownership Distribution</h2>
+                                            <h2 className="text-base font-bold text-gray-800">Ownership Distribution</h2>
                                             <div className="text-xs text-right text-gray-600 space-y-1">
                                                 <p className="flex items-center gap-1">
-                                                    <span className="w-2 h-2 bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-full animate-pulse"></span>
-                                                    <strong>Traded:</strong> <span className="text-indigo-600 font-bold">{ownershipDistribution.traded}</span>
+                                                    <span className="w-2 h-2 bg-cyan-400 rounded-full"></span>
+                                                    <strong>Traded:</strong> <span className="text-cyan-600 font-bold">{ownershipDistribution.traded}</span>
                                                 </p>
                                                 <p className="flex items-center gap-1">
-                                                    <span className="w-2 h-2 bg-gradient-to-r from-amber-400 to-amber-600 rounded-full animate-pulse"></span>
-                                                    <strong>Owned:</strong> <span className="text-amber-600 font-bold">{ownershipDistribution.owned}</span>
+                                                    <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                                                    <strong>Owned:</strong> <span className="text-yellow-600 font-bold">{ownershipDistribution.owned}</span>
                                                 </p>
                                                 <p className="flex items-center gap-1">
-                                                    <span className="w-2 h-2 bg-gradient-to-r from-red-400 to-red-600 rounded-full animate-pulse"></span>
-                                                    <strong>Leased:</strong> <span className="text-red-600 font-bold">{ownershipDistribution.leased}</span>
+                                                    <span className="w-2 h-2 bg-pink-400 rounded-full"></span>
+                                                    <strong>Leased:</strong> <span className="text-pink-600 font-bold">{ownershipDistribution.leased}</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -716,18 +709,18 @@ const BookingGraphDashboard = () => {
                             <Card className="h-60">
                                 <CardContent>
                                     <div className="flex justify-between items-start mb-2">
-                                        <h2 className="text-base font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">DOOH Availability</h2>
+                                        <h2 className="text-base font-bold text-gray-800">DOOH Availability</h2>
                                         <div className="text-xs text-right text-gray-600 space-y-1">
                                             <p className="flex items-center gap-1">
-                                                <span className="w-2 h-2 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full animate-pulse"></span>
-                                                <strong>Available:</strong> <span className="text-emerald-600 font-bold">{doohAvailabilityStatus.completelyAvailable}</span>
+                                                <span className="w-2 h-2 bg-lime-400 rounded-full"></span>
+                                                <strong>Available:</strong> <span className="text-lime-600 font-bold">{doohAvailabilityStatus.completelyAvailable}</span>
                                             </p>
                                             <p className="flex items-center gap-1">
-                                                <span className="w-2 h-2 bg-gradient-to-r from-amber-400 to-amber-600 rounded-full animate-pulse"></span>
-                                                <strong>Partially:</strong> <span className="text-amber-600 font-bold">{doohAvailabilityStatus.partiallyAvailable}</span>
+                                                <span className="w-2 h-2 bg-orange-400 rounded-full"></span>
+                                                <strong>Partially:</strong> <span className="text-orange-600 font-bold">{doohAvailabilityStatus.partiallyAvailable}</span>
                                             </p>
                                             <p className="flex items-center gap-1">
-                                                <span className="w-2 h-2 bg-gradient-to-r from-red-400 to-red-600 rounded-full animate-pulse"></span>
+                                                <span className="w-2 h-2 bg-red-400 rounded-full"></span>
                                                 <strong>Booked:</strong> <span className="text-red-600 font-bold">{doohAvailabilityStatus.completelyBooked}</span>
                                             </p>
                                         </div>
@@ -749,15 +742,15 @@ const BookingGraphDashboard = () => {
                             <Card className="h-60">
                                 <CardContent>
                                     <div className="flex justify-between items-start mb-2">
-                                        <h2 className="text-base font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">DOOH Unit Utilization</h2>
+                                        <h2 className="text-base font-bold text-gray-800">DOOH Unit Utilization</h2>
                                         <div className="text-xs text-right text-gray-600 space-y-1">
                                             <p className="flex items-center gap-1">
-                                                <span className="w-2 h-2 bg-gradient-to-r from-purple-400 to-purple-600 rounded-full animate-pulse"></span>
-                                                <strong>Booked:</strong> <span className="text-purple-600 font-bold">{unitUtilizationStats.bookedUnits}</span>
+                                                <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                                                <strong>Booked:</strong> <span className="text-blue-600 font-bold">{unitUtilizationStats.bookedUnits}</span>
                                             </p>
                                             <p className="flex items-center gap-1">
-                                                <span className="w-2 h-2 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full animate-pulse"></span>
-                                                <strong>Free:</strong> <span className="text-cyan-600 font-bold">{unitUtilizationStats.freeUnits}</span>
+                                                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                                <strong>Free:</strong> <span className="text-green-600 font-bold">{unitUtilizationStats.freeUnits}</span>
                                             </p>
                                         </div>
                                     </div>
@@ -778,19 +771,19 @@ const BookingGraphDashboard = () => {
                             <Card className="h-60">
                                 <CardContent>
                                     <div className="flex justify-between items-start mb-2">
-                                        <h2 className="text-base font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">Static Space Availability</h2>
+                                        <h2 className="text-base font-bold text-gray-800">Static Space Availability</h2>
                                         <div className="text-xs text-right text-gray-600 space-y-1">
                                             <p className="flex items-center gap-1">
-                                                <span className="w-2 h-2 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full animate-pulse"></span>
-                                                <strong>Available:</strong> <span className="text-emerald-600 font-bold">{availabilityStats.available}</span>
+                                                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                                <strong>Available:</strong> <span className="text-green-600 font-bold">{availabilityStats.available}</span>
                                             </p>
                                             <p className="flex items-center gap-1">
-                                                <span className="w-2 h-2 bg-gradient-to-r from-amber-400 to-amber-600 rounded-full animate-pulse"></span>
-                                                <strong>Booked:</strong> <span className="text-amber-600 font-bold">{availabilityStats.booked}</span>
+                                                <span className="w-2 h-2 bg-pink-400 rounded-full"></span>
+                                                <strong>Booked:</strong> <span className="text-pink-600 font-bold">{availabilityStats.booked}</span>
                                             </p>
                                             <p className="flex items-center gap-1">
-                                                <span className="w-2 h-2 bg-gradient-to-r from-red-400 to-red-600 rounded-full animate-pulse"></span>
-                                                <strong>Overlapping:</strong> <span className="text-red-600 font-bold">{availabilityStats.overlapping}</span>
+                                                <span className="w-2 h-2 bg-orange-400 rounded-full"></span>
+                                                <strong>Overlapping:</strong> <span className="text-orange-600 font-bold">{availabilityStats.overlapping}</span>
                                             </p>
                                         </div>
                                     </div>
@@ -811,7 +804,7 @@ const BookingGraphDashboard = () => {
 
                         <div className="flex justify-end">
                             <select
-                                className="border-2 border-transparent bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-xl text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+                                className="border border-gray-300 text-gray-700 px-3 py-2 rounded-xl text-sm shadow-md cursor-pointer hover:bg-gray-100 transition-all duration-300"
                                 value={range}
                                 onChange={(e) => setRange(e.target.value)}
                             >
@@ -821,21 +814,20 @@ const BookingGraphDashboard = () => {
                             </select>
                         </div>
 
-                        {/* ==== BOTTOM SECTION - TALLER CHARTS ==== */}
                         <div className="grid grid-cols-1 lg:grid-cols-6 auto-rows-fr gap-4">
 
                             <div className="lg:col-span-4">
                                 <Card className="h-80">
                                     <CardContent>
                                         <div className="flex justify-between items-center mb-3">
-                                            <h2 className="text-base font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">Bookings and Open Proposals</h2>
+                                            <h2 className="text-base font-bold text-gray-800">Bookings and Open Proposals</h2>
                                         </div>
                                         <div className="flex flex-grow -mx-4">
                                             <BarChart
                                                 xAxis={[{ scaleType: 'band', data: bookingsAndProposalsData.xLabels, categoryGapRatio: 0.4 }]}
                                                 series={[
-                                                    { data: bookingsAndProposalsData.bookingsData, label: 'Bookings', color: '#10b981' },
-                                                    { data: bookingsAndProposalsData.proposalsData, label: 'Open Proposals', color: '#3b82f6' }
+                                                    { data: bookingsAndProposalsData.bookingsData, label: 'Bookings', color: '#A5D6A7' },
+                                                    { data: bookingsAndProposalsData.proposalsData, label: 'Open Proposals', color: '#64B5F6' }
                                                 ]}
                                                 borderRadius={8}
                                                 legend={{
@@ -852,16 +844,16 @@ const BookingGraphDashboard = () => {
                                 <Card className="h-80">
                                     <CardContent>
                                         <div className="flex justify-between items-start mb-3">
-                                            <h2 className="text-base font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">Payment Overview</h2>
+                                            <h2 className="text-base font-bold text-gray-800">Payment Overview</h2>
                                             <div className="text-right">
                                                 <div className="text-xs text-gray-600 space-y-1">
                                                     <p className="flex items-center justify-end gap-1">
-                                                        <span className="w-2 h-2 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full animate-pulse"></span>
-                                                        <strong>Received:</strong> <span className="text-emerald-600 font-bold">₹{paymentData.received.toLocaleString()}</span>
+                                                        <span className="w-2 h-2 bg-teal-400 rounded-full"></span>
+                                                        <strong>Received:</strong> <span className="text-teal-600 font-bold">₹{paymentData.received.toLocaleString()}</span>
                                                     </p>
                                                     <p className="flex items-center justify-end gap-1">
-                                                        <span className="w-2 h-2 bg-gradient-to-r from-amber-400 to-amber-600 rounded-full animate-pulse"></span>
-                                                        <strong>Due:</strong> <span className="text-amber-600 font-bold">₹{paymentData.due.toLocaleString()}</span>
+                                                        <span className="w-2 h-2 bg-orange-400 rounded-full"></span>
+                                                        <strong>Due:</strong> <span className="text-orange-600 font-bold">₹{paymentData.due.toLocaleString()}</span>
                                                     </p>
                                                 </div>
                                             </div>
@@ -889,12 +881,12 @@ const BookingGraphDashboard = () => {
                                 <Card className="h-80">
                                     <CardContent>
                                         <div className="flex justify-between items-center mb-3">
-                                            <h2 className="text-base font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Campaign Status Overview</h2>
+                                            <h2 className="text-base font-bold text-gray-800">Campaign Status Overview</h2>
                                         </div>
                                         <div className="flex flex-grow -mx-4">
                                             <BarChart
                                                 xAxis={[{ scaleType: 'band', data: pipelineBarData.labels, categoryGapRatio: 0.6 }]}
-                                                series={[{ data: pipelineBarData.values, label: 'Campaign Count', color: '#8b5cf6' }]}
+                                                series={[{ data: pipelineBarData.values, label: 'Campaign Count', color: '#F2B6D4' }]}
                                                 borderRadius={8}
                                                 legend={{
                                                     direction: 'row',
@@ -910,10 +902,10 @@ const BookingGraphDashboard = () => {
                                 <Card className="h-80">
                                     <CardContent>
                                         <div className="flex justify-between items-center mb-2">
-                                            <h2 className="text-base font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">Revenue Graph</h2>
+                                            <h2 className="text-base font-bold text-gray-800">Revenue Graph</h2>
                                             <button
                                                 onClick={() => setRevenueView(prev => prev === 'yearly' ? 'monthly' : 'yearly')}
-                                                className="bg-gradient-to-r from-pink-500 to-rose-600 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 font-medium"
+                                                className="bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-lg shadow-md hover:bg-gray-300 transition-all duration-300 font-medium"
                                             >
                                                 View By: {revenueView === 'yearly' ? 'Yearly' : 'Monthly'}
                                             </button>
@@ -930,7 +922,7 @@ const BookingGraphDashboard = () => {
                                                         series={[{
                                                             data: revenueChartData.yData,
                                                             label: 'Revenue',
-                                                            color: '#ec4899',
+                                                            color: '#64B5F6',
                                                             showMark: true,
                                                             valueFormatter: tooltipFormatter,
                                                             area: true
@@ -955,29 +947,6 @@ const BookingGraphDashboard = () => {
             </main>
 
             <style jsx>{`
-                @keyframes gradient-flow-diagonal {
-                    0% {
-                        background-image: linear-gradient(135deg, #f5f5f5 0%, #ffffff 50%, #f5f5f5 100%);
-                    }
-                    25% {
-                        background-image: linear-gradient(135deg, #e6e9f0 0%, #f5e9f0 50%, #f0e9e6 100%);
-                    }
-                    50% {
-                        background-image: linear-gradient(135deg, #d3cceb 0%, #a48fe9 50%, #d3cceb 100%);
-                    }
-                    75% {
-                        background-image: linear-gradient(135deg, #f0e9e6 0%, #f5e9f0 50%, #e6e9f0 100%);
-                    }
-                    100% {
-                        background-image: linear-gradient(135deg, #f5f5f5 0%, #ffffff 50%, #f5f5f5 100%);
-                    }
-                }
-
-                .animate-gradient-flow-diagonal {
-                    background-size: 400% 400%;
-                    animation: gradient-flow-diagonal 15s ease infinite;
-                }
-                
                 @keyframes shimmer-flow {
                     0% { transform: translateX(-100%); }
                     100% { transform: translateX(100%); }
@@ -992,4 +961,3 @@ const BookingGraphDashboard = () => {
 };
 
 export default BookingGraphDashboard;
-

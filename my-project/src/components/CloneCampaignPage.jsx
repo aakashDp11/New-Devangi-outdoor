@@ -49,8 +49,8 @@ const AvailabilityBadge = ({ availabilityStatus }) => {
 };
 
 export default function CloneCampaignPage() {
-const { campaignId, bookingId } = useParams();
-console.log("🔎 useParams:", { campaignId, bookingId });
+  const { campaignId, bookingId } = useParams();
+  console.log("🔎 useParams:", { campaignId, bookingId });
 
   const navigate = useNavigate();
   const { isCollapsed } = useSidebar();
@@ -100,6 +100,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
         );
 
         const campaignData = res.data;
+        console.log("📋 Campaign data received:", campaignData);
         setCampaign(campaignData);
 
         setFormData({
@@ -110,7 +111,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
           endDate: campaignData.endDate
             ? campaignData.endDate.split("T")[0]
             : "",
-          description: campaignData.description,
+          description: campaignData.description || "",
         });
 
         setIsFOC(campaignData.isFOC || false);
@@ -121,13 +122,47 @@ console.log("🔎 useParams:", { campaignId, bookingId });
         });
 
         setOriginalBooking(campaignData.booking);
-        // const originalInvs = campaignData.spaces.map(s => ({ ...s.id, selectedUnits: s.selectedUnits }));
-        // setOriginalInventories(originalInvs);
 
-        // // Pre-select the original inventories by default
-        // setSelectedInventories(originalInvs.map(inv => inv._id));
+        // 🔹 FIX: Properly extract original inventories from campaign spaces
+        // Try different possible data structures
+        let spacesData = null;
+        if (campaignData.spaces && Array.isArray(campaignData.spaces)) {
+          spacesData = campaignData.spaces;
+        } else if (campaignData.inventories && Array.isArray(campaignData.inventories)) {
+          spacesData = campaignData.inventories;
+        } else if (campaignData.spaceIds && Array.isArray(campaignData.spaceIds)) {
+          spacesData = campaignData.spaceIds;
+        }
+
+        if (spacesData && spacesData.length > 0) {
+          const originalInvs = spacesData.map(space => {
+            // Handle different possible structures
+            const spaceId = space._id || space.id || space.spaceId || space;
+            return {
+              _id: typeof space === 'string' ? space : spaceId,
+              spaceName: space.spaceName || space.name || 'Unknown Space',
+              address: space.address || '',
+              city: space.city || '',
+              spaceType: space.spaceType || space.category || '',
+              availability: space.availability || "Available",
+              ownershipType: space.ownershipType || '',
+              selectedUnits: space.selectedUnits || []
+            };
+          });
+          
+          console.log("🏢 Original inventories extracted:", originalInvs);
+          setOriginalInventories(originalInvs);
+          
+          // Pre-select the original inventories by default
+          const inventoryIds = originalInvs.map(inv => inv._id).filter(id => id);
+          console.log("🆔 Pre-selecting inventory IDs:", inventoryIds);
+          setSelectedInventories(inventoryIds);
+        } else {
+          console.log("⚠️ No spaces found in campaign data. Full campaign data:", campaignData);
+        }
 
       } catch (error) {
+        console.error("❌ Error fetching campaign details:", error);
         toast.error("Failed to fetch campaign details.");
         navigate(-1);
       }
@@ -145,8 +180,10 @@ console.log("🔎 useParams:", { campaignId, bookingId });
           `${import.meta.env.VITE_API_BASE_URL}/api/bookings/inventories-for-selection`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("📦 All inventories fetched:", res.data);
         setAllInventories(res.data);
       } catch (error) {
+        console.error("❌ Error fetching inventories:", error);
         toast.error("Failed to fetch inventory list.");
       }
     };
@@ -183,6 +220,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
         );
         setConflictingInventories(res.data.conflictingSpaceIds || []);
       } catch (error) {
+        console.error("❌ Error checking availability:", error);
         toast.error("Could not verify inventory availability.");
       }
     };
@@ -207,57 +245,94 @@ console.log("🔎 useParams:", { campaignId, bookingId });
   };
 
   const executeClone = async () => {
+    // 🔹 Validation checks
+    if (!formData.campaignName.trim()) {
+      toast.error("Campaign name is required.");
+      return;
+    }
+
+    if (!formData.startDate || !formData.endDate) {
+      toast.error("Start date and end date are required.");
+      return;
+    }
+
+    if (new Date(formData.endDate) <= new Date(formData.startDate)) {
+      toast.error("End date must be after start date.");
+      return;
+    }
+
+    if (selectedInventories.length === 0) {
+      toast.error("Please select at least one inventory.");
+      return;
+    }
+
     if (!isFOC && conflictingInventories.length > 0) {
       toast.error(
-        "Cannot clone campaign with conflicting inventories. Please deselect them."
+        "Cannot clone campaign with conflicting inventories. Please deselect them or mark as FOC."
       );
       return;
     }
+
+    if (!bookingId) {
+      toast.error("No booking ID found to clone into.");
+      return;
+    }
+
     setIsLoading(true);
-    const token = localStorage.getItem("accessToken");
-    const clonePayload = {
-      ...formData,
-      campaignName:
-        formData.campaignName || `Copy of ${campaign.campaignName}`,
-      inventoryIds: selectedInventories,
-      isFOC: isFOC,
-    };
-    console.log("Clone payload is",clonePayload);
-    const targetBookingIds = cloneOption === "same" ? [bookingId] : selectedBookings;
-    if (cloneOption === "other" && targetBookingIds.length === 0) {
-      toast.error("Please select at least one booking to clone into.");
-      setIsLoading(false);
-      return;
-    }
-
+    
     try {
-      const clonePromises = targetBookingIds.map((id) =>
-        axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/api/campaigns/${campaignId}/clone/${id}`,
-          clonePayload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-      );
-      const results = await Promise.allSettled(clonePromises);
-      const successCount = results.filter(
-        (r) => r.status === "fulfilled" && r.value.status === 201
-      ).length;
+      const token = localStorage.getItem("accessToken");
+      
+      const clonePayload = {
+        campaignName: formData.campaignName.trim(),
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        description: formData.description || "",
+        inventoryIds: selectedInventories,
+        isFOC: isFOC,
+      };
+      
+      console.log("🚀 Clone payload:", clonePayload);
+      console.log("📍 Cloning to booking ID:", bookingId);
 
-      if (successCount > 0) {
-        toast.success(`${successCount} campaign(s) cloned successfully!`);
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/campaigns/${campaignId}/clone/${bookingId}`,
+        clonePayload,
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
+      );
+
+      if (response.status === 201 || response.status === 200) {
+        toast.success("Campaign cloned successfully!");
         navigate(`/booking/${bookingId}`);
+      } else {
+        throw new Error(`Unexpected response status: ${response.status}`);
       }
-      if (successCount < results.length) {
-        toast.error("Some campaigns failed to clone.");
+
+    } catch (error) {
+      console.error("❌ Clone error:", error);
+      
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.error || 
+                           error.response.data?.message || 
+                           `Server error: ${error.response.status}`;
+        toast.error(`Failed to clone campaign: ${errorMessage}`);
+      } else if (error.request) {
+        // Network error
+        toast.error("Network error: Could not connect to server");
+      } else {
+        // Other error
+        toast.error(`An error occurred: ${error.message}`);
       }
-    } catch (err) {
-      toast.error(err.response?.data?.error || "An error occurred while cloning.");
     } finally {
       setIsLoading(false);
     }
   };
-    
- 
 
   const searchedInventories = useMemo(() => {
     if (!inventorySearch) return allInventories;
@@ -362,6 +437,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
                   name="campaignName"
                   value={formData.campaignName}
                   onChange={handleChange}
+                  required
                 />
                 <div className="text-xs text-gray-500 mt-1 pl-1 space-y-0.5">
                   <p>
@@ -405,6 +481,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
                   type="date"
                   value={formData.startDate}
                   onChange={handleChange}
+                  required
                 />
                 <Input
                   label="End Date"
@@ -412,6 +489,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
                   type="date"
                   value={formData.endDate}
                   onChange={handleChange}
+                  required
                 />
               </div>
 
@@ -452,7 +530,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
 
               <div className="border-t pt-4">
                 <label className="text-sm font-semibold block mb-2">
-                  Select Inventories
+                  Select Inventories ({selectedInventories.length} selected)
                 </label>
                 <input
                   type="text"
@@ -466,7 +544,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
                   <div className="p-3 mb-2 bg-red-50 border-l-4 border-red-400 text-red-700 text-xs">
                     <FaExclamationTriangle className="inline mr-2" />
                     Some selected inventories are booked for these dates. Please
-                    deselect them.
+                    deselect them or mark as FOC.
                   </div>
                 )}
 
@@ -498,7 +576,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
                       {originalInventories.length > 0 && (
                         <tr className="bg-gray-100 font-semibold">
                           <td className="p-2 text-xs" colSpan="6">
-                            Original Inventories
+                            Original Inventories ({originalInventories.length})
                           </td>
                         </tr>
                       )}
@@ -509,7 +587,7 @@ console.log("🔎 useParams:", { campaignId, bookingId });
                       {otherInventories.length > 0 && (
                         <tr className="bg-gray-100 font-semibold">
                           <td className="p-2 text-xs" colSpan="6">
-                            Add Extra Inventories
+                            Add Extra Inventories ({otherInventories.length})
                           </td>
                         </tr>
                       )}
@@ -534,21 +612,24 @@ console.log("🔎 useParams:", { campaignId, bookingId });
               </div>
             </div>
 
-            
-
-
-                <div className="flex justify-end gap-4 mt-6">
-                    <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50" onClick={() => navigate(-1)} disabled={isLoading}>Cancel</button>
-                    <button 
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed" 
-                        onClick={executeClone} 
-                        disabled={isLoading || hasConflicts} 
-                        title={hasConflicts ? "Cannot clone with conflicting inventories" : ""}
-                    >
-                        {isLoading ? "Cloning..." : "Clone Campaign"}
-                    </button>
-                </div>
+            <div className="flex justify-end gap-4 mt-6">
+              <button 
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50" 
+                onClick={() => navigate(-1)} 
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed" 
+                onClick={executeClone} 
+                disabled={isLoading || hasConflicts || selectedInventories.length === 0} 
+                title={hasConflicts ? "Cannot clone with conflicting inventories" : selectedInventories.length === 0 ? "Please select at least one inventory" : ""}
+              >
+                {isLoading ? "Cloning..." : "Clone Campaign"}
+              </button>
             </div>
+          </div>
         </div>
       </main>
     </div>
