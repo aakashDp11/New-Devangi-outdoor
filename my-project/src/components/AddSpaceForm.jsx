@@ -35,7 +35,7 @@ const CardContent = ({ children, className = '' }) => (
 // Button component with consistent styling and loading state
 const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
     disabled={disabled || loading}
     {...props}
   >
@@ -780,7 +780,7 @@ export default function AddSpaceForm() {
               <div 
                 key={label} 
                 className={`flex items-center gap-2 pb-2 cursor-pointer transition-colors duration-200
-                  ${step === label ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]" : "text-gray-500"}
+                  ${step === label ? "border-b-2 border-[black] text-[black]" : "text-gray-500"}
                   ${completedSteps.includes(label) && "text-green-600 border-green-600"}`}
                 onClick={() => setStep(label)}
               >
@@ -1232,7 +1232,7 @@ export default function AddSpaceForm() {
               </Button>
               <Button 
                 onClick={handleNext} 
-                className="bg-[var(--color-primary)] text-white hover:bg-blue-700"
+                className="bg-[black] text-white hover:bg-blue-700"
               >
                 {step === "Location" ? "Preview" : "Next"}
               </Button>

@@ -50,7 +50,7 @@ const CardContent = ({ children, className = '' }) => (
 // Button component with consistent styling and loading state
 const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
     disabled={disabled || loading}
     {...props}
   >
@@ -191,7 +191,7 @@ const MarkAsReadConfirmationDialog = ({ isOpen, onConfirm, onCancel }) => {
             Cancel
           </Button>
           <Button
-            className='bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]'
+            className='bg-[black] hover:bg-[var(--color-primary-dark)]'
             onClick={onConfirm}
           >
             Confirm
@@ -219,7 +219,7 @@ const MarkAllReadConfirmationDialog = ({ isOpen, onConfirm, onCancel }) => {
             Cancel
           </Button>
           <Button
-            className='bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]'
+            className='bg-[black] hover:bg-[var(--color-primary-dark)]'
             onClick={onConfirm}
           >
             Confirm
@@ -534,7 +534,7 @@ export default function NotificationsPage() {
 
                 <Button
                   onClick={handleShowDateModal}
-                  className="w-full sm:w-auto text-xs whitespace-nowrap bg-white text-[var(--color-text)] hover:bg-gray-50 shadow-sm hover:shadow-md"
+                  className="w-full sm:w-auto text-xs whitespace-nowrap bg-gray-500 text-black hover:bg-black shadow-sm hover:shadow-md"
                 >
                   {isCustomDate && startDate && endDate ? `${startDate} to ${endDate}` : 'Date Filter'}
                 </Button>
@@ -579,13 +579,13 @@ export default function NotificationsPage() {
                           exit="exit"
                           variants={cardVariants}
                           transition={{ duration: 0.18 }}
-                          className={`rounded-2xl border shadow-sm w-full group ${!notif.read ? 'bg-white border-[var(--color-primary)]' : 'bg-gray-100 bg-opacity-80 border-gray-200'}`}
+                          className={`rounded-2xl border shadow-sm w-full group ${!notif.read ? 'bg-white border-[black]' : 'bg-gray-100 bg-opacity-80 border-gray-200'}`}
                           layout
                         >
                           <CardContent className="flex items-start justify-between gap-4 p-4 md:p-6">
                             <div className="flex items-start gap-4">
                               {!notif.read && (
-                                <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-primary)] mt-1.5 flex-shrink-0 animate-pulse" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-[black] mt-1.5 flex-shrink-0 animate-pulse" />
                               )}
                               <div className="flex-shrink-0 mt-1">{getNotificationIcon(notif.type)}</div>
                               <div>
@@ -637,7 +637,7 @@ export default function NotificationsPage() {
             />
             <div className="flex justify-end gap-2 p-2 border-t border-gray-200">
               <Button onClick={handleCancelDateFilter} className="bg-gray-700 text-white hover:bg-gray-800">Cancel</Button>
-              <Button onClick={handleApplyDateFilter} className="bg-[var(--color-primary)] text-white hover:opacity-90">Apply</Button>
+              <Button onClick={handleApplyDateFilter} className="bg-[black] text-white hover:opacity-90">Apply</Button>
             </div>
           </motion.div>
         </div>

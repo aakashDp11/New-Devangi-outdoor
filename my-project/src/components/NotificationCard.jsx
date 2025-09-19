@@ -14,11 +14,11 @@ const NotificationCard = ({ notification, onMarkRead, onDelete }) => {
       className={`p-4 rounded-2xl shadow mb-3 cursor-pointer transition-colors ${
         notification.read
           ? "bg-gray-100 bg-opacity-80 border-l-4 border-gray-200"
-          : "bg-white border-l-4 border-[var(--color-primary)] shadow-sm"
+          : "bg-white border-l-4 border-[black] shadow-sm"
       }`}
     >
       <div className="flex items-start gap-3">
-        <FaBullhorn className="text-[var(--color-primary)] mt-1" size={20} />
+        <FaBullhorn className="text-[black] mt-1" size={20} />
         <div className="flex-1">
           <h4 className="font-semibold text-[var(--color-text)]">
             {notification.title}

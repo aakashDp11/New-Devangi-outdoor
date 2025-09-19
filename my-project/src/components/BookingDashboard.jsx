@@ -40,7 +40,7 @@ const CardContent = ({ children, className = '' }) => (
 // Button component with consistent styling and loading state
 const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
     disabled={disabled || loading}
     {...props}
   >
@@ -107,12 +107,12 @@ const SortableHeader = ({ title, sortKey, sortConfig, setSortConfig }) => {
     <th scope='col' className='px-6 py-3'>
       <div
         onClick={handleSort}
-        className='flex items-center gap-1.5 cursor-pointer select-none text-[var(--color-text)] hover:text-[var(--color-primary)] transition-all duration-200 hover:scale-105 active:scale-95'
+        className='flex items-center gap-1.5 cursor-pointer select-none text-[var(--color-text)] hover:text-[black] transition-all duration-200 hover:scale-105 active:scale-95'
       >
         {title}
         <span
           className={`text-[var(--color-muted)] transition-all duration-200 ${
-            isSorting ? 'text-[var(--color-primary)] scale-110' : ''
+            isSorting ? 'text-[black] scale-110' : ''
           }`}
         >
           {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '⇅'}
@@ -228,12 +228,28 @@ const Pagination = ({
   );
 };
 
+// --- NEW MODAL COMPONENT ---
+const Modal = ({ children, onClose }) => {
+  return (
+    <div
+      className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 animate-fadeIn'
+      onClick={onClose}
+    >
+      <div
+        className='bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden animate-scaleIn'
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
 // --- MAIN COMPONENT ---
 
 export default function BookingsDashboard() {
   const navigate = useNavigate();
   const { isCollapsed } = useSidebar();
-  const datePickerRef = useRef(null);
   const [bookings, setBookings] = useState([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -415,20 +431,6 @@ export default function BookingsDashboard() {
     });
   }, [bookings, sortConfig]);
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
-        setShowDateModal(false);
-      }
-    }
-    if (showDateModal) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showDateModal]);
-
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 h-screen w-screen text-[var(--color-text)] flex flex-col lg:flex-row overflow-hidden'>
       <Navbar />
@@ -473,13 +475,13 @@ export default function BookingsDashboard() {
                 />
               </div>
               <div className='flex items-center gap-2 flex-shrink-0'>
-                <div ref={datePickerRef} className='relative w-full md:w-auto'>
+                <div className='relative w-full md:w-auto'>
                   <button
                     onClick={() => {
                       setTempDateRange(dateRange);
                       setShowDateModal((prev) => !prev);
                     }}
-                    className='px-4 py-2 rounded-xl hover:bg-gray-100 hover:ring-2 ring-[var(--color-primary)] w-full text-left bg-white text-[var(--color-text)] transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md text-xs'
+                    className='px-4 py-2 rounded-xl hover:bg-gray-100 hover:ring-2 ring-[black] w-full text-left bg-white text-[var(--color-text)] transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md text-xs'
                   >
                     {dateRange[0].startDate && dateRange[0].endDate
                       ? `${formatDate(dateRange[0].startDate)} to ${formatDate(
@@ -487,30 +489,6 @@ export default function BookingsDashboard() {
                         )}`
                       : 'Date Filter'}
                   </button>
-                  {showDateModal && (
-                    <div
-                      className='absolute top-full mt-2 left-0 bg-white rounded-xl shadow-lg p-2 z-50 text-xs animate-scaleIn'
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DateRange
-                        editableDateInputs={true}
-                        onChange={(item) => setTempDateRange([item.selection])}
-                        moveRangeOnFirstSelection={false}
-                        ranges={tempDateRange}
-                        className='text-xs'
-                        rangeColors={['#000000']}
-                      />
-                      <div className='flex justify-end gap-2 p-2 pt-0'>
-                        <button
-                          onClick={handleCancelDateFilter}
-                          className='px-4 py-1.5 rounded-md bg-gray-100 text-[var(--color-text)] hover:bg-gray-200 transition-all duration-200 hover:scale-105'
-                        >
-                          Cancel
-                        </button>
-                        <Button onClick={handleApplyDateFilters}>Apply</Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
                 <Button
                   onClick={handleClearAllFilters}
@@ -527,7 +505,7 @@ export default function BookingsDashboard() {
           {loading && (
             <div className='absolute inset-0 bg-white/80 rounded-lg flex items-center justify-center z-10'>
               <div className='flex flex-col items-center gap-3'>
-                <div className='w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin'></div>
+                <div className='w-8 h-8 border-2 border-[black] border-t-transparent rounded-full animate-spin'></div>
                 <div className='text-[var(--color-muted)] text-sm'>
                   Loading bookings...
                 </div>
@@ -617,13 +595,13 @@ export default function BookingsDashboard() {
                           <td className='px-6 py-4 text-[var(--color-text)]'>
                             {item.clientName || 'No Client'}
                           </td>
-                          <td className='px-6 py-4 text-pink-500'>
+                          <td className='px-6 py-4 text-[var(--color-text)]'>
                             {formatDate(item.createdAt)}
                           </td>
-                          <td className='px-6 py-4 text-green-500'>
+                          <td className='px-6 py-4 text-[var(--color-text)]'>
                             {formatDate(upcomingStart)}
                           </td>
-                          <td className='px-6 py-4 text-red-500'>
+                          <td className='px-6 py-4 text-[var(--color-text)]'>
                             {formatDate(upcomingEnd)}
                           </td>
                         </tr>
@@ -645,73 +623,32 @@ export default function BookingsDashboard() {
           loading={loading}
         />
       </main>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateX(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
-        @keyframes scaleIn {
-          from {
-            opacity: 0;
-            transform: scale(0.9);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        @keyframes bg-gradient-flow-diagonal {
-          0% { background-position: 0% 0%; }
-          100% { background-position: 100% 100%; }
-        }
-
-        .animate-bg-gradient-flow-diagonal {
-          background-size: 200% 200%;
-          animation: bg-gradient-flow-diagonal 10s linear infinite;
-        }
-
-        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
-        .animate-slideUp { animation: slideUp 0.4s ease-out; }
-        .animate-slideDown { animation: slideDown 0.4s ease-out; }
-        .animate-slideIn { animation: slideIn 0.4s ease-out; }
-        .animate-scaleIn { animation: scaleIn 0.3s ease-out; }
-      `}</style>
+      
+      {/* Date Picker Modal */}
+      {showDateModal && (
+        <Modal onClose={handleCancelDateFilter}>
+          <div className='p-6'>
+            <h3 className='text-lg font-semibold text-[var(--color-text)] mb-4'>Select Date Range</h3>
+            <DateRange
+              editableDateInputs={true}
+              onChange={(item) => setTempDateRange([item.selection])}
+              moveRangeOnFirstSelection={false}
+              ranges={tempDateRange}
+              className='text-xs w-full'
+              rangeColors={['#000000']}
+            />
+            <div className='flex justify-end gap-2 mt-4'>
+              <button
+                onClick={handleCancelDateFilter}
+                className='px-4 py-1.5 rounded-md bg-gray-100 text-[var(--color-text)] hover:bg-gray-200 transition-all duration-200 hover:scale-105'
+              >
+                Cancel
+              </button>
+              <Button onClick={handleApplyDateFilters}>Apply</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

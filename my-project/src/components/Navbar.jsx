@@ -107,11 +107,7 @@ export default function Navbar() {
           {!isCollapsed && <img src={logo1} alt="Logo" className="w-40" />}
           <button
             onClick={handleToggle}
-            className="p-2 rounded-full"
-            style={{
-              backgroundColor: "var(--color-primary)",
-              color: "#fff",
-            }}
+            className="p-2 rounded-full bg-gray-600 hover:bg-gray-700 text-white transition-colors duration-200"
             aria-label="Toggle sidebar"
           >
             {isCollapsed ? <FaArrowRight size={16} /> : <FaArrowLeft size={16} />}
@@ -132,11 +128,10 @@ export default function Navbar() {
                   navigate(item.path);
                   if (window.innerWidth < 768) setIsCollapsed(true);
                 }}
-                className="cursor-pointer transition-colors duration-200 mx-0"
+                className={`cursor-pointer transition-colors duration-200 mx-0 ${
+                  isActive ? 'bg-gray-600 text-white' : 'bg-transparent hover:bg-gray-100'
+                }`}
                 style={{
-                  backgroundColor: isActive
-                    ? "var(--color-primary)"
-                    : "transparent",
                   color: isActive ? "#fff" : "var(--color-text)",
                 }}
                 title={item.label}
@@ -184,8 +179,6 @@ export default function Navbar() {
           className="pt-4 pb-4"
           style={{ borderTop: "1px solid var(--color-border)" }}
         >
-          
-
           {isCollapsed ? (
             <div className="flex flex-col items-center space-y-1 py-1">
               <FaShieldAlt
@@ -246,11 +239,7 @@ export default function Navbar() {
       {/* Mobile hamburger */}
       <button
         onClick={handleToggle}
-        className="p-2 rounded-md md:hidden fixed top-4 left-4 z-40"
-        style={{
-          backgroundColor: "var(--color-primary)",
-          color: "#fff",
-        }}
+        className="p-2 rounded-md md:hidden fixed top-4 left-4 z-40 bg-gray-600 hover:bg-gray-700 text-white transition-colors duration-200"
       >
         ☰
       </button>

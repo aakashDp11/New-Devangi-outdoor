@@ -44,7 +44,7 @@ const Layout = ({ children }) => {
             onClick={handleToggle}
             className="p-2 rounded-md"
             aria-label="Open sidebar"
-            style={{ color: 'var(--color-text)' }}
+            style={{ color: 'black' }}
           >
             <FaBars size={20} />
           </button>

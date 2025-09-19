@@ -15,10 +15,10 @@ import OtherReport from './reports/OtherReport';
 
 // --- REUSABLE UI COMPONENTS ---
 
-// Button component with consistent styling
+// Button component with consistent styling - CHANGED TO GRAY
 const Button = ({ children, className = '', ...props }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`px-4 py-2 rounded-xl bg-gray-600 text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:bg-gray-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
     {...props}
   >
     {children}
@@ -55,11 +55,11 @@ const Notification = ({ message, type = 'success', onClose }) => {
       }`}
     >
       <div className='flex items-center gap-2'>
-        {type === 'error' ? <FaExclamationTriangle /> : <FaCheck />}
+        {type === 'error' ? <span>⚠️</span> : <span>✓</span>}
         <span className='text-sm font-medium'>{message}</span>
         <button
           onClick={onClose}
-          className='ml-auto text-sm text-[var(--color-muted)] hover:text-[var(--color-text)]'
+          className='ml-auto text-sm text-gray-500 hover:text-gray-700'
         >
           &times;
         </button>
@@ -204,7 +204,7 @@ export default function Report() {
   }, [activeTab, bookingStats, loadingCharts, allBookingsForPayments, navigate, handleShowDateModal]);
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-screen h-screen text-[var(--color-text)] flex flex-col lg:flex-row overflow-hidden'>
+    <div className='min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-screen h-screen text-gray-800 flex flex-col lg:flex-row overflow-hidden'>
       <Navbar />
 
       {/* Notification System */}
@@ -227,7 +227,7 @@ export default function Report() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab.toLowerCase())}
-              className={`py-2 px-4 text-sm font-medium transition-all duration-300 ease-in-out hover:text-orange-600 ${activeTab === tab.toLowerCase() ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`py-2 px-4 text-sm font-medium transition-all duration-300 ease-in-out hover:text-white ${activeTab === tab.toLowerCase() ? 'text-white border-b-2 border-white' : 'text-white hover:text-white'}`}
             >
               {tab}
             </button>
@@ -251,7 +251,7 @@ export default function Report() {
                 moveRangeOnFirstSelection={false}
                 ranges={tempDateRange}
                 className='text-xs'
-                rangeColors={['#000000']}
+                rangeColors={['#4b5563']}
               />
               <div className='flex justify-end gap-2 p-2 pt-0'>
                 <Button onClick={handleCancelDateModal} className="bg-gray-700 text-white hover:bg-gray-800">

@@ -38,7 +38,7 @@ const CardContent = ({ children, className = '' }) => (
 // Button component with consistent styling and loading state
 const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
     disabled={disabled || loading}
     {...props}
   >
@@ -361,8 +361,7 @@ export default function ProposalsDashboard() {
             Proposals ({filteredData.length})
             {loading && <span className='ml-2 text-sm text-[var(--color-muted)]'>Loading...</span>}
           </h2>
-          <Button onClick={() => navigate('/create-proposal')}>+ Create Proposal</Button>
-        </div>
+       </div>
 
         <Card className='mt-6 shadow-xl animate-slideUp bg-gray-100 bg-opacity-80'>
           <CardContent>
@@ -384,7 +383,7 @@ export default function ProposalsDashboard() {
                       setSortConfig({ key, direction });
                       setCurrentPage(1);
                     }}
-                    className='px-4 py-2 rounded-xl w-full bg-white text-xs text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all duration-200 shadow-sm hover:shadow-md'
+                    className='px-4 py-2 rounded-xl w-full bg-white text-xs text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[black] transition-all duration-200 shadow-sm hover:shadow-md'
                     value={`${sortConfig.key}:${sortConfig.direction}`}
                   >
                     <option value='createdAt:desc'>Sort by: Latest</option>
@@ -408,7 +407,7 @@ export default function ProposalsDashboard() {
           {loading ? (
             <div className='absolute inset-0 bg-white/80 rounded-lg flex items-center justify-center z-10'>
               <div className='flex flex-col items-center gap-3'>
-                <div className='w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin'></div>
+                <div className='w-8 h-8 border-2 border-[black] border-t-transparent rounded-full animate-spin'></div>
                 <div className='text-[var(--color-muted)] text-sm'>
                   Loading proposals...
                 </div>

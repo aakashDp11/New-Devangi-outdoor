@@ -34,7 +34,7 @@ const CardContent = ({ children, className = "" }) => (
 // Button component with consistent styling and loading state
 const Button = ({ children, className = "", disabled = false, loading = false, ...props }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
     disabled={disabled || loading}
     {...props}
   >
@@ -336,9 +336,9 @@ export default function CreateOrderBasicInfo() {
           {/* Step Navigation Tabs */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 mb-8 text-sm font-medium border-b border-gray-200 animate-fadeIn">
             <div
-              className={`flex items-center gap-2 pb-2 transition-colors duration-200 border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]`}
+              className={`flex items-center gap-2 pb-2 transition-colors duration-200 border-b-2 border-[black] text-[black]`}
             >
-              <span className="text-[var(--color-primary)]">
+              <span className="text-[black]">
                 <FaCheck />
               </span>
               Basic Information
@@ -513,7 +513,7 @@ export default function CreateOrderBasicInfo() {
             </Button>
             <Button
               onClick={handleNext}
-              className="bg-[var(--color-primary)] text-white hover:bg-blue-700"
+              className="bg-[black] text-white hover:bg-blue-700"
             >
               Next
             </Button>

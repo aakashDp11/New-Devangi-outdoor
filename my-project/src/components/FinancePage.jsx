@@ -32,7 +32,7 @@ const CardContent = ({ children, className = '' }) => (
 // Button component with consistent styling and loading state
 const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
     disabled={disabled || loading}
     {...props}
   >
@@ -384,11 +384,7 @@ export default function FinancePage() {
                 <FaArrowLeft className="inline mr-2" /> Back
               </Button>
             )}
-            {currentView === 'documents' && (
-              <Button onClick={() => toast.info('Upload functionality coming soon!')}>
-                + Upload Document
-              </Button>
-            )}
+            
           </div>
         </div>
 
@@ -411,7 +407,7 @@ export default function FinancePage() {
                   <div className='w-full md:w-auto'>
                     <select
                       onChange={handleSortChange}
-                      className='px-4 py-2 rounded-xl w-full bg-white text-xs text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all duration-200 shadow-sm hover:shadow-md'
+                      className='px-4 py-2 rounded-xl w-full bg-white text-xs text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[black] transition-all duration-200 shadow-sm hover:shadow-md'
                       value={`${sortConfig.key}:${sortConfig.direction}`}
                     >
                       <option value='name:asc'>Sort by: Name (A-Z)</option>
@@ -429,7 +425,7 @@ export default function FinancePage() {
           {loading ? (
             <div className='absolute inset-0 bg-white/80 rounded-lg flex items-center justify-center z-10'>
               <div className='flex flex-col items-center gap-3'>
-                <div className='w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin'></div>
+                <div className='w-8 h-8 border-2 border-[black] border-t-transparent rounded-full animate-spin'></div>
                 <div className='text-[var(--color-muted)] text-sm'>
                   Loading data...
                 </div>

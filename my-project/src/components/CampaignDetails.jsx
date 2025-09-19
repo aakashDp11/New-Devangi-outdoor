@@ -54,7 +54,7 @@ const Button = ({
   ...props
 }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
     disabled={disabled || loading}
     {...props}
   >
@@ -422,7 +422,7 @@ export default function CampaignDetails() {
           }`}
         >
           <div className="flex flex-col items-center gap-3 animate-pulse">
-            <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-2 border-[black] border-t-transparent rounded-full animate-spin"></div>
             <div className="text-[var(--color-muted)] text-sm">
               Loading campaign details...
             </div>
@@ -506,7 +506,7 @@ export default function CampaignDetails() {
             </Button>
             <Button
               onClick={() => setShowEditModal(true)}
-              className="bg-[var(--color-primary)] text-white"
+              className="bg-[black] text-white"
             >
               <FaEdit className="inline mr-2" />
               Edit Campaign
@@ -832,7 +832,7 @@ export default function CampaignDetails() {
                         <Button
                           onClick={() => handleSaveCostForSpace(space._id)}
                           disabled={!isEditable}
-                          className="inline-flex items-center gap-2 text-xs ml-auto px-3 py-1.5 bg-[var(--color-primary)] text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          className="inline-flex items-center gap-2 text-xs ml-auto px-3 py-1.5 bg-[black] text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                           <FaSave />
                           Save
