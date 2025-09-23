@@ -72,7 +72,7 @@ let db;
 app.use(express.json()); // for parsing application/json
 // app.use(requestMetrics());
 app.use('/api/invoices', invoiceRoutes);
-app.use('/api/invoice-reports', invoiceReportRoutes);
+app.use('/api/reports', invoiceReportRoutes);
 app.use('/api/spaces', spaceRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/pipeline', pipelineRoutes);

@@ -286,6 +286,8 @@ export const updateTicket = async (req, res) => {
             return res.status(403).json({ message: 'Access denied. You can only edit your own tickets.' });
         }
 
+        // Fix: Assign the new status to the ticket object
+        ticket.status = status;
         ticket.priority = priority;
         ticket.category = category;
 
@@ -491,7 +493,7 @@ export const getAllTickets = async (req, res) => {
         }
 
         const tickets = await Ticket.find(filter)
-            .populate('createdBy', 'name email') // FIXED: Populate createdBy
+            .populate('createdBy', 'name email')
             .populate('assignedTo', 'name email')
             .sort({ createdAt: -1 })
             .limit(limit * 1)
@@ -523,12 +525,12 @@ export const getTicketStats = async (req, res) => {
                 $group: {
                     _id: null,
                     total: { $sum: 1 },
-                    open: { a$sum: { $cond: [{ $eq: ["$status", "open"] }, 1, 0] } },
-                    inProgress: { a$sum: { $cond: [{ $eq: ["$status", "in-progress"] }, 1, 0] } },
-                    resolved: { a$sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] } },
-                    closed: { a$sum: { $cond: [{ $eq: ["$status", "closed"] }, 1, 0] } },
-                    urgent: { a$sum: { a$cond: [{ $eq: ["$priority", "urgent"] }, 1, 0] } },
-                    high: { a$sum: { a$cond: [{ $eq: ["$priority", "high"] }, 1, 0] } }
+                    open: { $sum: { $cond: [{ $eq: ["$status", "open"] }, 1, 0] } },
+                    inProgress: { $sum: { $cond: [{ $eq: ["$status", "in-progress"] }, 1, 0] } },
+                    resolved: { $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] } },
+                    closed: { $sum: { $cond: [{ $eq: ["$status", "closed"] }, 1, 0] } },
+                    urgent: { $sum: { $cond: [{ $eq: ["$priority", "urgent"] }, 1, 0] } },
+                    high: { $sum: { $cond: [{ $eq: ["$priority", "high"] }, 1, 0] } }
                 }
             }
         ]);

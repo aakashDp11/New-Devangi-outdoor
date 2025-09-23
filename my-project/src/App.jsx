@@ -2,7 +2,6 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 
-
 // --- Context Providers ---
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { SidebarProvider } from "./context/SidebarContext";
@@ -40,8 +39,9 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import DisclaimerPolicy from "./components/DisclaimerPolicy";
 import NotificationsPage from "./components/NotificationsPage";
 import EditProposal from "./components/EditProposal";
+import InvoiceManagement from './components/InvoiceManagement';
 import CloneCampaignPage from "./components/CloneCampaignPage"; 
-import TicketsDashboard from "./components/TicketsDashboard"; // Import the new component
+import TicketsDashboard from "./components/TicketsDashboard";
 
 // --- Error Pages ---
 import NotFound from "./components/NotFound";
@@ -53,8 +53,6 @@ export default function App() {
     <AuthProvider>
       <SidebarProvider>
         <Toaster position="top-right" />
-        
-
         <Routes>
           {/* ======= Public Routes ======= */}
           <Route path="/login" element={<Login />} />
@@ -72,6 +70,10 @@ export default function App() {
             <Route path="/reports" element={<Report />} />
             <Route path="/proposal-dashboard" element={<ProposalDashboard />} />
             <Route path="/finances" element={<FinancePage />} />
+            
+            {/* 🟢 Move the InvoiceManagement route inside the protected route */}
+            <Route path="/invoices" element={<InvoiceManagement />} />
+            
             <Route path="/booking/:id" element={<BookingDetails />} />
             <Route
               path="/clone-campaign/:campaignId/from-booking/:bookingId"
@@ -178,8 +180,6 @@ export default function App() {
               }
             />
             
-            
-
             {/* 🆕 Notifications */}
             <Route path="/notifications" element={<NotificationsPage />} />
           </Route>

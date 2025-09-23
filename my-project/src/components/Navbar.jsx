@@ -19,7 +19,7 @@ import {
   FaSignOutAlt,
   FaExclamationCircle,
   FaBell,
-  FaFileInvoice, // Import the new icon
+  FaFileInvoice, // For invoices
 } from "react-icons/fa";
 
 export default function Navbar() {
@@ -37,11 +37,15 @@ export default function Navbar() {
     { label: "Users", path: "/users", icon: <FaUsers /> },
     { label: "Reports", path: "/reports", icon: <FaChartBar /> },
     { label: "Finances", path: "/finances", icon: <FaRupeeSign /> },
+    
+    // NEW: Invoice Management Section
+    { label: "Invoices", path: "/invoices", icon: <FaFileInvoice /> },
+    
     { label: "Gallery", path: "/gallery", icon: <FaImages /> },
     {
       label: "Support Tickets",
       path: "/tickets",
-      icon: <FaFileInvoice />,
+      icon: <FaFileInvoice />, // You might want to use a different icon for tickets
     },
     {
       label: "Notifications",
