@@ -41,6 +41,7 @@ import DisclaimerPolicy from "./components/DisclaimerPolicy";
 import NotificationsPage from "./components/NotificationsPage";
 import EditProposal from "./components/EditProposal";
 import CloneCampaignPage from "./components/CloneCampaignPage"; 
+import TicketsDashboard from "./components/TicketsDashboard"; // Import the new component
 
 // --- Error Pages ---
 import NotFound from "./components/NotFound";
@@ -81,6 +82,9 @@ export default function App() {
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/disclaimer-policy" element={<DisclaimerPolicy />} />
+            
+            {/* 🆕 Support Tickets Route */}
+            <Route path="/tickets" element={<TicketsDashboard />} />
 
             {/* Booking & Space Form Flow */}
             <Route
@@ -173,7 +177,7 @@ export default function App() {
                 </PipelineProvider>
               }
             />
-           
+            
             
 
             {/* 🆕 Notifications */}

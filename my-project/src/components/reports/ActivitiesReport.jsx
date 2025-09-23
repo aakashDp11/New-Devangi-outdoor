@@ -49,13 +49,13 @@ const Button = ({ children, loading, disabled, variant = 'primary', ...props }) 
 };
 
 const Card = ({ children, className }) => (
-  <div className={`bg-white shadow-md rounded-lg overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg transform hover:-translate-y-1 ${className}`}>
+  <div className={`bg-white shadow-md rounded-lg overflow-hidden p-6 transition-all duration-300 ease-in-out hover:shadow-lg transform hover:-translate-y-1 ${className}`}>
     {children}
   </div>
 );
 
 const CardContent = ({ children }) => (
-  <div className="p-6 animate-fade-in">
+  <div className="animate-fade-in">
     {children}
   </div>
 );
@@ -541,59 +541,59 @@ export default function ActivitiesReport({ handleShowDateModal = () => {} }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {changelogLoading ? (
-                    <tr>
-                      <td colSpan="6">
-                        <LoadingSpinner />
-                      </td>
-                    </tr>
-                  ) : changelogs.length > 0 ? (
-                    changelogs.map((log, index) => (
-                      <tr 
-                        key={log._id} 
-                        className="bg-white border-b hover:bg-gray-50 transition-all duration-200 hover-scale table-row-enter"
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                      >
-                        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                          {log.campaignId?.campaignName || "N/A"}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="font-medium">{log.userName}</span>
-                            <span className="text-gray-500 text-[10px]">({log.userEmail})</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                            {log.changeType}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-pre-wrap text-[10px] max-w-xs">
-                          <div className="max-h-20 overflow-y-auto">
-                            {renderObjectDetails(log.previousValue) || <em className="text-gray-400">Creation Step</em>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-pre-wrap text-[10px] max-w-xs">
-                          <div className="max-h-20 overflow-y-auto">
-                            {renderObjectDetails(log.newValue) || <em className="text-gray-400">N/A</em>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span>{dayjs(log.createdAt).format("DD MMM YYYY")}</span>
-                            <span className="text-gray-500 text-[10px]">{dayjs(log.createdAt).format("HH:mm")}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="text-center py-10 text-gray-500">
-                        No changelogs found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+  {changelogLoading ? (
+    <tr>
+      <td colSpan="6">
+        <LoadingSpinner />
+      </td>
+    </tr>
+  ) : changelogs.length > 0 ? (
+    changelogs.map((log, index) => (
+      <tr 
+        key={log._id} 
+        className={`bg-white border-b hover:bg-gray-50 transition-all duration-200 hover-scale table-row-enter ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+        style={{ animationDelay: `${index * 0.1}s` }}
+      >
+        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+          {log.campaignId?.campaignName || "N/A"}
+        </td>
+        <td className="px-6 py-4">
+          <div className="flex flex-col">
+            <span className="font-medium">{log.userName}</span>
+            <span className="text-gray-500 text-[10px]">({log.userEmail})</span>
+          </div>
+        </td>
+        <td className="px-6 py-4">
+          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+            {log.changeType}
+          </span>
+        </td>
+        <td className="px-6 py-4 whitespace-pre-wrap text-[10px] max-w-xs">
+          <div className="max-h-20 overflow-y-auto">
+            {renderObjectDetails(log.previousValue) || <em className="text-gray-400">Creation Step</em>}
+          </div>
+        </td>
+        <td className="px-6 py-4 whitespace-pre-wrap text-[10px] max-w-xs">
+          <div className="max-h-20 overflow-y-auto">
+            {renderObjectDetails(log.newValue) || <em className="text-gray-400">N/A</em>}
+          </div>
+        </td>
+        <td className="px-6 py-4">
+          <div className="flex flex-col">
+            <span>{dayjs(log.createdAt).format("DD MMM YYYY")}</span>
+            <span className="text-gray-500 text-[10px]">{dayjs(log.createdAt).format("HH:mm")}</span>
+          </div>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="6" className="text-center py-10 text-gray-500">
+        No changelogs found.
+      </td>
+    </tr>
+  )}
+</tbody>
               </table>
             </div>
             

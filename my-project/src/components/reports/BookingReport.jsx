@@ -69,14 +69,14 @@ const Button = ({ children, loading, disabled, variant = 'primary', ...props }) 
   );
 };
 
-const Card = ({ children, className }) => (
-  <div className={`bg-white shadow-md rounded-lg overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg transform hover:-translate-y-1 ${className}`}>
+const Card = ({ children, className, animate = true }) => (
+  <div className={`bg-white shadow-md rounded-lg overflow-hidden p-6 transition-all duration-300 ease-in-out hover:shadow-lg transform hover:-translate-y-1 ${className}`}>
     {children}
   </div>
 );
 
 const CardContent = ({ children }) => (
-  <div className="p-6 animate-fade-in">
+  <div className="animate-fade-in">
     {children}
   </div>
 );
@@ -892,71 +892,71 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookingLoading ? (
-                    <tr>
-                      <td colSpan="5">
-                        <LoadingSpinner />
-                      </td>
-                    </tr>
-                  ) : bookings.length > 0 ? (
-                    bookings.map((b, index) => {
-                      let totalPaid = 0, totalDue = 0;
-                      b.campaigns?.forEach((c) => {
-                        const p = c.paymentSummary;
-                        if (p) {
-                          totalPaid += p.totalPaid || 0;
-                          totalDue += p.totalDue || 0;
-                        }
-                      });
-                      let paymentStatus = "Completed";
-                      if (totalDue > 0 && totalPaid < totalDue) {
-                        paymentStatus = totalPaid > 0 ? "Partial" : "Pending";
-                      }                    
-                      const poStatuses = b.campaigns?.map(c => c.poConfirmed === true) || [];
-                      let poStatus = "Pending";
+  {bookingLoading ? (
+    <tr>
+      <td colSpan="5">
+        <LoadingSpinner />
+      </td>
+    </tr>
+  ) : bookings.length > 0 ? (
+    bookings.map((b, index) => {
+      let totalPaid = 0, totalDue = 0;
+      b.campaigns?.forEach((c) => {
+        const p = c.paymentSummary;
+        if (p) {
+          totalPaid += p.totalPaid || 0;
+          totalDue += p.totalDue || 0;
+        }
+      });
+      let paymentStatus = "Completed";
+      if (totalDue > 0 && totalPaid < totalDue) {
+        paymentStatus = totalPaid > 0 ? "Partial" : "Pending";
+      }          
+      const poStatuses = b.campaigns?.map(c => c.poConfirmed === true) || [];
+      let poStatus = "Pending";
 
-                      if (poStatuses.length > 0) {
-                          if (poStatuses.every(status => status === true)) {
-                              poStatus = "Completed";
-                          } else if (poStatuses.some(status => status === true)) {
-                              poStatus = "Partial";
-                          }
-                      }                    
-                      return (
-                        <tr 
-                          key={b._id} 
-                          className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover-scale table-row-enter" 
-                          onClick={() => navigate(`/booking-details/${b._id}`)}
-                          style={{ animationDelay: `${index * 0.1}s` }}
-                        >
-                          <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{b.companyName}</td>
-                          <td className="px-6 py-4">{b.clientName}</td>
-                          <td className="px-6 py-4">{dayjs(b.createdAt).format("DD MMM YYYY")}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-                              paymentStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {paymentStatus}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              poStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-                              poStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {poStatus}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr><td colSpan="5" className="text-center py-10 text-gray-500">No bookings found.</td></tr>
-                  )}
-                </tbody>
+      if (poStatuses.length > 0) {
+          if (poStatuses.every(status => status === true)) {
+              poStatus = "Completed";
+          } else if (poStatuses.some(status => status === true)) {
+              poStatus = "Partial";
+          }
+      }          
+      return (
+        <tr 
+          key={b._id} 
+          className={`bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover-scale table-row-enter ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`} 
+          onClick={() => navigate(`/booking-details/${b._id}`)}
+          style={{ animationDelay: `${index * 0.1}s` }}
+        >
+          <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{b.companyName}</td>
+          <td className="px-6 py-4">{b.clientName}</td>
+          <td className="px-6 py-4">{dayjs(b.createdAt).format("DD MMM YYYY")}</td>
+          <td className="px-6 py-4">
+            <span className={`px-2 py-1 text-xs rounded-full ${
+              paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+              paymentStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              {paymentStatus}
+            </span>
+          </td>
+          <td className="px-6 py-4">
+            <span className={`px-2 py-1 text-xs rounded-full ${
+              poStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+              poStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              {poStatus}
+            </span>
+          </td>
+        </tr>
+      );
+    })
+  ) : (
+    <tr><td colSpan="5" className="text-center py-10 text-gray-500">No bookings found.</td></tr>
+  )}
+</tbody>
               </table>
             </div>
             
@@ -1073,34 +1073,34 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {proposalLoading ? (
-                    <tr>
-                      <td colSpan="8">
-                        <LoadingSpinner />
-                      </td>
-                    </tr>
-                  ) : proposals.length > 0 ? (
-                    proposals.map((p, index) => (
-                      <tr 
-                        key={p._id} 
-                        className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover-scale table-row-enter" 
-                        onClick={() => navigate(`/proposal-details/${p._id}`)}
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                      >
-                        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.companyName}</td>
-                        <td className="px-6 py-4">{p.clientName}</td>
-                        <td className="px-6 py-4">{p.industry || "N/A"}</td>
-                        <td className="px-6 py-4">{p.clientType || "N/A"}</td>
-                        <td className="px-6 py-4">{p.bookingSource || "N/A"}</td>
-                        <td className="px-6 py-4">{dayjs(p.createdAt).format("DD MMM YYYY")}</td>
-                        <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceName).join(", ") || "N/A"}</td>
-                        <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceType).join(", ") || "N/A"}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr><td colSpan="8" className="text-center py-10 text-gray-500">No proposals found for the selected filters.</td></tr>
-                  )}
-                </tbody>
+  {proposalLoading ? (
+    <tr>
+      <td colSpan="8">
+        <LoadingSpinner />
+      </td>
+    </tr>
+  ) : proposals.length > 0 ? (
+    proposals.map((p, index) => (
+      <tr 
+        key={p._id} 
+        className={`bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover-scale table-row-enter ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`} 
+        onClick={() => navigate(`/proposal-details/${p._id}`)}
+        style={{ animationDelay: `${index * 0.1}s` }}
+      >
+        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.companyName}</td>
+        <td className="px-6 py-4">{p.clientName}</td>
+        <td className="px-6 py-4">{p.industry || "N/A"}</td>
+        <td className="px-6 py-4">{p.clientType || "N/A"}</td>
+        <td className="px-6 py-4">{p.bookingSource || "N/A"}</td>
+        <td className="px-6 py-4">{dayjs(p.createdAt).format("DD MMM YYYY")}</td>
+        <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceName).join(", ") || "N/A"}</td>
+        <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceType).join(", ") || "N/A"}</td>
+      </tr>
+    ))
+  ) : (
+    <tr><td colSpan="8" className="text-center py-10 text-gray-500">No proposals found for the selected filters.</td></tr>
+  )}
+</tbody>
               </table>
             </div>
             

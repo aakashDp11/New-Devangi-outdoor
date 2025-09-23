@@ -28,7 +28,7 @@ const Button = ({ children, loading = false, disabled = false, variant = "primar
   const baseClasses = "px-4 py-2 text-xs font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed";
   
   const variants = {
-    primary: "text-white bg-blue hover:bg-blue-700 focus:ring-blue-500 shadow-lg hover:shadow-xl",
+    primary: "text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 shadow-lg hover:shadow-xl",
     secondary: "text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-gray-500 shadow-md hover:shadow-lg",
     danger: "text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 shadow-lg hover:shadow-xl"
   };
@@ -52,7 +52,7 @@ const Button = ({ children, loading = false, disabled = false, variant = "primar
 };
 
 const Card = ({ children, className, animate = true }) => (
-  <div className={`bg-white shadow-md rounded-lg overflow-hidden transition-all duration-500 ${
+  <div className={`bg-white shadow-md rounded-lg overflow-hidden p-6 transition-all duration-500 ${
     animate ? 'hover:shadow-xl transform hover:-translate-y-1' : ''
   } ${className}`}>
     {children}
@@ -60,7 +60,7 @@ const Card = ({ children, className, animate = true }) => (
 );
 
 const CardContent = ({ children }) => (
-  <div className="p-6 animate-fade-in">{children}</div>
+  <div className="animate-fade-in">{children}</div>
 );
 
 const ShimmerCard = () => (
@@ -977,52 +977,52 @@ export default function RevenueReport({
                 </tr>
               </thead>
               <tbody>
-                {paymentLoading ? (
-                  <tr>
-                    <td colSpan="7" className="text-center py-10 text-gray-500">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                        <span>Loading payments...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : paymentData.length > 0 ? (
-                  paymentData.map((p, index) => (
-                    <tr 
-                      key={p._id || p.bookingId} 
-                      className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-md transform hover:scale-[1.01]" 
-                      onClick={() => handleRowClick(p)}
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.bookingName}</td>
-                      <td className="px-6 py-4">{p.clientName}</td>
-                      <td className="px-6 py-4">₹{p.amount?.toLocaleString()}</td>
-                      <td className="px-6 py-4">{new Date(p.paymentDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 capitalize">{p.mode}</td>
-                      <td className="px-6 py-4">{p.referenceNumber || "N/A"}</td>
-                      <td className="px-6 py-4">
-                        {p.documentUrl ? (
-                          <a 
-                            href={p.documentUrl} 
-                            target="_blank" 
-                            className="text-blue-500 underline hover:text-blue-700 transition-colors duration-200" 
-                            rel="noreferrer" 
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            View
-                          </a>
-                        ) : "N/A"}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="text-center py-10 text-gray-500">
-                      No payments found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+  {paymentLoading ? (
+    <tr>
+      <td colSpan="7" className="text-center py-10 text-gray-500">
+        <div className="flex items-center justify-center gap-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+          <span>Loading payments...</span>
+        </div>
+      </td>
+    </tr>
+  ) : paymentData.length > 0 ? (
+    paymentData.map((p, index) => (
+      <tr 
+        key={p._id || p.bookingId} 
+        className={`bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`} 
+        onClick={() => handleRowClick(p)}
+        style={{ animationDelay: `${index * 0.1}s` }}
+      >
+        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.bookingName}</td>
+        <td className="px-6 py-4">{p.clientName}</td>
+        <td className="px-6 py-4">₹{p.amount?.toLocaleString()}</td>
+        <td className="px-6 py-4">{new Date(p.paymentDate).toLocaleDateString()}</td>
+        <td className="px-6 py-4 capitalize">{p.mode}</td>
+        <td className="px-6 py-4">{p.referenceNumber || "N/A"}</td>
+        <td className="px-6 py-4">
+          {p.documentUrl ? (
+            <a 
+              href={p.documentUrl} 
+              target="_blank" 
+              className="text-blue-500 underline hover:text-blue-700 transition-colors duration-200" 
+              rel="noreferrer" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              View
+            </a>
+          ) : "N/A"}
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="7" className="text-center py-10 text-gray-500">
+        No payments found.
+      </td>
+    </tr>
+  )}
+</tbody>
             </table>
           </div>
           <EnhancedPaginationControls 
@@ -1297,44 +1297,44 @@ export default function RevenueReport({
                 </tr>
               </thead>
               <tbody>
-                {tradeMarginTableLoading ? (
-                  <tr>
-                    <td colSpan="6" className="text-center py-10 text-gray-500">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                        <span>Loading trade margins...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : tradeMarginTableError ? (
-                  <tr>
-                    <td colSpan="6" className="text-center py-10 text-red-500">
-                      {tradeMarginTableError}
-                    </td>
-                  </tr>
-                ) : tradeMarginData.length > 0 ? (
-                  tradeMarginData.map((item, index) => (
-                    <tr 
-                      key={item.id || index} 
-                      className="bg-white border-b hover:bg-gray-50 transition-all duration-200 hover:shadow-md transform hover:scale-[1.01]"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <td className="px-6 py-4">{item.inventory || "N/A"}</td>
-                      <td className="px-6 py-4">{item.inventoryType || "N/A"}</td>
-                      <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{item.booking || "N/A"}</td>
-                      <td className="px-6 py-4">{item.invoiceNo || "N/A"}</td>
-                      <td className="px-6 py-4 font-medium">₹{item.tradeMargin?.toLocaleString() || "0"}</td>
-                      <td className="px-6 py-4">{dayjs(item.date).format("DD MMM YYYY")}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="text-center py-10 text-gray-500">
-                      No trade margin data found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+  {tradeMarginTableLoading ? (
+    <tr>
+      <td colSpan="6" className="text-center py-10 text-gray-500">
+        <div className="flex items-center justify-center gap-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+          <span>Loading trade margins...</span>
+        </div>
+      </td>
+    </tr>
+  ) : tradeMarginTableError ? (
+    <tr>
+      <td colSpan="6" className="text-center py-10 text-red-500">
+        {tradeMarginTableError}
+      </td>
+    </tr>
+  ) : tradeMarginData.length > 0 ? (
+    tradeMarginData.map((item, index) => (
+      <tr 
+        key={item.id || index} 
+        className={`bg-white border-b hover:bg-gray-50 transition-all duration-200 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+        style={{ animationDelay: `${index * 0.1}s` }}
+      >
+        <td className="px-6 py-4">{item.inventory || "N/A"}</td>
+        <td className="px-6 py-4">{item.inventoryType || "N/A"}</td>
+        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{item.booking || "N/A"}</td>
+        <td className="px-6 py-4">{item.invoiceNo || "N/A"}</td>
+        <td className="px-6 py-4 font-medium">₹{item.tradeMargin?.toLocaleString() || "0"}</td>
+        <td className="px-6 py-4">{dayjs(item.date).format("DD MMM YYYY")}</td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="6" className="text-center py-10 text-gray-500">
+        No trade margin data found.
+      </td>
+    </tr>
+  )}
+</tbody>
             </table>
           </div>
           <EnhancedPaginationControls 

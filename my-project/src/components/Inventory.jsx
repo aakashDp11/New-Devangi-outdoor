@@ -28,8 +28,8 @@ const Card = ({ children, className = '', ...props }) => (
       bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
       ${className}
   `} {...props}>
-    <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-20 animate-bg-gradient-flow-diagonal z-0"></div>
-    <div className="relative z-10 h-full flex flex-col">
+    <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-10 animate-bg-gradient-flow-diagonal z-0"></div>
+    <div className="relative z-10 h-full flex flex-col p-6 md:p-8">
       {children}
     </div>
   </div>
@@ -37,7 +37,7 @@ const Card = ({ children, className = '', ...props }) => (
 
 // New CardContent
 const CardContent = ({ children, className = '' }) => (
-  <div className={`p-4 md:p-6 flex-grow flex flex-col ${className}`}>{children}</div>
+  <div className={`flex-grow flex flex-col ${className}`}>{children}</div>
 );
 
 // --- VALIDATION HELPERS ---
@@ -86,7 +86,14 @@ const Tooltip = ({ content, children }) => {
 // --- UI HELPER COMPONENTS ---
 const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-black text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`
+      px-4 py-2 rounded-xl bg-black text-white text-xs font-medium 
+      transition-all duration-200 transform 
+      hover:scale-105 hover:opacity-90 active:scale-95 
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none 
+      shadow-md hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:ring-black
+      ${className}
+    `}
     disabled={disabled || loading}
     {...props}
   >
@@ -282,6 +289,31 @@ const Modal = ({ children, onClose }) => {
   );
 };
 
+// Custom Select Component
+const CustomSelect = ({ value, onChange, options, placeholder, className = '' }) => {
+  return (
+    <div className={`relative w-full md:w-auto ${className}`}>
+      <select
+        className="px-3 py-2 rounded-xl w-full bg-white text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[black] transition-all duration-200 shadow-sm hover:shadow-md appearance-none pr-8"
+        value={value}
+        onChange={onChange}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+        </svg>
+      </div>
+    </div>
+  );
+};
+
 // --- VIEW COMPONENTS ---
 const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => {
   const [tagInputErrors, setTagInputErrors] = useState({});
@@ -411,7 +443,11 @@ const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, se
             {data.map((item, index) => (
               <tr
                 key={item._id}
-                className="bg-white hover:bg-gray-50 transition-all duration-200 animate-slideIn border-b border-gray-200"
+                className={`
+                  transition-all duration-200 animate-slideIn border-b border-gray-200
+                  ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} 
+                  hover:bg-gray-100 hover:shadow-md
+                `}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <td className="px-6 py-4 text-[var(--color-muted)] cursor-pointer transition-all duration-200 hover:text-black"
@@ -571,6 +607,34 @@ export default function InventoryDashboard() {
   const [searchError, setSearchError] = useState('');
   const [fileError, setFileError] = useState('');
 
+  // Availability options for the dropdown
+  const availabilityOptions = [
+    { value: 'Available', label: 'Available' },
+    { value: 'Completely booked', label: 'Completely Booked' },
+    { value: 'Booked', label: 'Booked' },
+    { value: 'Partially available', label: 'Partially Available' },
+    { value: 'Partialy available', label: 'Partially Available (Alt)' },
+    { value: 'Overlapping booking', label: 'Overlapping Booking' }
+  ];
+
+  // Space type options for the dropdown
+  const spaceTypeOptions = [
+    { value: 'Billboard', label: 'Billboard' },
+    { value: 'DOOH', label: 'DOOH' },
+    { value: 'Pole Kiosk', label: 'Pole Kiosk' },
+    { value: 'Gantry', label: 'Gantry' },
+    { value: 'BQS', label: 'BQS' },
+    { value: 'Transit', label: 'Transit' },
+    { value: 'Miscellaneous', label: 'Miscellaneous' }
+  ];
+
+  // Ownership type options for the dropdown
+  const ownershipTypeOptions = [
+    { value: 'Owned', label: 'Owned' },
+    { value: 'Leased', label: 'Leased' },
+    { value: 'Traded', label: 'Traded' }
+  ];
+
   // Notification system
   const addNotification = (message, type = 'success') => {
     const id = Date.now();
@@ -602,11 +666,11 @@ export default function InventoryDashboard() {
       const params = new URLSearchParams({
         page: currentPage,
         limit,
-        search,
-        region: selectedRegion,
-        availability,
-        spaceType,
-        ownershipType,
+        ...(search && { search }),
+        ...(selectedRegion && { region: selectedRegion }),
+        ...(availability && { availability }),
+        ...(spaceType && { spaceType }),
+        ...(ownershipType && { ownershipType }),
         ...(startDate && endDate && { startDate, endDate }),
       });
 
@@ -621,9 +685,10 @@ export default function InventoryDashboard() {
       }
 
       const data = await res.json();
-      setSpaces(data.spaces);
-      setTotalCount(data.totalCount);
+      setSpaces(data.spaces || []);
+      setTotalCount(data.totalCount || 0);
     } catch (error) {
+      console.error('Fetch spaces error:', error);
       addNotification("Failed to fetch inventories", 'error');
     } finally {
       setLoading(false);
@@ -636,11 +701,11 @@ export default function InventoryDashboard() {
     try {
       const token = localStorage.getItem('accessToken');
       const params = new URLSearchParams({
-        search,
-        region: selectedRegion,
-        availability,
-        spaceType,
-        ownershipType,
+        ...(search && { search }),
+        ...(selectedRegion && { region: selectedRegion }),
+        ...(availability && { availability }),
+        ...(spaceType && { spaceType }),
+        ...(ownershipType && { ownershipType }),
         ...(startDate && endDate && { startDate, endDate }),
       });
 
@@ -655,9 +720,10 @@ export default function InventoryDashboard() {
       }
 
       const data = await res.json();
-      setMapSpaces(data);
-      setTotalCount(data.length);
+      setMapSpaces(data || []);
+      setTotalCount(data.length || 0);
     } catch (error) {
+      console.error('Fetch map locations error:', error);
       addNotification("Failed to fetch map locations", 'error');
     } finally {
       setLoading(false);
@@ -670,7 +736,7 @@ export default function InventoryDashboard() {
     } else {
       fetchSpaces();
     }
-  }, [viewMode, fetchSpaces, fetchMapLocations, startDate, endDate, currentPage, search, selectedRegion, availability, spaceType, ownershipType]);
+  }, [viewMode, fetchSpaces, fetchMapLocations]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -723,11 +789,16 @@ export default function InventoryDashboard() {
 
       if (res.ok) {
         addNotification(`Tag ${action === 'add' ? 'added' : 'removed'} successfully`);
-        fetchSpaces();
+        if (viewMode === 'map') {
+          fetchMapLocations();
+        } else {
+          fetchSpaces();
+        }
       } else {
         addNotification(`Failed to ${action} tag`, 'error');
       }
     } catch (err) {
+      console.error('Tag update error:', err);
       addNotification(`Error while trying to ${action} tag`, 'error');
     }
   };
@@ -762,6 +833,7 @@ export default function InventoryDashboard() {
 
       addNotification("Excel file downloaded successfully");
     } catch (error) {
+      console.error('Download excel error:', error);
       addNotification("Failed to download Excel file", 'error');
     }
   };
@@ -797,11 +869,16 @@ export default function InventoryDashboard() {
         setShowUploadModal(false);
         setSelectedFile(null);
         setFileError('');
-        fetchSpaces();
+        if (viewMode === 'map') {
+          fetchMapLocations();
+        } else {
+          fetchSpaces();
+        }
       } else {
         addNotification(result.error || 'Upload failed', 'error');
       }
     } catch (error) {
+      console.error('Upload error:', error);
       addNotification('Something went wrong while uploading', 'error');
     } finally {
       setUploadLoading(false);
@@ -827,7 +904,11 @@ export default function InventoryDashboard() {
     addNotification("Filters reset successfully");
   };
 
-  const formatDate = (date) => date ? new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0] : '';
+  const formatDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
+  };
 
   const handleApplyDateFilter = () => {
     const { startDate: start, endDate: end } = tempDateRange[0];
@@ -845,6 +926,8 @@ export default function InventoryDashboard() {
 
     if (start && end) {
       addNotification("Date filter applied successfully");
+    } else if (!start && !end) {
+      addNotification("Date filter cleared");
     }
   };
 
@@ -864,10 +947,10 @@ export default function InventoryDashboard() {
         {notifications.map((notification) => (
           <div
             key={notification.id}
-            className={`px-4 py-3 rounded-lg shadow-lg ${
+            className={`px-4 py-3 rounded-lg shadow-lg animate-slideIn ${
               notification.type === 'error'
-                ? 'bg-red-50 text-red-800'
-                : 'bg-green-50 text-green-800'
+                ? 'bg-red-50 text-red-800 border border-red-200'
+                : 'bg-green-50 text-green-800 border border-green-200'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -956,41 +1039,36 @@ export default function InventoryDashboard() {
                 onChange={(e) => { setSelectedRegion(e.target.value); setCurrentPage(1); }}
                 placeholder="City/State/Zone"
               />
-              <div className="relative w-full md:w-auto">
-                <select
-                  className="px-3 py-2 rounded-xl w-full md:w-auto bg-white text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[black] transition-all duration-200 shadow-sm hover:shadow-md appearance-none pr-8"
-                  value={spaceType}
-                  onChange={(e) => { setSpaceType(e.target.value); setCurrentPage(1); }}
-                >
-                  <option value="">All Space Types</option>
-                  <option value="Billboard">Billboard</option>
-                  <option value="DOOH">DOOH</option>
-                  <option value="Pole Kiosk">Pole Kiosk</option>
-                  <option value="Gantry">Gantry</option>
-                  <option value="BQS">BQS</option>
-                  <option value="Transit">Transit</option>
-                  <option value="Miscellaneous">Miscellaneous</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                </div>
-              </div>
-              <select
-                className="px-3 py-2 rounded-xl w-full md:w-auto bg-white text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[black] transition-all duration-200 shadow-sm hover:shadow-md"
+              
+              <CustomSelect
+                value={spaceType}
+                onChange={(e) => { setSpaceType(e.target.value); setCurrentPage(1); }}
+                options={spaceTypeOptions}
+                placeholder="All Space Types"
+              />
+
+              <CustomSelect
                 value={ownershipType}
                 onChange={(e) => { setOwnershipType(e.target.value); setCurrentPage(1); }}
-              >
-                <option value="">All Ownerships</option>
-                <option value="Owned">Owned</option>
-                <option value="Leased">Leased</option>
-                <option value="Traded">Traded</option>
-              </select>
+                options={ownershipTypeOptions}
+                placeholder="All Ownerships"
+              />
+
+              <CustomSelect
+                value={availability}
+                onChange={(e) => { setAvailability(e.target.value); setCurrentPage(1); }}
+                options={availabilityOptions}
+                placeholder="All Availabilities"
+              />
+
               <div className="relative w-full md:w-auto" ref={datePickerRef}>
                 <button
                   onClick={() => { setTempDateRange(dateRange); setShowDateModal(prev => !prev); }}
                   className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:ring-2 ring-[black] w-full text-left bg-white text-[var(--color-text)] transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
                 >
-                  {dateRange[0].startDate && dateRange[0].endDate ? `${formatDate(dateRange[0].startDate)} to ${formatDate(dateRange[0].endDate)}` : "Date Filter"}
+                  {dateRange[0].startDate && dateRange[0].endDate 
+                    ? `${formatDate(dateRange[0].startDate)} to ${formatDate(dateRange[0].endDate)}` 
+                    : "Date Filter"}
                 </button>
               </div>
             </div>

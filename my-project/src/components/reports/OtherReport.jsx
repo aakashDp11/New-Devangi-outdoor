@@ -299,31 +299,31 @@ export default function OtherReport({ bookingStats, loadingCharts }) {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {focCampaigns.map((campaign, index) => (
-                                            <tr
-                                                key={index}
-                                                onClick={() => handleRowClick(campaign.campaignId)}
-                                                className="hover:bg-gray-50 cursor-pointer transition-colors duration-150 animate-fade-in-down"
-                                                style={{ animationDelay: `${index * 0.05}s` }}
-                                            >
-                                                <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                                                    {campaign.campaignName || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                                                    {campaign.companyName || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                                                    {campaign.clientName || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                                                    {campaign.startDate || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                                                    {campaign.endDate || 'N/A'}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
+  {focCampaigns.map((campaign, index) => (
+    <tr
+      key={index}
+      onClick={() => handleRowClick(campaign.campaignId)}
+      className={`hover:bg-gray-50 cursor-pointer transition-colors duration-150 animate-fade-in-down ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+      style={{ animationDelay: `${index * 0.05}s` }}
+    >
+      <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+        {campaign.campaignName || 'N/A'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+        {campaign.companyName || 'N/A'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+        {campaign.clientName || 'N/A'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+        {campaign.startDate || 'N/A'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+        {campaign.endDate || 'N/A'}
+      </td>
+    </tr>
+  ))}
+</tbody>
                                 </table>
                             ) : (
                                 <div className="flex items-center justify-center py-10 animate-fade-in">
@@ -349,34 +349,34 @@ export default function OtherReport({ bookingStats, loadingCharts }) {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {allInvoices.map((invoice, index) => (
-                                            <tr
-                                                key={index}
-                                                className="hover:bg-gray-50 transition-colors duration-150 animate-fade-in-down"
-                                                style={{ animationDelay: `${index * 0.05}s` }}
-                                            >
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                    {invoice.documentName || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {invoice.campaignName || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {invoice.clientName || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {invoice.fileUrl && (
-                                                        <Button
-                                                            onClick={() => handleDownload(invoice.fileUrl, invoice.documentName || 'invoice')}
-                                                            variant="secondary"
-                                                        >
-                                                            Download
-                                                        </Button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
+  {allInvoices.map((invoice, index) => (
+    <tr
+      key={index}
+      className={`hover:bg-gray-50 cursor-pointer transition-colors duration-150 animate-fade-in-down ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+      style={{ animationDelay: `${index * 0.05}s` }}
+    >
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+        {invoice.documentName || 'N/A'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {invoice.campaignName || 'N/A'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {invoice.clientName || 'N/A'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {invoice.fileUrl && (
+          <Button
+            onClick={() => handleDownload(invoice.fileUrl, invoice.documentName || 'invoice')}
+            variant="secondary"
+          >
+            Download
+          </Button>
+        )}
+      </td>
+    </tr>
+  ))}
+</tbody>
                                 </table>
                             ) : (
                                 <div className="flex items-center justify-center py-10 animate-fade-in">

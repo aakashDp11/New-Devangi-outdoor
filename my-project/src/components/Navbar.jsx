@@ -19,6 +19,7 @@ import {
   FaSignOutAlt,
   FaExclamationCircle,
   FaBell,
+  FaFileInvoice, // Import the new icon
 } from "react-icons/fa";
 
 export default function Navbar() {
@@ -37,6 +38,11 @@ export default function Navbar() {
     { label: "Reports", path: "/reports", icon: <FaChartBar /> },
     { label: "Finances", path: "/finances", icon: <FaRupeeSign /> },
     { label: "Gallery", path: "/gallery", icon: <FaImages /> },
+    {
+      label: "Support Tickets",
+      path: "/tickets",
+      icon: <FaFileInvoice />,
+    },
     {
       label: "Notifications",
       path: "/notifications",

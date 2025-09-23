@@ -17,6 +17,9 @@ import {
 // --- REUSABLE COMPONENTS WITH BORDERLESS DESIGN ---
 
 // Card component with a flowing gradient animation on the background
+// --- REUSABLE COMPONENTS WITH BORDERLESS DESIGN ---
+
+// Card component with a flowing gradient animation on the background
 const Card = ({ children, className = '', ...props }) => (
   <div
     className={`
@@ -25,14 +28,16 @@ const Card = ({ children, className = '', ...props }) => (
     `}
     {...props}
   >
-    <div className='absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-20 animate-bg-gradient-flow-diagonal z-0'></div>
-    <div className='relative z-10 h-full flex flex-col'>{children}</div>
+    <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-10 animate-bg-gradient-flow-diagonal z-0"></div>
+    <div className="relative z-10 h-full flex flex-col p-6 md:p-8">
+      {children}
+    </div>
   </div>
 );
 
 // CardContent component for consistent padding and layout
 const CardContent = ({ children, className = '' }) => (
-  <div className={`p-4 md:p-6 flex-grow flex flex-col ${className}`}>
+  <div className={`flex-grow flex flex-col ${className}`}>
     {children}
   </div>
 );
@@ -40,7 +45,14 @@ const CardContent = ({ children, className = '' }) => (
 // Button component with consistent styling and loading state
 const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
   <button
-    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    className={`
+      px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium 
+      transition-all duration-200 transform 
+      hover:scale-105 hover:opacity-90 active:scale-95 
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none 
+      shadow-md hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:ring-black
+      ${className}
+    `}
     disabled={disabled || loading}
     {...props}
   >
@@ -56,12 +68,18 @@ const Button = ({ children, className = '', disabled = false, loading = false, .
 );
 
 // Input component with a more polished look and error handling
+// Input component with a more polished look and error handling
 const Input = ({ className = '', error = null, ...props }) => (
   <div className='relative'>
     <input
-      className={`border ${
-        error ? 'border-red-300' : 'border-gray-200'
-      } px-4 py-2 rounded-xl w-full bg-white text-[var(--color-text)] focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:shadow-md ${className}`}
+      className={`
+        border border-gray-200 
+        ${error ? 'ring-red-300' : 'focus:ring-[black]'} 
+        px-4 py-2 rounded-xl w-full bg-white text-[var(--color-text)] 
+        focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm 
+        hover:shadow-md hover:ring-2 hover:ring-gray-200
+        ${className}
+      `}
       {...props}
     />
     {error && (
@@ -560,55 +578,60 @@ export default function BookingsDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {error ? (
-                    <tr>
-                      <td colSpan='7' className='text-center py-8 text-red-500'>
-                        Error: {error}
-                      </td>
-                    </tr>
-                  ) : sortedData.length === 0 && !loading ? (
-                    <tr>
-                      <td colSpan='7' className='text-center py-8 text-[var(--color-muted)]'>
-                        No bookings found matching your criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    sortedData.map((item, index) => {
-                      const upcomingStart = getUpcomingCampaignDate(item.campaigns, 'startDate');
-                      const upcomingEnd = getUpcomingCampaignDate(item.campaigns, 'endDate');
-                      return (
-                        <tr
-                          key={item._id}
-                          className='bg-white border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-all duration-200 ease-in-out transform hover:scale-[1.005] animate-slideIn'
-                          style={{ animationDelay: `${index * 50}ms` }}
-                          onClick={() => navigate(`/booking/${item._id}`)}
-                        >
-                          <td className='px-6 py-4 text-[var(--color-muted)]'>
-                            {(currentPage - 1) * limit + index + 1}
-                          </td>
-                          <td className='px-6 py-4 font-mono text-[var(--color-muted)]'>
-                            {item._id?.substring(0, 6).toUpperCase() || 'N/A'}
-                          </td>
-                          <td className='px-6 py-4 font-medium text-[var(--color-text)] whitespace-nowrap'>
-                            {item.companyName || 'No Company'}
-                          </td>
-                          <td className='px-6 py-4 text-[var(--color-text)]'>
-                            {item.clientName || 'No Client'}
-                          </td>
-                          <td className='px-6 py-4 text-[var(--color-text)]'>
-                            {formatDate(item.createdAt)}
-                          </td>
-                          <td className='px-6 py-4 text-[var(--color-text)]'>
-                            {formatDate(upcomingStart)}
-                          </td>
-                          <td className='px-6 py-4 text-[var(--color-text)]'>
-                            {formatDate(upcomingEnd)}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
+  {error ? (
+    <tr>
+      <td colSpan='7' className='text-center py-8 text-red-500'>
+        Error: {error}
+      </td>
+    </tr>
+  ) : sortedData.length === 0 && !loading ? (
+    <tr>
+      <td colSpan='7' className='text-center py-8 text-[var(--color-muted)]'>
+        No bookings found matching your criteria.
+      </td>
+    </tr>
+  ) : (
+    sortedData.map((item, index) => {
+      const upcomingStart = getUpcomingCampaignDate(item.campaigns, 'startDate');
+      const upcomingEnd = getUpcomingCampaignDate(item.campaigns, 'endDate');
+      return (
+        <tr
+          key={item._id}
+          className={`
+            border-b border-gray-200 hover:bg-gray-100 cursor-pointer 
+            transition-all duration-200 ease-in-out transform hover:scale-[1.005] 
+            animate-slideIn
+            ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+          `}
+          style={{ animationDelay: `${index * 50}ms` }}
+          onClick={() => navigate(`/booking/${item._id}`)}
+        >
+          <td className='px-6 py-4 text-[var(--color-muted)]'>
+            {(currentPage - 1) * limit + index + 1}
+          </td>
+          <td className='px-6 py-4 font-mono text-[var(--color-muted)]'>
+            {item._id?.substring(0, 6).toUpperCase() || 'N/A'}
+          </td>
+          <td className='px-6 py-4 font-medium text-[var(--color-text)] whitespace-nowrap'>
+            {item.companyName || 'No Company'}
+          </td>
+          <td className='px-6 py-4 text-[var(--color-text)]'>
+            {item.clientName || 'No Client'}
+          </td>
+          <td className='px-6 py-4 text-[var(--color-text)]'>
+            {formatDate(item.createdAt)}
+          </td>
+          <td className='px-6 py-4 text-[var(--color-text)]'>
+            {formatDate(upcomingStart)}
+          </td>
+          <td className='px-6 py-4 text-[var(--color-text)]'>
+            {formatDate(upcomingEnd)}
+          </td>
+        </tr>
+      );
+    })
+  )}
+</tbody>
               </table>
             </div>
           </Card>

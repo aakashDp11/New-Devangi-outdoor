@@ -70,13 +70,13 @@ const Button = ({ children, loading, disabled, variant = 'primary', ...props }) 
 };
 
 const Card = ({ children, className }) => (
-  <div className={`bg-white shadow-md rounded-lg overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg transform hover:-translate-y-1 ${className}`}>
+  <div className={`bg-white shadow-md rounded-lg overflow-hidden p-6 transition-all duration-300 ease-in-out hover:shadow-lg transform hover:-translate-y-1 ${className}`}>
     {children}
   </div>
 );
 
 const CardContent = ({ children }) => (
-  <div className="p-6 animate-fade-in">
+  <div className="animate-fade-in">
     {children}
   </div>
 );
@@ -608,31 +608,31 @@ export default function InventoryReport({ handleShowDateModal = () => {} }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {inventoryLoading ? (
-                    <tr>
-                      <td colSpan="6">
-                        <LoadingSpinner />
-                      </td>
-                    </tr>
-                  ) : inventories.length > 0 ? (
-                    inventories.map((inv, index) => (
-                      <tr 
-                        key={inv.id} 
-                        className="bg-white border-b hover:bg-gray-50 transition-all duration-200 hover-scale table-row-enter"
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                      >
-                        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{inv.name}</td>
-                        <td className="px-6 py-4">{inv.type}</td>
-                        <td className="px-6 py-4">{inv.agency || "N/A"}</td>
-                        <td className="px-6 py-4">{inv.industry || "N/A"}</td>
-                        <td className="px-6 py-4">{inv.bookings?.toLocaleString() || 0}</td>
-                        <td className="px-6 py-4">₹{inv.revenue?.toLocaleString() || 0}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr><td colSpan="6" className="text-center py-10 text-gray-500">No inventories found.</td></tr>
-                  )}
-                </tbody>
+  {inventoryLoading ? (
+    <tr>
+      <td colSpan="6">
+        <LoadingSpinner />
+      </td>
+    </tr>
+  ) : inventories.length > 0 ? (
+    inventories.map((inv, index) => (
+      <tr 
+        key={inv.id} 
+        className={`bg-white border-b hover:bg-gray-50 transition-all duration-200 hover-scale table-row-enter ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+        style={{ animationDelay: `${index * 0.1}s` }}
+      >
+        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{inv.name}</td>
+        <td className="px-6 py-4">{inv.type}</td>
+        <td className="px-6 py-4">{inv.agency || "N/A"}</td>
+        <td className="px-6 py-4">{inv.industry || "N/A"}</td>
+        <td className="px-6 py-4">{inv.bookings?.toLocaleString() || 0}</td>
+        <td className="px-6 py-4">₹{inv.revenue?.toLocaleString() || 0}</td>
+      </tr>
+    ))
+  ) : (
+    <tr><td colSpan="6" className="text-center py-10 text-gray-500">No inventories found.</td></tr>
+  )}
+</tbody>
               </table>
             </div>
             
