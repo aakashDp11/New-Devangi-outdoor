@@ -362,10 +362,287 @@ router.post('/:campaignId/clone/:bookingId', authenticate, async (req, res) => {
 
 
 
-
-
-
-
+// router.post('/add-statuses', async (req, res) => {
+ 
+  
+//     try {
+//       const { printingStatus, mountingStatus, campaignId, spaceId } = req.body;
+//   console.log("Printing status",printingStatus);
+//   console.log("Mounting status",mountingStatus);
+//   console.log("Mounting status",campaignId);
+//   console.log("Mounting status",spaceId);
+//       // Find the corresponding CampaignInventoryMapping document
+//       const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+//         campaignId,
+//         spaceId
+//       });
+  
+//       if (!campaignInventoryMapping) {
+//         return res.status(404).json({ error: 'Campaign and space not found.' });
+//       }
+//       console.log("Mounting status",campaignInventoryMapping);
+//       // Add the new printingStatus to the printingStatus array
+//       campaignInventoryMapping.printingStatus.push(printingStatus);
+  
+//       // Add the new mountingStatus to the mountingStatus array
+//       campaignInventoryMapping.mountingStatus.push(mountingStatus);
+  
+//       // Save the updated CampaignInventoryMapping document
+//       await campaignInventoryMapping.save();
+//   console.log("Final doc",campaignInventoryMapping)
+//       return res.status(201).json({
+//         message: 'PrintingStatus and MountingStatus added successfully',
+//         printingStatus,
+//         mountingStatus,
+//       });
+//     } catch (err) {
+//       console.error('Error adding statuses:', err);
+//       return res.status(500).json({ error: 'Server error' });
+//     }
+//   });
+  
+// router.post('/add-statuses', async (req, res) => {
+//     try {
+//       const { printingStatus, mountingStatus, campaignId, spaceId } = req.body;
+  
+//       console.log("Printing status", printingStatus);  // Debugging
+//       console.log("Mounting status", mountingStatus);  // Debugging
+//       console.log("CampaignId", campaignId);  // Debugging
+//       console.log("SpaceId", spaceId);  // Debugging
+  
+//       // Find the corresponding CampaignInventoryMapping document
+//       const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+//         campaignId,
+//         spaceId
+//       });
+  
+//       if (!campaignInventoryMapping) {
+//         return res.status(404).json({ error: 'Campaign and space not found.' });
+//       }
+  
+//       console.log("CampaignInventoryMapping found:", campaignInventoryMapping);  // Debugging
+  
+//       // Add the new printingStatus to the printingStatus array (embedded in the CampaignInventoryMapping)
+//       campaignInventoryMapping.printingStatus.push(printingStatus);
+  
+//       // Add the new mountingStatus to the mountingStatus array (embedded in the CampaignInventoryMapping)
+//       campaignInventoryMapping.mountingStatus.push(mountingStatus);
+  
+//       // Save the updated CampaignInventoryMapping document
+//       await campaignInventoryMapping.save();
+  
+//       console.log("Final CampaignInventoryMapping:", campaignInventoryMapping);  // Debugging
+  
+//       return res.status(201).json({
+//         message: 'PrintingStatus and MountingStatus added successfully',
+//         printingStatus,
+//         mountingStatus,
+//       });
+//     } catch (err) {
+//       console.error('Error adding statuses:', err);
+//       return res.status(500).json({ error: 'Server error' });
+//     }
+//   });
+  
+router.post('/add-statuses', async (req, res) => {
+    try {
+      const { printingStatus, mountingStatus, campaignId, spaceId } = req.body;
+  
+      // Logging the received data to debug
+      console.log("Printing status received:", printingStatus);
+      console.log("Mounting status received:", mountingStatus);
+      console.log("CampaignId:", campaignId);
+      console.log("SpaceId:", spaceId);
+     
+      // Find the corresponding CampaignInventoryMapping document
+      const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+        campaignId,
+        spaceId
+      });
+  
+      if (!campaignInventoryMapping) {
+        return res.status(404).json({ error: 'Campaign and space not found.' });
+      }
+  
+      console.log("CampaignInventoryMapping found (before update):", campaignInventoryMapping);
+  
+      const newUnitId = printingStatus.unitId; // Assuming both have the same unitId
+  
+      // Ensure the new unitId exists in the campaignInventoryMapping's unitIds array
+      if (!campaignInventoryMapping.unitIds.includes(newUnitId)) {
+        campaignInventoryMapping.unitIds.push(newUnitId);
+        // Sort to maintain consistency if desired
+        campaignInventoryMapping.unitIds.sort((a, b) => a - b);
+      }
+  
+      // Find and update existing status or add new ones
+      let existingPrintingStatus = campaignInventoryMapping.printingStatus.find(ps => ps.unitId === newUnitId);
+      if (existingPrintingStatus) {
+        // Update fields for the existing status
+        Object.assign(existingPrintingStatus, printingStatus);
+      } else {
+        // Add the new printingStatus if it doesn't exist for this unitId
+        campaignInventoryMapping.printingStatus.push(printingStatus);
+      }
+  
+      let existingMountingStatus = campaignInventoryMapping.mountingStatus.find(ms => ms.unitId === newUnitId);
+      if (existingMountingStatus) {
+        // Update fields for the existing status
+        Object.assign(existingMountingStatus, mountingStatus);
+      } else {
+        // Add the new mountingStatus if it doesn't exist for this unitId
+        campaignInventoryMapping.mountingStatus.push(mountingStatus);
+      }
+  
+      // Handle the linking between PrintingStatus and MountingStatus if they are new or updated
+      // If you're creating new ones, you might need to establish the link here
+      // This part depends on whether you want to link them immediately upon creation
+      // For now, let's assume they are handled by their respective objects if present.
+      // The `pre('validate')` hook already attempts to preserve existing links.
+  
+      // Save the updated CampaignInventoryMapping document
+      await campaignInventoryMapping.save();
+  
+      console.log("Final CampaignInventoryMapping (after update):", campaignInventoryMapping);
+  
+      return res.status(201).json({
+        message: 'PrintingStatus and MountingStatus added/updated successfully',
+        updatedCampaignInventoryMapping: campaignInventoryMapping, // Return the full updated document
+      });
+    } catch (err) {
+      console.error('Error adding statuses:', err);
+      return res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+  
+router.put('/update-printing-status', async (req, res) => {
+    try {
+      const { campaignId, spaceId, unitId, updatedPrintingStatus } = req.body;
+  
+      // Basic validation for required fields
+      if (!campaignId || !spaceId || !unitId || !updatedPrintingStatus) {
+        return res.status(400).json({ error: 'Missing required fields: campaignId, spaceId, unitId, and updatedPrintingStatus.' });
+      }
+  
+      // Log received data for debugging
+      console.log("Updating Printing Status:");
+      console.log("  CampaignId:", campaignId);
+      console.log("  SpaceId:", spaceId);
+      console.log("  UnitId:", unitId);
+      console.log("  Updated Printing Status Data:", updatedPrintingStatus);
+  
+      // Find the CampaignInventoryMapping document
+      const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+        campaignId,
+        spaceId
+      });
+  
+      if (!campaignInventoryMapping) {
+        return res.status(404).json({ error: 'Campaign Inventory Mapping not found for the given campaignId and spaceId.' });
+      }
+  
+      console.log("Found Campaign Inventory Mapping (before update):", campaignInventoryMapping);
+  
+      // Find the specific printingStatus subdocument to update based on unitId
+      const printingStatusIndex = campaignInventoryMapping.printingStatus.findIndex(
+        ps => ps.unitId === unitId
+      );
+  
+      if (printingStatusIndex === -1) {
+        return res.status(404).json({ error: `Printing status for unitId ${unitId} not found.` });
+      }
+  
+      // Ensure the unitId in the updatedPrintingStatus matches the target unitId
+      if (updatedPrintingStatus.unitId && updatedPrintingStatus.unitId !== unitId) {
+        return res.status(400).json({ error: `Mismatch: unitId in updatedPrintingStatus (${updatedPrintingStatus.unitId}) does not match the target unitId (${unitId}).` });
+      }
+  
+      // Perform the update using Object.assign to merge properties
+      // This is crucial for subdocuments to retain their _id and Mongoose tracking
+      Object.assign(campaignInventoryMapping.printingStatus[printingStatusIndex], updatedPrintingStatus);
+  
+      // Mark the array as modified if direct assignment to an element within it
+      // doesn't trigger change tracking automatically (Mongoose sometimes needs this for arrays of subdocuments).
+      // However, Object.assign on an array element usually works.
+      // If issues arise, uncomment: campaignInventoryMapping.markModified('printingStatus');
+  
+      // Save the updated document
+      await campaignInventoryMapping.save();
+  
+      console.log("Updated Campaign Inventory Mapping (after save):", campaignInventoryMapping);
+  
+      return res.status(200).json({
+        message: `Printing status for unitId ${unitId} updated successfully.`,
+        updatedPrintingStatus: campaignInventoryMapping.printingStatus[printingStatusIndex],
+        fullDocument: campaignInventoryMapping // Optionally return the full updated document
+      });
+  
+    } catch (err) {
+      console.error('Error updating printing status:', err);
+      return res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+router.put('/update-mounting-status', async (req, res) => {
+    try {
+      const { campaignId, spaceId, unitId, updatedMountingStatus } = req.body;
+  
+      // Basic validation for required fields
+      if (!campaignId || !spaceId || !unitId || !updatedMountingStatus) {
+        return res.status(400).json({ error: 'Missing required fields: campaignId, spaceId, unitId, and updatedMountingStatus.' });
+      }
+  
+      // Log received data for debugging
+      console.log("Updating Mounting Status:");
+      console.log("  CampaignId:", campaignId);
+      console.log("  SpaceId:", spaceId);
+      console.log("  UnitId:", unitId);
+      console.log("  Updated Mounting Status Data:", updatedMountingStatus);
+  
+      // Find the CampaignInventoryMapping document
+      const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+        campaignId,
+        spaceId
+      });
+  
+      if (!campaignInventoryMapping) {
+        return res.status(404).json({ error: 'Campaign Inventory Mapping not found for the given campaignId and spaceId.' });
+      }
+  
+      console.log("Found Campaign Inventory Mapping (before update):", campaignInventoryMapping);
+  
+      // Find the specific mountingStatus subdocument to update based on unitId
+      const mountingStatusIndex = campaignInventoryMapping.mountingStatus.findIndex(
+        ms => ms.unitId === unitId
+      );
+  
+      if (mountingStatusIndex === -1) {
+        return res.status(404).json({ error: `Mounting status for unitId ${unitId} not found.` });
+      }
+  
+      // Ensure the unitId in the updatedMountingStatus matches the target unitId
+      if (updatedMountingStatus.unitId && updatedMountingStatus.unitId !== unitId) {
+        return res.status(400).json({ error: `Mismatch: unitId in updatedMountingStatus (${updatedMountingStatus.unitId}) does not match the target unitId (${unitId}).` });
+      }
+  
+      // Perform the update using Object.assign to merge properties
+      Object.assign(campaignInventoryMapping.mountingStatus[mountingStatusIndex], updatedMountingStatus);
+  
+      // Save the updated document
+      await campaignInventoryMapping.save();
+  
+      console.log("Updated Campaign Inventory Mapping (after save):", campaignInventoryMapping);
+  
+      return res.status(200).json({
+        message: `Mounting status for unitId ${unitId} updated successfully.`,
+        updatedMountingStatus: campaignInventoryMapping.mountingStatus[mountingStatusIndex],
+        fullDocument: campaignInventoryMapping // Optionally return the full updated document
+      });
+  
+    } catch (err) {
+      console.error('Error updating mounting status:', err);
+      return res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
 
 router.get('/:id', async (req, res) => {
     try {

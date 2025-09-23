@@ -26,6 +26,8 @@ import { startAvailabilityUpdaterJob } from './cron/availabilityUpdater.js'; // 
 import revenueRoutes from './routes/revenue.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
 import reportRoutes from './routes/reports.routes.js'; 
+import invoiceRoutes from './routes/invoice.routes.js';
+import invoiceReportRoutes from './routes/invoiceReport.routes.js';
 // import { requestMetrics } from './metrics.js';
 dotenv.config();
 const app = express();
@@ -55,11 +57,7 @@ app.use(cors({
   },
   credentials: true,
 }));
-// app.options('*', cors());
-// app.options('*', (req, res) => {
-//   console.log('✅ OPTIONS reached the Lambda');
-//   res.sendStatus(200);
-// });
+
 
 
 
@@ -67,6 +65,8 @@ app.use(cors({
 let db;
 app.use(express.json()); // for parsing application/json
 // app.use(requestMetrics());
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/invoice-reports', invoiceReportRoutes);
 app.use('/api/spaces', spaceRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/pipeline', pipelineRoutes);

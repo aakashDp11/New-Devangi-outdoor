@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose, existingData }) {
+export default function PrintingStatus({ campaignId, existingData,unitId, spaceId, onConfirm, onClose }) {
   const [view, setView] = useState('form');
   const [printingDate, setPrintingDate] = useState('');
   const [note, setNote] = useState('');
@@ -13,7 +13,10 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
   const username = localStorage.getItem('userName');
   const useremail = localStorage.getItem('userEmail');
   const userId = localStorage.getItem('userId');
-
+console.log("Unit id for printing is",unitId);
+console.log("exisitng data for printing is", existingData);
+console.log("exisitng data for printing is",campaignId);
+console.log("exisitng data for printing is",spaceId);
   useEffect(() => {
     if (existingData && existingData.confirmed) {
       setView('summary');
@@ -53,7 +56,7 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
     };
 
     try {
-      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}/printingStatus`, newPrintingStatus);
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns/update-printing-status`, {updatedPrintingStatus:newPrintingStatus,unitId,campaignId,spaceId});
       await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData);
       
       toast.success('Printing status saved successfully!');

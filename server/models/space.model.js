@@ -524,8 +524,8 @@ const spaceSchema = new Schema({
 
   dates: [{ type: String }], // optional freeform date tags
 
-  printingStatus: { type: PrintingStatusSchema, default: () => ({}) },
-  mountingStatus: { type: MountingStatusSchema, default: () => ({}) }
+  // printingStatus: { type: PrintingStatusSchema, default: () => ({}) },
+  // mountingStatus: { type: MountingStatusSchema, default: () => ({}) }
 }, { timestamps: true });
 
 // --- Indexes ---

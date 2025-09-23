@@ -18,6 +18,8 @@ import campaignRoutes from './routes/campaign.routes.js'
 import notificationRoutes from './routes/notification.routes.js';
 import revenueRoutes from './routes/revenue.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
+import invoiceRoutes from './routes/invoice.routes.js';
+import invoiceReportRoutes from './routes/invoiceReport.routes.js';
 
 dotenv.config();
 const app = express();
@@ -58,7 +60,8 @@ app.use(cors({
 // });
 
 app.use(express.json());
-
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/invoice-reports', invoiceReportRoutes);
 
 app.use('/api/spaces', spaceRoutes);
 app.use('/api/bookings', bookingRoutes);

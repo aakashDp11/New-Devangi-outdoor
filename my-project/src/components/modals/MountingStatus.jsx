@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-export default function MountingStatus({ campaignId, spaceId, onConfirm, onClose, existingData }) {
+export default function MountingStatus({ campaignId, unitId,spaceId, onConfirm, onClose, existingData }) {
   const [view, setView] = useState('form');
   const [mountingDate, setMountingDate] = useState('');
   const [assignedPerson, setAssignedPerson] = useState('');
@@ -50,7 +50,8 @@ export default function MountingStatus({ campaignId, spaceId, onConfirm, onClose
     };
 
     try {
-      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}/mountingStatus`, newMountingStatus);
+      // await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}/mountingStatus`, newMountingStatus);
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns/update-mounting-status`, {updatedMountingStatus:newMountingStatus,unitId,campaignId,spaceId});
       await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData);
       
       toast.success('Mounting status saved successfully.');
