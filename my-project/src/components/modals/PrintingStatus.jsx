@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose, existingData }) {
+export default function PrintingStatus({ campaignId, existingData,unitId, spaceId, onConfirm, onClose }) {
   const [view, setView] = useState('form');
   const [printingDate, setPrintingDate] = useState('');
   const [note, setNote] = useState('');
@@ -14,56 +14,10 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
   const username = localStorage.getItem('userName');
   const useremail = localStorage.getItem('userEmail');
   const userId = localStorage.getItem('userId');
-
-  // Validation functions
-  const validateAssignedPerson = (person) => {
-    if (!person || person.trim() === '') return null; // Optional field
-    if (person.trim().length < 2) return 'Name must be at least 2 characters';
-    if (person.trim().length > 50) return 'Name must be less than 50 characters';
-    // Check for valid name (letters, spaces, hyphens, apostrophes)
-    if (!/^[A-Za-z\s\-'\.]+$/.test(person.trim())) {
-      return 'Name can only contain letters, spaces, hyphens, apostrophes, and dots';
-    }
-    return null;
-  };
-
-  const validateAssignedAgency = (agency) => {
-    if (!agency || agency.trim() === '') return null; // Optional field
-    if (agency.trim().length < 2) return 'Agency name must be at least 2 characters';
-    if (agency.trim().length > 100) return 'Agency name must be less than 100 characters';
-    // Check for valid agency name (letters, numbers, spaces, common punctuation)
-    if (!/^[A-Za-z0-9\s\-'&\.\,\(\)]+$/.test(agency.trim())) {
-      return 'Agency name contains invalid characters';
-    }
-    return null;
-  };
-
-  const validateNote = (noteText) => {
-    if (!noteText || noteText.trim() === '') return null; // Optional field
-    if (noteText.trim().length > 500) return 'Note must be less than 500 characters';
-    // Check for potentially harmful content (basic XSS prevention)
-    if (/<script|javascript:|on\w+=/i.test(noteText)) {
-      return 'Note contains invalid content';
-    }
-    return null;
-  };
-
-  const validateAllFields = () => {
-    const errors = {};
-    
-    const personError = validateAssignedPerson(assignedPerson);
-    if (personError) errors.assignedPerson = personError;
-
-    const agencyError = validateAssignedAgency(assignedAgency);
-    if (agencyError) errors.assignedAgency = agencyError;
-
-    const noteError = validateNote(note);
-    if (noteError) errors.note = noteError;
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
+console.log("Unit id for printing is",unitId);
+console.log("exisitng data for printing is", existingData);
+console.log("exisitng data for printing is",campaignId);
+console.log("exisitng data for printing is",spaceId);
   useEffect(() => {
     if (existingData && existingData.confirmed) {
       setView('summary');
@@ -125,7 +79,7 @@ export default function PrintingStatus({ campaignId, spaceId, onConfirm, onClose
     };
 
     try {
-      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/${spaceId}/printingStatus`, newPrintingStatus);
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL}/api/campaigns/update-printing-status`, {updatedPrintingStatus:newPrintingStatus,unitId,campaignId,spaceId});
       await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/pipeline/change-Log`, changeLogData);
       
       toast.success('Printing status saved successfully!');

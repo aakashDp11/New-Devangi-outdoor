@@ -26,6 +26,8 @@ import { startAvailabilityUpdaterJob } from './cron/availabilityUpdater.js'; // 
 import revenueRoutes from './routes/revenue.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
 import reportRoutes from './routes/reports.routes.js';
+import invoiceRoutes from './routes/invoice.routes.js';
+import invoiceReportRoutes from './routes/invoiceReport.routes.js';
 import ticketRoutes from './routes/ticketroutes.js'; // 🆕 Import ticket routes
 
 // import { requestMetrics } from './metrics.js';
@@ -69,6 +71,8 @@ app.use(cors({
 let db;
 app.use(express.json()); // for parsing application/json
 // app.use(requestMetrics());
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/invoice-reports', invoiceReportRoutes);
 app.use('/api/spaces', spaceRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/pipeline', pipelineRoutes);

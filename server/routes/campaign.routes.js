@@ -205,6 +205,11 @@ router.post('/check-availability', authenticate, async (req, res) => {
     }
 });
 
+
+
+
+
+
 router.post('/:campaignId/clone/:bookingId', authenticate, async (req, res) => {
     try {
         console.log("\n--- [CLONE ROUTE START] ---");
@@ -413,90 +418,575 @@ router.post('/:campaignId/clone/:bookingId', authenticate, async (req, res) => {
     }
 });
 
+
+
+
+// router.post('/add-statuses', async (req, res) => {
+ 
+  
+//     try {
+//       const { printingStatus, mountingStatus, campaignId, spaceId } = req.body;
+//   console.log("Printing status",printingStatus);
+//   console.log("Mounting status",mountingStatus);
+//   console.log("Mounting status",campaignId);
+//   console.log("Mounting status",spaceId);
+//       // Find the corresponding CampaignInventoryMapping document
+//       const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+//         campaignId,
+//         spaceId
+//       });
+  
+//       if (!campaignInventoryMapping) {
+//         return res.status(404).json({ error: 'Campaign and space not found.' });
+//       }
+//       console.log("Mounting status",campaignInventoryMapping);
+//       // Add the new printingStatus to the printingStatus array
+//       campaignInventoryMapping.printingStatus.push(printingStatus);
+  
+//       // Add the new mountingStatus to the mountingStatus array
+//       campaignInventoryMapping.mountingStatus.push(mountingStatus);
+  
+//       // Save the updated CampaignInventoryMapping document
+//       await campaignInventoryMapping.save();
+//   console.log("Final doc",campaignInventoryMapping)
+//       return res.status(201).json({
+//         message: 'PrintingStatus and MountingStatus added successfully',
+//         printingStatus,
+//         mountingStatus,
+//       });
+//     } catch (err) {
+//       console.error('Error adding statuses:', err);
+//       return res.status(500).json({ error: 'Server error' });
+//     }
+//   });
+  
+// router.post('/add-statuses', async (req, res) => {
+//     try {
+//       const { printingStatus, mountingStatus, campaignId, spaceId } = req.body;
+  
+//       console.log("Printing status", printingStatus);  // Debugging
+//       console.log("Mounting status", mountingStatus);  // Debugging
+//       console.log("CampaignId", campaignId);  // Debugging
+//       console.log("SpaceId", spaceId);  // Debugging
+  
+//       // Find the corresponding CampaignInventoryMapping document
+//       const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+//         campaignId,
+//         spaceId
+//       });
+  
+//       if (!campaignInventoryMapping) {
+//         return res.status(404).json({ error: 'Campaign and space not found.' });
+//       }
+  
+//       console.log("CampaignInventoryMapping found:", campaignInventoryMapping);  // Debugging
+  
+//       // Add the new printingStatus to the printingStatus array (embedded in the CampaignInventoryMapping)
+//       campaignInventoryMapping.printingStatus.push(printingStatus);
+  
+//       // Add the new mountingStatus to the mountingStatus array (embedded in the CampaignInventoryMapping)
+//       campaignInventoryMapping.mountingStatus.push(mountingStatus);
+  
+//       // Save the updated CampaignInventoryMapping document
+//       await campaignInventoryMapping.save();
+  
+//       console.log("Final CampaignInventoryMapping:", campaignInventoryMapping);  // Debugging
+  
+//       return res.status(201).json({
+//         message: 'PrintingStatus and MountingStatus added successfully',
+//         printingStatus,
+//         mountingStatus,
+//       });
+//     } catch (err) {
+//       console.error('Error adding statuses:', err);
+//       return res.status(500).json({ error: 'Server error' });
+//     }
+//   });
+  
+router.post('/add-statuses', async (req, res) => {
+    try {
+      const { printingStatus, mountingStatus, campaignId, spaceId } = req.body;
+  
+      // Logging the received data to debug
+      console.log("Printing status received:", printingStatus);
+      console.log("Mounting status received:", mountingStatus);
+      console.log("CampaignId:", campaignId);
+      console.log("SpaceId:", spaceId);
+     
+      // Find the corresponding CampaignInventoryMapping document
+      const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+        campaignId,
+        spaceId
+      });
+  
+      if (!campaignInventoryMapping) {
+        return res.status(404).json({ error: 'Campaign and space not found.' });
+      }
+  
+      console.log("CampaignInventoryMapping found (before update):", campaignInventoryMapping);
+  
+      const newUnitId = printingStatus.unitId; // Assuming both have the same unitId
+  
+      // Ensure the new unitId exists in the campaignInventoryMapping's unitIds array
+      if (!campaignInventoryMapping.unitIds.includes(newUnitId)) {
+        campaignInventoryMapping.unitIds.push(newUnitId);
+        // Sort to maintain consistency if desired
+        campaignInventoryMapping.unitIds.sort((a, b) => a - b);
+      }
+  
+      // Find and update existing status or add new ones
+      let existingPrintingStatus = campaignInventoryMapping.printingStatus.find(ps => ps.unitId === newUnitId);
+      if (existingPrintingStatus) {
+        // Update fields for the existing status
+        Object.assign(existingPrintingStatus, printingStatus);
+      } else {
+        // Add the new printingStatus if it doesn't exist for this unitId
+        campaignInventoryMapping.printingStatus.push(printingStatus);
+      }
+  
+      let existingMountingStatus = campaignInventoryMapping.mountingStatus.find(ms => ms.unitId === newUnitId);
+      if (existingMountingStatus) {
+        // Update fields for the existing status
+        Object.assign(existingMountingStatus, mountingStatus);
+      } else {
+        // Add the new mountingStatus if it doesn't exist for this unitId
+        campaignInventoryMapping.mountingStatus.push(mountingStatus);
+      }
+  
+      // Handle the linking between PrintingStatus and MountingStatus if they are new or updated
+      // If you're creating new ones, you might need to establish the link here
+      // This part depends on whether you want to link them immediately upon creation
+      // For now, let's assume they are handled by their respective objects if present.
+      // The `pre('validate')` hook already attempts to preserve existing links.
+  
+      // Save the updated CampaignInventoryMapping document
+      await campaignInventoryMapping.save();
+  
+      console.log("Final CampaignInventoryMapping (after update):", campaignInventoryMapping);
+  
+      return res.status(201).json({
+        message: 'PrintingStatus and MountingStatus added/updated successfully',
+        updatedCampaignInventoryMapping: campaignInventoryMapping, // Return the full updated document
+      });
+    } catch (err) {
+      console.error('Error adding statuses:', err);
+      return res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+  
+router.put('/update-printing-status', async (req, res) => {
+    try {
+      const { campaignId, spaceId, unitId, updatedPrintingStatus } = req.body;
+  
+      // Basic validation for required fields
+      if (!campaignId || !spaceId || !unitId || !updatedPrintingStatus) {
+        return res.status(400).json({ error: 'Missing required fields: campaignId, spaceId, unitId, and updatedPrintingStatus.' });
+      }
+  
+      // Log received data for debugging
+      console.log("Updating Printing Status:");
+      console.log("  CampaignId:", campaignId);
+      console.log("  SpaceId:", spaceId);
+      console.log("  UnitId:", unitId);
+      console.log("  Updated Printing Status Data:", updatedPrintingStatus);
+  
+      // Find the CampaignInventoryMapping document
+      const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+        campaignId,
+        spaceId
+      });
+  
+      if (!campaignInventoryMapping) {
+        return res.status(404).json({ error: 'Campaign Inventory Mapping not found for the given campaignId and spaceId.' });
+      }
+  
+      console.log("Found Campaign Inventory Mapping (before update):", campaignInventoryMapping);
+  
+      // Find the specific printingStatus subdocument to update based on unitId
+      const printingStatusIndex = campaignInventoryMapping.printingStatus.findIndex(
+        ps => ps.unitId === unitId
+      );
+  
+      if (printingStatusIndex === -1) {
+        return res.status(404).json({ error: `Printing status for unitId ${unitId} not found.` });
+      }
+  
+      // Ensure the unitId in the updatedPrintingStatus matches the target unitId
+      if (updatedPrintingStatus.unitId && updatedPrintingStatus.unitId !== unitId) {
+        return res.status(400).json({ error: `Mismatch: unitId in updatedPrintingStatus (${updatedPrintingStatus.unitId}) does not match the target unitId (${unitId}).` });
+      }
+  
+      // Perform the update using Object.assign to merge properties
+      // This is crucial for subdocuments to retain their _id and Mongoose tracking
+      Object.assign(campaignInventoryMapping.printingStatus[printingStatusIndex], updatedPrintingStatus);
+  
+      // Mark the array as modified if direct assignment to an element within it
+      // doesn't trigger change tracking automatically (Mongoose sometimes needs this for arrays of subdocuments).
+      // However, Object.assign on an array element usually works.
+      // If issues arise, uncomment: campaignInventoryMapping.markModified('printingStatus');
+  
+      // Save the updated document
+      await campaignInventoryMapping.save();
+  
+      console.log("Updated Campaign Inventory Mapping (after save):", campaignInventoryMapping);
+  
+      return res.status(200).json({
+        message: `Printing status for unitId ${unitId} updated successfully.`,
+        updatedPrintingStatus: campaignInventoryMapping.printingStatus[printingStatusIndex],
+        fullDocument: campaignInventoryMapping // Optionally return the full updated document
+      });
+  
+    } catch (err) {
+      console.error('Error updating printing status:', err);
+      return res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+router.put('/update-mounting-status', async (req, res) => {
+    try {
+      const { campaignId, spaceId, unitId, updatedMountingStatus } = req.body;
+  
+      // Basic validation for required fields
+      if (!campaignId || !spaceId || !unitId || !updatedMountingStatus) {
+        return res.status(400).json({ error: 'Missing required fields: campaignId, spaceId, unitId, and updatedMountingStatus.' });
+      }
+  
+      // Log received data for debugging
+      console.log("Updating Mounting Status:");
+      console.log("  CampaignId:", campaignId);
+      console.log("  SpaceId:", spaceId);
+      console.log("  UnitId:", unitId);
+      console.log("  Updated Mounting Status Data:", updatedMountingStatus);
+  
+      // Find the CampaignInventoryMapping document
+      const campaignInventoryMapping = await CampaignInventoryMapping.findOne({
+        campaignId,
+        spaceId
+      });
+  
+      if (!campaignInventoryMapping) {
+        return res.status(404).json({ error: 'Campaign Inventory Mapping not found for the given campaignId and spaceId.' });
+      }
+  
+      console.log("Found Campaign Inventory Mapping (before update):", campaignInventoryMapping);
+  
+      // Find the specific mountingStatus subdocument to update based on unitId
+      const mountingStatusIndex = campaignInventoryMapping.mountingStatus.findIndex(
+        ms => ms.unitId === unitId
+      );
+  
+      if (mountingStatusIndex === -1) {
+        return res.status(404).json({ error: `Mounting status for unitId ${unitId} not found.` });
+      }
+  
+      // Ensure the unitId in the updatedMountingStatus matches the target unitId
+      if (updatedMountingStatus.unitId && updatedMountingStatus.unitId !== unitId) {
+        return res.status(400).json({ error: `Mismatch: unitId in updatedMountingStatus (${updatedMountingStatus.unitId}) does not match the target unitId (${unitId}).` });
+      }
+  
+      // Perform the update using Object.assign to merge properties
+      Object.assign(campaignInventoryMapping.mountingStatus[mountingStatusIndex], updatedMountingStatus);
+  
+      // Save the updated document
+      await campaignInventoryMapping.save();
+  
+      console.log("Updated Campaign Inventory Mapping (after save):", campaignInventoryMapping);
+  
+      return res.status(200).json({
+        message: `Mounting status for unitId ${unitId} updated successfully.`,
+        updatedMountingStatus: campaignInventoryMapping.mountingStatus[mountingStatusIndex],
+        fullDocument: campaignInventoryMapping // Optionally return the full updated document
+      });
+  
+    } catch (err) {
+      console.error('Error updating mounting status:', err);
+      return res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+      const campaignId = req.params.id;
+      if (!mongoose.Types.ObjectId.isValid(campaignId)) {
+        return res.status(400).json({ message: 'Invalid campaign ID format' });
+      }
+  
+      // 1) Campaign header
+      const campaign = await Campaign.findById(campaignId).lean();
+      if (!campaign) {
+        return res.status(404).json({ message: 'Campaign not found' });
+      }
+  
+      // 2) Find parent booking via join table
+      const bc = await BookingCampaign.findOne({ campaignId }).lean();
+      const parentBooking = bc ? await Booking.findById(bc.bookingId).lean() : null;
+  
+      // 3) Spaces for this campaign via mappings → join to Space
+      const mappings = await CampaignInventoryMapping.find(
+        { campaignId },
+        { spaceId: 1 }
+      ).lean();
+  
+      const spaceIds = [...new Set(mappings.map(m => String(m.spaceId)))];
+      let spaces = [];
+      if (spaceIds.length) {
+        spaces = await Space.find(
+          { _id: { $in: spaceIds.map(id => new mongoose.Types.ObjectId(id)) } },
+          // select whatever you need; here we fetch full doc like before
+          {}
+        ).lean();
+      }
+  
+      // (Back-compat) “spaceNames” like your old code did from populated campaign.spaces
+      const spaceNames = spaces.map(s => s.spaceName).filter(Boolean);
+  
+      // 4) Response shaped like before (campaign + booking + spaceNames)
+      const responseData = {
+        ...campaign,
+        booking: parentBooking, // entire booking object
+        bookingName: parentBooking ? (parentBooking.companyName || parentBooking.clientName) : 'N/A',
+        spaceNames
+      };
+  
+      return res.status(200).json(responseData);
+    } catch (err) {
+      console.error('Error fetching single campaign:', err);
+      return res.status(500).json({ message: 'Server error, could not fetch the campaign.' });
+    }
+  });
+// router.get('/:id', async (req, res) => {
+//     try {
+//       const campaignId = req.params.id;
+   
+//       // Step 1: Find the parent booking and get the FULL document.
+//       const parentBooking = await Booking.findOne({ campaigns: campaignId }).lean();
+   
+//       // Step 2: Find the campaign and populate the FULL space documents.
+//       const campaign = await Campaign.findById(campaignId)
+//         .populate({
+//           path: 'spaces.id' // Get all fields from the Space model
+//         })
+//         .lean();
+   
+//       if (!campaign) {
+//         return res.status(404).json({ message: 'Campaign not found' });
+//       }
+   
+//       // Step 3: Construct a response that includes the full objects for the frontend.
+//       const responseData = {
+//         ...campaign,
+//         booking: parentBooking, // Send the entire booking object
+//         bookingName: parentBooking ? (parentBooking.companyName || parentBooking.clientName) : 'N/A',
+//         spaceNames: campaign.spaces ? campaign.spaces.map(space => space.id?.spaceName).filter(Boolean) : []
+//       };
+   
+//       res.status(200).json(responseData);
+   
+//     } catch (err) {
+//       console.error('Error fetching single campaign:', err);
+//       if (err.kind === 'ObjectId') {
+//           return res.status(400).json({ message: 'Invalid campaign ID format' });
+//       }
+//       res.status(500).json({ message: 'Server error, could not fetch the campaign.' });
+//     }
+//   });
+
+
+// ===================================================================
+// =========== START: NEW CAMPAIGN CREATION ROUTE ====================
+// ===================================================================
 /**
- * @route   DELETE /api/campaigns/:campaignId/booking/:bookingId
- * @desc    Delete a campaign and remove it from the booking
- * @access  Private
+ * @route   POST /api/campaigns
+ * @desc    Create a new campaign and immediately update space availability if it's active
+ * @access  Private (Authenticated)
  */
-router.delete('/:campaignId/booking/:bookingId', authenticate, async (req, res) => {
-  try {
-    const { campaignId, bookingId } = req.params;
+router.post('/', authenticate, async (req, res) => {
+    try {
+        const newCampaign = new Campaign(req.body);
+        await newCampaign.save(); // First, save the campaign
 
-    // Validate IDs
-    if (!mongoose.Types.ObjectId.isValid(campaignId) || !mongoose.Types.ObjectId.isValid(bookingId)) {
-      return res.status(400).json({ error: 'Invalid campaign or booking ID' });
-    }
+        // --- START: LOGIC FOR IMMEDIATE REFLECTION ---
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const startDate = new Date(newCampaign.startDate);
+        const endDate = new Date(newCampaign.endDate);
 
-    // Check if campaign exists
-    const campaign = await Campaign.findById(campaignId);
-    if (!campaign) {
-      return res.status(404).json({ error: 'Campaign not found' });
-    }
+        // Check if the newly created campaign is active as of today
+        if (startDate <= today && endDate >= today) {
+            const spaceUnitUpdates = {};
+            newCampaign.spaces.forEach(space => {
+                if (space && space.id && space.selectedUnits > 0) {
+                    const spaceId = space.id.toString();
+                    spaceUnitUpdates[spaceId] = (spaceUnitUpdates[spaceId] || 0) + space.selectedUnits;
+                }
+            });
 
-    // Get campaign inventory mappings to update space occupancy
-    const inventoryMappings = await CampaignInventoryMapping.find({ campaignId }).lean();
+            const bulkOps = Object.keys(spaceUnitUpdates).map(spaceId => ({
+                updateOne: {
+                    filter: { _id: spaceId },
+                    // INCREMENT the occupiedUnits count immediately
+                    update: { $inc: { occupiedUnits: spaceUnitUpdates[spaceId] } }
+                }
+            }));
 
-    // Update space occupancy if not FOC
-    if (!campaign.isFOC && inventoryMappings.length > 0) {
-      const bulkOps = inventoryMappings.map(mapping => ({
-        updateOne: {
-          filter: { _id: mapping.spaceId },
-          update: {
-            $inc: {
-              occupiedUnits: -(mapping.unitIds ? mapping.unitIds.length : 1),
-              numberOfBookings: -1
-            },
-            $pull: {
-              campaignDates: { campaignId: new mongoose.Types.ObjectId(campaignId) }
+            if (bulkOps.length > 0) {
+                await Space.bulkWrite(bulkOps);
+                console.log(`[IMMEDIATE UPDATE] Incremented occupiedUnits for new campaign: ${newCampaign._id}`);
             }
-          }
         }
-      }));
+        // --- END: NEW LOGIC ---
 
-      await Space.bulkWrite(bulkOps);
-    } else if (campaign.isFOC && inventoryMappings.length > 0) {
-      // For FOC campaigns, just remove campaign dates and decrement booking count
-      const bulkOps = inventoryMappings.map(mapping => ({
-        updateOne: {
-          filter: { _id: mapping.spaceId },
-          update: {
-            $inc: { numberOfBookings: -1 },
-            $pull: {
-              campaignDates: { campaignId: new mongoose.Types.ObjectId(campaignId) }
+        res.status(201).json({ message: "Campaign created successfully!", campaign: newCampaign });
+
+    } catch (error) {
+        console.error('Error creating campaign:', error);
+        res.status(500).json({ error: 'Server error while creating campaign.' });
+    }
+});
+// ===================================================================
+// ============= END: NEW CAMPAIGN CREATION ROUTE ====================
+// ===================================================================
+
+
+// ===================================================================
+// =========== START: NEW CAMPAIGN UPDATE ROUTE ======================
+// ===================================================================
+/**
+ * @route   PUT /api/campaigns/:id
+ * @desc    Update a campaign and immediately adjust space availability
+ * @access  Private (Authenticated)
+ */
+router.put('/:id', authenticate, async (req, res) => {
+    try {
+        const campaignId = req.params.id;
+
+        // 1. Get the state of the campaign BEFORE the update
+        const campaignBeforeUpdate = await Campaign.findById(campaignId);
+        if (!campaignBeforeUpdate) {
+            return res.status(404).json({ error: 'Campaign not found' });
+        }
+
+        // 2. Calculate the "before" occupied units map
+        const unitsBeforeMap = new Map();
+        campaignBeforeUpdate.spaces.forEach(s => {
+            unitsBeforeMap.set(s.id.toString(), s.selectedUnits);
+        });
+
+        // 3. Perform the update
+        const campaignAfterUpdate = await Campaign.findByIdAndUpdate(campaignId, req.body, { new: true });
+
+        // 4. Check if the campaign's active status has changed or if spaces have changed
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const startDateBefore = new Date(campaignBeforeUpdate.startDate);
+        const endDateBefore = new Date(campaignBeforeUpdate.endDate);
+        const startDateAfter = new Date(campaignAfterUpdate.startDate);
+        const endDateAfter = new Date(campaignAfterUpdate.endDate);
+
+        const wasActiveBefore = startDateBefore <= today && endDateBefore >= today;
+        const isActiveNow = startDateAfter <= today && endDateAfter >= today;
+
+        const unitsDifferenceMap = new Map();
+
+        // Calculate the "after" map
+        const unitsAfterMap = new Map();
+        campaignAfterUpdate.spaces.forEach(s => {
+            unitsAfterMap.set(s.id.toString(), s.selectedUnits);
+        });
+
+        // Combine all unique space IDs from before and after
+        const allSpaceIds = new Set([...unitsBeforeMap.keys(), ...unitsAfterMap.keys()]);
+
+        allSpaceIds.forEach(spaceId => {
+            const beforeUnits = unitsBeforeMap.get(spaceId) || 0;
+            const afterUnits = unitsAfterMap.get(spaceId) || 0;
+            
+            let difference = 0;
+            if (wasActiveBefore && !isActiveNow) { // Became inactive
+                difference = -beforeUnits;
+            } else if (!wasActiveBefore && isActiveNow) { // Became active
+                difference = afterUnits;
+            } else if (wasActiveBefore && isActiveNow) { // Remained active, units might have changed
+                difference = afterUnits - beforeUnits;
             }
-          }
+            
+            if (difference !== 0) {
+                unitsDifferenceMap.set(spaceId, difference);
+            }
+        });
+        
+        // 5. Apply the calculated differences to the database
+        const bulkOps = [];
+        for (const [spaceId, difference] of unitsDifferenceMap.entries()) {
+            bulkOps.push({
+                updateOne: {
+                    filter: { _id: spaceId },
+                    update: { $inc: { occupiedUnits: difference } }
+                }
+            });
         }
-      }));
 
-      await Space.bulkWrite(bulkOps);
+        if (bulkOps.length > 0) {
+            await Space.bulkWrite(bulkOps);
+            console.log(`[IMMEDIATE UPDATE] Adjusted occupiedUnits for updated campaign: ${campaignId}`);
+        }
+
+        res.json({ message: 'Campaign updated successfully!', campaign: campaignAfterUpdate });
+
+    } catch (error) {
+        console.error('Error updating campaign:', error);
+        res.status(500).json({ error: 'Server error while updating campaign.' });
     }
+});
+// ===================================================================
+// ============= END: NEW CAMPAIGN UPDATE ROUTE ======================
+// ===================================================================
 
-    // Delete campaign inventory mappings
-    await CampaignInventoryMapping.deleteMany({ campaignId });
 
-    // Delete booking-campaign mapping
-    await BookingCampaign.deleteOne({ campaignId, bookingId });
-
-    // Delete the pipeline if it exists
-    if (campaign.pipeline) {
-      await Pipeline.findByIdAndDelete(campaign.pipeline);
+// ===================================================================
+// =========== EXISTING LOGIC (UNCHANGED) ============================
+// ===================================================================
+/**
+ * @route   DELETE /api/campaigns/:id
+ * @desc    Delete a campaign and immediately update space availability
+ * @access  Private (Authenticated)
+ */
+router.delete('/:id', authenticate, async (req, res) => {
+    try {
+        const campaignId = req.params.id;
+        const campaignToDelete = await Campaign.findById(campaignId);
+        if (!campaignToDelete) {
+            return res.status(404).json({ error: 'Campaign not found' });
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const startDate = new Date(campaignToDelete.startDate);
+        const endDate = new Date(campaignToDelete.endDate);
+        if (startDate <= today && endDate >= today) {
+            if (campaignToDelete.spaces && campaignToDelete.spaces.length > 0) {
+                const spaceUnitUpdates = {};
+                campaignToDelete.spaces.forEach(space => {
+                    if (space && space.id && space.selectedUnits > 0) {
+                        const spaceId = space.id.toString();
+                        spaceUnitUpdates[spaceId] = (spaceUnitUpdates[spaceId] || 0) + space.selectedUnits;
+                    }
+                });
+                const bulkOps = Object.keys(spaceUnitUpdates).map(spaceId => ({
+                    updateOne: {
+                        filter: { _id: spaceId },
+                        update: { $inc: { occupiedUnits: -spaceUnitUpdates[spaceId] } }
+                    }
+                }));
+                if (bulkOps.length > 0) {
+                    await Space.bulkWrite(bulkOps);
+                    console.log(`[IMMEDIATE UPDATE] Decremented occupiedUnits for spaces from deleted campaign: ${campaignId}`);
+                }
+            }
+        }
+        await Campaign.findByIdAndDelete(campaignId);
+        res.json({ message: 'Campaign deleted successfully and space availability updated immediately.' });
+    } catch (error) {
+        console.error('Error deleting campaign:', error);
+        res.status(500).json({ error: 'Server error while deleting campaign.' });
     }
-
-    // Delete the campaign
-    await Campaign.findByIdAndDelete(campaignId);
-
-    // Remove campaign from booking if using old structure
-    await Booking.findByIdAndUpdate(
-      bookingId,
-      { $pull: { campaigns: campaignId } }
-    );
-
-    res.status(200).json({ message: 'Campaign deleted successfully' });
-
-  } catch (error) {
-    console.error('Error deleting campaign:', error);
-    res.status(500).json({ error: 'Server error while deleting campaign' });
-  }
 });
 
 export default router;
