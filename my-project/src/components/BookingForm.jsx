@@ -10,16 +10,16 @@ import { FaArrowLeft, FaCheck } from "react-icons/fa";
 
 // --- REUSABLE UI COMPONENTS (COPIED FROM ADDSPACEFORM.JSX) ---
 
-// Card component with a flowing gradient animation on the background
+// Card component with a flowing gradient animation on the background - FIXED overflow issue
 const Card = ({ children, className = "", ...props }) => (
   <div
     className={`
-      bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
+      bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative
       ${className}
     `}
     {...props}
   >
-    <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-20 animate-bg-gradient-flow-diagonal z-0"></div>
+    <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-20 animate-bg-gradient-flow-diagonal z-0 rounded-2xl"></div>
     <div className="relative z-10 h-full flex flex-col">{children}</div>
   </div>
 );
@@ -70,7 +70,7 @@ const Input = ({ className = "", label, mandatory = false, error = null, ...prop
   </div>
 );
 
-// Reusable CustomSelect component
+// Reusable CustomSelect component with fixed z-index and menu positioning
 export function CustomSelect({ mandatory = false, label, value, onChange, name, options, error, placeholder = "Select..." }) {
   const formattedValue = options.find((option) => option.value === value);
   const customStyles = {
@@ -99,6 +99,11 @@ export function CustomSelect({ mandatory = false, label, value, onChange, name, 
       ...provided,
       borderRadius: '12px',
       boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+      zIndex: 9999, // High z-index to ensure it appears above everything
+    }),
+    menuPortal: (provided) => ({
+      ...provided,
+      zIndex: 9999, // High z-index for portal
     }),
     option: (provided, state) => ({
       ...provided,
@@ -124,6 +129,8 @@ export function CustomSelect({ mandatory = false, label, value, onChange, name, 
         isSearchable
         styles={customStyles}
         placeholder={placeholder}
+        menuPortalTarget={document.body} // Render menu in document body to avoid clipping
+        menuPosition="fixed" // Use fixed positioning
       />
       {error && (
         <span className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -320,7 +327,7 @@ export default function CreateOrderBasicInfo() {
   ];
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-screen text-[var(--color-text)] flex flex-col lg:flex-row overflow-hidden`}>
+    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-screen text-[var(--color-text)] flex flex-col lg:flex-row`}>
       <Navbar />
       <main className={`flex-1 overflow-y-auto px-4 md:px-6 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="max-w-screen-xl w-full mx-auto">
