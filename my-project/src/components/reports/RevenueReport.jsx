@@ -4,6 +4,11 @@ import { saveAs } from "file-saver";
 import dayjs from "dayjs";
 import { LineChart, BarChart, PieChart } from "@mui/x-charts";
 import { CircularProgress } from "@mui/material";
+import { FaExclamationTriangle, FaCheck } from 'react-icons/fa';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
+import { DateRange } from 'react-date-range';
+import { format } from 'date-fns';
 
 // --- ENHANCED UI HELPER COMPONENTS WITH ANIMATIONS ---
 const Input = ({ error, ...props }) => (
@@ -239,9 +244,31 @@ const ITEMS_PER_PAGE = 10;
 export default function RevenueReport({
   bookingStats = [],
   loadingCharts,
-  handleShowDateModal = () => {},
   navigate,
 }) {
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [modalContext, setModalContext] = useState(null);
+
+  const handleShowDateModal = (reportType, currentFilters, onApply) => {
+    setModalContext({ reportType, currentFilters, onApply });
+    setShowDateModal(true);
+  };
+  
+  const handleApplyDateModal = (newDateRange) => {
+    if (modalContext) {
+      const startDate = newDateRange[0].startDate ? dayjs(newDateRange[0].startDate).format("YYYY-MM-DD") : "";
+      const endDate = newDateRange[0].endDate ? dayjs(newDateRange[0].endDate).format("YYYY-MM-DD") : "";
+      modalContext.onApply({ ...modalContext.currentFilters, startDate, endDate });
+    }
+    setShowDateModal(false);
+  };
+  
+  const handleCancelDateModal = () => {
+    setShowDateModal(false);
+    setModalContext(null);
+  };
+  
+
   // --- STATE & LOGIC FOR REVENUE GRAPH ---
   const [revenueView, setRevenueView] = useState("monthly");
   const [revenueChartData, setRevenueChartData] = useState({
@@ -882,6 +909,7 @@ export default function RevenueReport({
     }
   };
 
+
   return (
     <div className="space-y-10">
       {/* Add custom CSS animations */}
@@ -896,9 +924,9 @@ export default function RevenueReport({
         }
         @keyframes bounce-in {
           0% { opacity: 0; transform: scale(0.3); }
-          50% { opacity: 1; transform: scale(1.05); }
-          70% { transform: scale(0.9); }
-          100% { opacity: 1; transform: scale(1); }
+           50% { opacity: 1; transform: scale(1.05); }
+           70% { transform: scale(0.9); }
+           100% { opacity: 1; transform: scale(1); }
         }
         .animate-fade-in {
           animation: fade-in 0.6s ease-out;
@@ -927,18 +955,22 @@ export default function RevenueReport({
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-start">
-            <Input
-              placeholder="Client Name"
-              value={paymentFilters.clientName}
-              onChange={(e) => handlePaymentFilterChange('clientName', e.target.value)}
-              error={paymentErrors.clientName}
-            />
-            <Input
-              placeholder="Booking Name"
-              value={paymentFilters.bookingName}
-              onChange={(e) => handlePaymentFilterChange('bookingName', e.target.value)}
-              error={paymentErrors.bookingName}
-            />
+            <div className="relative">
+              <Input
+                placeholder="Client Name"
+                value={paymentFilters.clientName}
+                onChange={(e) => handlePaymentFilterChange('clientName', e.target.value)}
+                error={paymentErrors.clientName}
+              />
+            </div>
+            <div className="relative">
+              <Input
+                placeholder="Booking Name"
+                value={paymentFilters.bookingName}
+                onChange={(e) => handlePaymentFilterChange('bookingName', e.target.value)}
+                error={paymentErrors.bookingName}
+              />
+            </div>
             <div className="relative">
               <button
                 onClick={() => handleShowDateModal("payments", paymentFilters, (filters) => {
@@ -946,11 +978,11 @@ export default function RevenueReport({
                   const errors = validatePaymentFilters(filters);
                   setPaymentErrors(errors);
                 })}
-                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-300 transform hover:scale-[1.02]"
+                className="w-full px-4 py-2 rounded-xl hover:bg-gray-100 hover:ring-2 ring-[black] w-full text-left bg-white text-xs text-[var(--color-text)] transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
               >
                 {paymentFilters.startDate && paymentFilters.endDate 
-                  ? `${paymentFilters.startDate} to ${paymentFilters.endDate}` 
-                  : "Filter by Payment Date"
+                  ? `${format(new Date(paymentFilters.startDate), 'dd/MM/yyyy')} to ${format(new Date(paymentFilters.endDate), 'dd/MM/yyyy')}` 
+                  : "Date Filter"
                 }
               </button>
               {paymentErrors.dateRange && (
@@ -959,9 +991,12 @@ export default function RevenueReport({
                 </div>
               )}
             </div>
-            <Button onClick={resetPaymentFilters} variant="secondary">
+            <button
+              onClick={resetPaymentFilters}
+              className='px-4 py-2 rounded-xl bg-gray-700 text-white text-xs font-semibold transition-all duration-200 transform hover:scale-105 hover:bg-gray-800 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:ring-black'
+            >
               Reset Filters
-            </Button>
+            </button>
           </div>
           <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white animate-slide-up">
             <table className="w-full text-xs text-left text-gray-600">
@@ -977,52 +1012,52 @@ export default function RevenueReport({
                 </tr>
               </thead>
               <tbody>
-  {paymentLoading ? (
-    <tr>
-      <td colSpan="7" className="text-center py-10 text-gray-500">
-        <div className="flex items-center justify-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-          <span>Loading payments...</span>
-        </div>
-      </td>
-    </tr>
-  ) : paymentData.length > 0 ? (
-    paymentData.map((p, index) => (
-      <tr 
-        key={p._id || p.bookingId} 
-        className={`bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`} 
-        onClick={() => handleRowClick(p)}
-        style={{ animationDelay: `${index * 0.1}s` }}
-      >
-        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.bookingName}</td>
-        <td className="px-6 py-4">{p.clientName}</td>
-        <td className="px-6 py-4">₹{p.amount?.toLocaleString()}</td>
-        <td className="px-6 py-4">{new Date(p.paymentDate).toLocaleDateString()}</td>
-        <td className="px-6 py-4 capitalize">{p.mode}</td>
-        <td className="px-6 py-4">{p.referenceNumber || "N/A"}</td>
-        <td className="px-6 py-4">
-          {p.documentUrl ? (
-            <a 
-              href={p.documentUrl} 
-              target="_blank" 
-              className="text-blue-500 underline hover:text-blue-700 transition-colors duration-200" 
-              rel="noreferrer" 
-              onClick={(e) => e.stopPropagation()}
-            >
-              View
-            </a>
-          ) : "N/A"}
-        </td>
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan="7" className="text-center py-10 text-gray-500">
-        No payments found.
-      </td>
-    </tr>
-  )}
-</tbody>
+                {paymentLoading ? (
+                  <tr>
+                    <td colSpan="7" className="text-center py-10 text-gray-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                        <span>Loading payments...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : paymentData.length > 0 ? (
+                  paymentData.map((p, index) => (
+                    <tr 
+                      key={p._id || p.bookingId} 
+                      className={`bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`} 
+                      onClick={() => handleRowClick(p)}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.bookingName}</td>
+                      <td className="px-6 py-4">{p.clientName}</td>
+                      <td className="px-6 py-4">₹{p.amount?.toLocaleString()}</td>
+                      <td className="px-6 py-4">{new Date(p.paymentDate).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 capitalize">{p.mode}</td>
+                      <td className="px-6 py-4">{p.referenceNumber || "N/A"}</td>
+                      <td className="px-6 py-4">
+                        {p.documentUrl ? (
+                          <a 
+                            href={p.documentUrl} 
+                            target="_blank" 
+                            className="text-blue-500 underline hover:text-blue-700 transition-colors duration-200" 
+                            rel="noreferrer" 
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View
+                          </a>
+                        ) : "N/A"}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center py-10 text-gray-500">
+                      No payments found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
             </table>
           </div>
           <EnhancedPaginationControls 
@@ -1044,17 +1079,17 @@ export default function RevenueReport({
                 Agency vs Direct Revenue
               </h3>
               <div className="flex items-center gap-2">
-                <div className="relative">
+                <div className="relative w-40">
                   <button 
                     onClick={() => handleShowDateModal("agency", agencyFilters, (filters) => {
                       setagencyFilters(filters);
                       setAgencyDateError(validateDateRange(filters.startDate, filters.endDate));
                     })} 
-                    className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-300 transform hover:scale-[1.02]"
+                    className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:ring-2 ring-[black] w-full text-left bg-white text-xs text-[var(--color-text)] transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
                   >
                     {agencyFilters.startDate && agencyFilters.endDate 
                       ? `${agencyFilters.startDate} to ${agencyFilters.endDate}` 
-                      : "Filter by Date"
+                      : "Date Filter"
                     }
                   </button>
                   {agencyDateError && (
@@ -1063,7 +1098,12 @@ export default function RevenueReport({
                     </div>
                   )}
                 </div>
-                <Button onClick={resetAgencyFilters} variant="secondary">Reset</Button>
+                <button 
+                  onClick={resetAgencyFilters}
+                  className='px-4 py-2 rounded-xl bg-gray-700 text-white text-xs font-semibold transition-all duration-200 transform hover:scale-105 hover:bg-gray-800 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:ring-black'
+                >
+                  Reset Filters
+                </button>
               </div>
               <p className="font-semibold text-sm w-full sm:w-auto text-right animate-bounce-in">
                 Total Revenue: ₹{totalRevenue.toLocaleString()}
@@ -1128,17 +1168,17 @@ export default function RevenueReport({
                 Revenue by Industry
               </h3>
               <div className="flex items-center gap-2">
-                <div className="relative">
+                <div className="relative w-40">
                   <button 
                     onClick={() => handleShowDateModal("industry", industryFilters, (filters) => {
                       setIndustryFilters(filters);
                       setIndustryDateError(validateDateRange(filters.startDate, filters.endDate));
                     })} 
-                    className="px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-300 transform hover:scale-[1.02]"
+                    className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:ring-2 ring-[black] w-full text-left bg-white text-xs text-[var(--color-text)] transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
                   >
                     {industryFilters.startDate && industryFilters.endDate 
                       ? `${industryFilters.startDate} to ${industryFilters.endDate}` 
-                      : "Filter by Date"
+                      : "Date Filter"
                     }
                   </button>
                   {industryDateError && (
@@ -1147,7 +1187,12 @@ export default function RevenueReport({
                     </div>
                   )}
                 </div>
-                <Button onClick={resetIndustryFilters} variant="secondary">Reset</Button>
+                <button 
+                  onClick={resetIndustryFilters}
+                  className='px-4 py-2 rounded-xl bg-gray-700 text-white text-xs font-semibold transition-all duration-200 transform hover:scale-105 hover:bg-gray-800 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:ring-black'
+                >
+                  Reset Filters
+                </button>
               </div>
             </div>
             <div className="rounded-md border border-gray-100 shadow-sm p-3 bg-gray-50 hover:shadow-md transition-shadow duration-300 animate-bounce-in">
@@ -1230,34 +1275,40 @@ export default function RevenueReport({
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 items-start">
-            <Input 
-              name="bookingSearch" 
-              placeholder="Filter by Booking" 
-              value={tradeMarginFilters.bookingSearch} 
-              onChange={handleTradeMarginFilterChange} 
-              error={tradeMarginErrors.bookingSearch}
-            />
-            <Input 
-              name="inventorySearch" 
-              placeholder="Filter by Inventory" 
-              value={tradeMarginFilters.inventorySearch} 
-              onChange={handleTradeMarginFilterChange} 
-              error={tradeMarginErrors.inventorySearch}
-            />
-            <Select 
-              name="inventoryType" 
-              value={tradeMarginFilters.inventoryType} 
-              onChange={handleTradeMarginFilterChange}
-            >
-              <option value="">Filter by Inventory Type</option>
-              <option value="Billboard">Billboard</option>
-              <option value="DOOh">DOOH</option>
-              <option value="Gantry">Gantry</option>
-              <option value="Pole kiosk">Pole kiosk</option>
-              <option value="BQS">BQS</option>
-              <option value="DigitalBQS">DigitalBQS</option>
-              <option value="Miscellaneous">Miscellaneous</option>
-            </Select>
+            <div className="relative">
+              <Input 
+                name="bookingSearch" 
+                placeholder="Filter by Booking" 
+                value={tradeMarginFilters.bookingSearch} 
+                onChange={handleTradeMarginFilterChange} 
+                error={tradeMarginErrors.bookingSearch}
+              />
+            </div>
+            <div className="relative">
+              <Input 
+                name="inventorySearch" 
+                placeholder="Filter by Inventory" 
+                value={tradeMarginFilters.inventorySearch} 
+                onChange={handleTradeMarginFilterChange} 
+                error={tradeMarginErrors.inventorySearch}
+              />
+            </div>
+            <div className="relative">
+              <Select 
+                name="inventoryType" 
+                value={tradeMarginFilters.inventoryType} 
+                onChange={handleTradeMarginFilterChange}
+              >
+                  <option value="">Filter by Inventory Type</option>
+                  <option value="Billboard">Billboard</option>
+                  <option value="DOOh">DOOH</option>
+                  <option value="Gantry">Gantry</option>
+                  <option value="Pole kiosk">Pole kiosk</option>
+                  <option value="BQS">BQS</option>
+                  <option value="DigitalBQS">DigitalBQS</option>
+                  <option value="Miscellaneous">Miscellaneous</option>
+              </Select>
+            </div>
             <div className="relative">
               <button
                 onClick={() => {
@@ -1267,11 +1318,11 @@ export default function RevenueReport({
                     setTradeMarginErrors(errors);
                   });
                 }}
-                className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-300 transform hover:scale-[1.02]"
+                className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:ring-2 ring-[black] w-full text-left bg-white text-xs text-[var(--color-text)] transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
               >
                 {tradeMarginFilters.startDate && tradeMarginFilters.endDate 
                   ? `${dayjs(tradeMarginFilters.startDate).format("DD MMM YYYY")} to ${dayjs(tradeMarginFilters.endDate).format("DD MMM YYYY")}` 
-                  : "Filter by Date Range"
+                  : "Date Filter"
                 }
               </button>
               {tradeMarginErrors.dateRange && (
@@ -1280,9 +1331,12 @@ export default function RevenueReport({
                 </div>
               )}
             </div>
-            <Button onClick={resetTradeMarginFilters} variant="secondary">
+            <button
+              onClick={resetTradeMarginFilters}
+              className='px-4 py-2 rounded-xl bg-gray-700 text-white text-xs font-semibold transition-all duration-200 transform hover:scale-105 hover:bg-gray-800 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:ring-black'
+            >
               Reset Filters
-            </Button>
+            </button>
           </div>
           <div className="overflow-x-auto relative shadow-md sm:rounded-lg bg-white animate-slide-up">
             <table className="w-full text-xs text-left text-gray-600">
@@ -1297,44 +1351,44 @@ export default function RevenueReport({
                 </tr>
               </thead>
               <tbody>
-  {tradeMarginTableLoading ? (
-    <tr>
-      <td colSpan="6" className="text-center py-10 text-gray-500">
-        <div className="flex items-center justify-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-          <span>Loading trade margins...</span>
-        </div>
-      </td>
-    </tr>
-  ) : tradeMarginTableError ? (
-    <tr>
-      <td colSpan="6" className="text-center py-10 text-red-500">
-        {tradeMarginTableError}
-      </td>
-    </tr>
-  ) : tradeMarginData.length > 0 ? (
-    tradeMarginData.map((item, index) => (
-      <tr 
-        key={item.id || index} 
-        className={`bg-white border-b hover:bg-gray-50 transition-all duration-200 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-        style={{ animationDelay: `${index * 0.1}s` }}
-      >
-        <td className="px-6 py-4">{item.inventory || "N/A"}</td>
-        <td className="px-6 py-4">{item.inventoryType || "N/A"}</td>
-        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{item.booking || "N/A"}</td>
-        <td className="px-6 py-4">{item.invoiceNo || "N/A"}</td>
-        <td className="px-6 py-4 font-medium">₹{item.tradeMargin?.toLocaleString() || "0"}</td>
-        <td className="px-6 py-4">{dayjs(item.date).format("DD MMM YYYY")}</td>
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan="6" className="text-center py-10 text-gray-500">
-        No trade margin data found.
-      </td>
-    </tr>
-  )}
-</tbody>
+                {tradeMarginTableLoading ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-10 text-gray-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                        <span>Loading trade margins...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : tradeMarginTableError ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-10 text-red-500">
+                      {tradeMarginTableError}
+                    </td>
+                  </tr>
+                ) : tradeMarginData.length > 0 ? (
+                  tradeMarginData.map((item, index) => (
+                    <tr 
+                      key={item.id || index} 
+                      className={`bg-white border-b hover:bg-gray-50 transition-all duration-200 hover:shadow-md transform hover:scale-[1.01] ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <td className="px-6 py-4">{item.inventory || "N/A"}</td>
+                      <td className="px-6 py-4">{item.inventoryType || "N/A"}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{item.booking || "N/A"}</td>
+                      <td className="px-6 py-4">{item.invoiceNo || "N/A"}</td>
+                      <td className="px-6 py-4 font-medium">₹{item.tradeMargin?.toLocaleString() || "0"}</td>
+                      <td className="px-6 py-4">{dayjs(item.date).format("DD MMM YYYY")}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center py-10 text-gray-500">
+                      No trade margin data found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
             </table>
           </div>
           <EnhancedPaginationControls 
@@ -1350,42 +1404,62 @@ export default function RevenueReport({
       {/* Trade Margin Graph */}
       <Card>
         <CardContent>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
             <h3 className="text-base font-semibold text-gray-800">Trade Margin Graph</h3>
-            <button onClick={() => setTradeMarginChartView(prev => prev === "yearly" ? "monthly" : "yearly")} className="bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-md">
+            <button 
+              onClick={() => setTradeMarginChartView(prev => prev === "yearly" ? "monthly" : "yearly")} 
+              className='px-4 py-2 rounded-xl bg-gray-200 text-gray-700 text-xs font-semibold transition-all duration-200 transform hover:scale-105 hover:bg-gray-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:ring-black'
+            >
               View By: {tradeMarginChartView === "yearly" ? "Yearly" : "Monthly"}
             </button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 items-center">
-            <Input name="bookingSearch" placeholder="Filter by Booking" value={tradeMarginGraphFilters.bookingSearch} onChange={handleTradeMarginGraphFilterChange} />
-            <Input name="inventorySearch" placeholder="Filter by Inventory" value={tradeMarginGraphFilters.inventorySearch} onChange={handleTradeMarginGraphFilterChange} />
-            <Select name="inventoryType" value={tradeMarginGraphFilters.inventoryType} onChange={handleTradeMarginGraphFilterChange}>
-                <option value="">Filter by Inventory Type</option>
-                <option value="Billboard">Billboard</option>
-                <option value="DOOh">DOOH</option>
-                <option value="Gantry">Gantry</option>
-                <option value="Pole kiosk">Pole kiosk</option>
-                <option value="BQS">BQS</option>
-                <option value="DigitalBQS">DigitalBQS</option>
-                <option value="Miscellaneous">Miscellaneous</option>
-            </Select>
-            <button
-              onClick={() => {
-                handleShowDateModal("tradeMarginGraph", tradeMarginGraphFilters, setTradeMarginGraphFilters);
-              }}
-              className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50"
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 items-start">
+            <div className="relative">
+              <Input name="bookingSearch" placeholder="Filter by Booking" value={tradeMarginGraphFilters.bookingSearch} onChange={handleTradeMarginGraphFilterChange} />
+            </div>
+            <div className="relative">
+              <Input name="inventorySearch" placeholder="Filter by Inventory" value={tradeMarginGraphFilters.inventorySearch} onChange={handleTradeMarginGraphFilterChange} />
+            </div>
+            <div className="relative">
+              <Select name="inventoryType" value={tradeMarginGraphFilters.inventoryType} onChange={handleTradeMarginGraphFilterChange}>
+                  <option value="">Filter by Inventory Type</option>
+                  <option value="Billboard">Billboard</option>
+                  <option value="DOOh">DOOH</option>
+                  <option value="Gantry">Gantry</option>
+                  <option value="Pole kiosk">Pole kiosk</option>
+                  <option value="BQS">BQS</option>
+                  <option value="DigitalBQS">DigitalBQS</option>
+                  <option value="Miscellaneous">Miscellaneous</option>
+              </Select>
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  handleShowDateModal("tradeMarginGraph", tradeMarginGraphFilters, setTradeMarginGraphFilters);
+                }}
+                className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:ring-2 ring-[black] w-full text-left bg-white text-xs text-[var(--color-text)] transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+              >
+                {tradeMarginGraphFilters.startDate && tradeMarginGraphFilters.endDate ? `${dayjs(tradeMarginGraphFilters.startDate).format("DD MMM YYYY")} to ${dayjs(tradeMarginGraphFilters.endDate).format("DD MMM YYYY")}` : "Date Filter"}
+              </button>
+              {tradeMarginGraphErrors.dateRange && (
+                <div className="absolute -bottom-5 left-0 text-xs text-red-500 animate-fade-in">
+                  {tradeMarginGraphErrors.dateRange}
+                </div>
+              )}
+            </div>
+            <button 
+              onClick={resetTradeMarginGraphFilters}
+              className='px-4 py-2 rounded-xl bg-gray-700 text-white text-xs font-semibold transition-all duration-200 transform hover:scale-105 hover:bg-gray-800 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:ring-black'
             >
-              {tradeMarginGraphFilters.startDate && tradeMarginGraphFilters.endDate ? `${dayjs(tradeMarginGraphFilters.startDate).format("DD MMM YYYY")} to ${dayjs(tradeMarginGraphFilters.endDate).format("DD MMM YYYY")}` : "Filter by Date Range"}
+              Reset Filters
             </button>
-            <Button onClick={resetTradeMarginGraphFilters}>Reset Filters</Button>
           </div>
           
           {tradeMarginGraphLoading ? <ShimmerCard /> : tradeMarginGraphError ? (
-             <div className="h-80 flex items-center justify-center text-red-500">{tradeMarginGraphError}</div>
+              <div className="h-80 flex items-center justify-center text-red-500">{tradeMarginGraphError}</div>
           ) : (
             <div className="flex flex-grow h-80">
-              {/* --- CHANGE 6: UPDATE TRADE MARGIN BAR CHART TO SHOW PERCENTAGES IN TOOLTIP --- */}
               <BarChart
                 xAxis={[{ scaleType: 'band', data: tradeMarginChartData.xLabels }]}
                 yAxis={[{ label: "Amount in Lakhs", valueFormatter: yAxisFormatter }]}
@@ -1402,6 +1476,36 @@ export default function RevenueReport({
           )}
         </CardContent>
       </Card>
+
+      {showDateModal && modalContext && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 animate-fadeIn'>
+          <div className='bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden animate-scaleIn'>
+            <div className='p-6'>
+              <h3 className='text-lg font-semibold text-[var(--color-text)] mb-4'>Select Date Range</h3>
+              <div className='flex justify-center'>
+                <DateRange
+                  editableDateInputs={true}
+                  onChange={(item) => setModalContext(prev => ({ ...prev, tempDateRange: [item.selection] }))}
+                  moveRangeOnFirstSelection={false}
+                  ranges={modalContext.tempDateRange || [{ startDate: null, endDate: null, key: 'selection' }]}
+                  className='text-xs w-full'
+                  rangeColors={['#000000']}
+                  showDateDisplay={false}
+                />
+              </div>
+              <div className='flex justify-end gap-2 mt-4'>
+                <button
+                  onClick={handleCancelDateModal}
+                  className='px-4 py-1.5 rounded-md bg-gray-100 text-[var(--color-text)] hover:bg-gray-200 transition-all duration-200 hover:scale-105'
+                >
+                  Cancel
+                </button>
+                <Button onClick={() => handleApplyDateModal(modalContext.tempDateRange)}>Apply</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

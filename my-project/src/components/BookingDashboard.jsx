@@ -292,6 +292,7 @@ export default function BookingsDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const datePickerRef = useRef(null);
 
   const limit = 10;
 
@@ -471,10 +472,15 @@ export default function BookingsDashboard() {
         }`}
       >
         <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-6 animate-slideDown'>
-          <h2 className='text-2xl font-sans font-normal'>
-            Bookings ({totalCount})
-            {loading && <span className='ml-2 text-sm text-[var(--color-muted)]'>Loading...</span>}
-          </h2>
+          <div className="flex items-center gap-4">
+            <Button onClick={() => navigate(-1)} className="text-white bg-black">
+              <FaArrowLeft className="inline mr-2" /> Back
+            </Button>
+            <h2 className='text-2xl font-sans font-normal'>
+              Bookings ({totalCount})
+              {loading && <span className='ml-2 text-sm text-[var(--color-muted)]'>Loading...</span>}
+            </h2>
+          </div>
           <Button onClick={() => navigate('/create-booking')}>+ Create Booking</Button>
         </div>
 
@@ -578,60 +584,60 @@ export default function BookingsDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-  {error ? (
-    <tr>
-      <td colSpan='7' className='text-center py-8 text-red-500'>
-        Error: {error}
-      </td>
-    </tr>
-  ) : sortedData.length === 0 && !loading ? (
-    <tr>
-      <td colSpan='7' className='text-center py-8 text-[var(--color-muted)]'>
-        No bookings found matching your criteria.
-      </td>
-    </tr>
-  ) : (
-    sortedData.map((item, index) => {
-      const upcomingStart = getUpcomingCampaignDate(item.campaigns, 'startDate');
-      const upcomingEnd = getUpcomingCampaignDate(item.campaigns, 'endDate');
-      return (
-        <tr
-          key={item._id}
-          className={`
-            border-b border-gray-200 hover:bg-gray-100 cursor-pointer 
-            transition-all duration-200 ease-in-out transform hover:scale-[1.005] 
-            animate-slideIn
-            ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-          `}
-          style={{ animationDelay: `${index * 50}ms` }}
-          onClick={() => navigate(`/booking/${item._id}`)}
-        >
-          <td className='px-6 py-4 text-[var(--color-muted)]'>
-            {(currentPage - 1) * limit + index + 1}
-          </td>
-          <td className='px-6 py-4 font-mono text-[var(--color-muted)]'>
-            {item._id?.substring(0, 6).toUpperCase() || 'N/A'}
-          </td>
-          <td className='px-6 py-4 font-medium text-[var(--color-text)] whitespace-nowrap'>
-            {item.companyName || 'No Company'}
-          </td>
-          <td className='px-6 py-4 text-[var(--color-text)]'>
-            {item.clientName || 'No Client'}
-          </td>
-          <td className='px-6 py-4 text-[var(--color-text)]'>
-            {formatDate(item.createdAt)}
-          </td>
-          <td className='px-6 py-4 text-[var(--color-text)]'>
-            {formatDate(upcomingStart)}
-          </td>
-          <td className='px-6 py-4 text-[var(--color-text)]'>
-            {formatDate(upcomingEnd)}
-          </td>
-        </tr>
-      );
-    })
-  )}
-</tbody>
+                  {error ? (
+                    <tr>
+                      <td colSpan='7' className='text-center py-8 text-red-500'>
+                        Error: {error}
+                      </td>
+                    </tr>
+                  ) : sortedData.length === 0 && !loading ? (
+                    <tr>
+                      <td colSpan='7' className='text-center py-8 text-[var(--color-muted)]'>
+                        No bookings found matching your criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    sortedData.map((item, index) => {
+                      const upcomingStart = getUpcomingCampaignDate(item.campaigns, 'startDate');
+                      const upcomingEnd = getUpcomingCampaignDate(item.campaigns, 'endDate');
+                      return (
+                        <tr
+                          key={item._id}
+                          className={`
+                            border-b border-gray-200 hover:bg-gray-100 cursor-pointer 
+                            transition-all duration-200 ease-in-out transform hover:scale-[1.005] 
+                            animate-slideIn
+                            ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                          `}
+                          style={{ animationDelay: `${index * 50}ms` }}
+                          onClick={() => navigate(`/booking/${item._id}`)}
+                        >
+                          <td className='px-6 py-4 text-[var(--color-muted)]'>
+                            {(currentPage - 1) * limit + index + 1}
+                          </td>
+                          <td className='px-6 py-4 font-mono text-[var(--color-muted)]'>
+                            {item._id?.substring(0, 6).toUpperCase() || 'N/A'}
+                          </td>
+                          <td className='px-6 py-4 font-medium text-[var(--color-text)] whitespace-nowrap'>
+                            {item.companyName || 'No Company'}
+                          </td>
+                          <td className='px-6 py-4 text-[var(--color-text)]'>
+                            {item.clientName || 'No Client'}
+                          </td>
+                          <td className='px-6 py-4 text-[var(--color-text)]'>
+                            {formatDate(item.createdAt)}
+                          </td>
+                          <td className='px-6 py-4 text-[var(--color-text)]'>
+                            {formatDate(upcomingStart)}
+                          </td>
+                          <td className='px-6 py-4 text-[var(--color-text)]'>
+                            {formatDate(upcomingEnd)}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
               </table>
             </div>
           </Card>
@@ -652,14 +658,17 @@ export default function BookingsDashboard() {
         <Modal onClose={handleCancelDateFilter}>
           <div className='p-6'>
             <h3 className='text-lg font-semibold text-[var(--color-text)] mb-4'>Select Date Range</h3>
-            <DateRange
-              editableDateInputs={true}
-              onChange={(item) => setTempDateRange([item.selection])}
-              moveRangeOnFirstSelection={false}
-              ranges={tempDateRange}
-              className='text-xs w-full'
-              rangeColors={['#000000']}
-            />
+            <div className='flex justify-center'>
+              <DateRange
+                editableDateInputs={true}
+                onChange={(item) => setTempDateRange([item.selection])}
+                moveRangeOnFirstSelection={false}
+                ranges={tempDateRange}
+                className='text-xs w-full'
+                rangeColors={['#000000']}
+                showDateDisplay={false}
+              />
+            </div>
             <div className='flex justify-end gap-2 mt-4'>
               <button
                 onClick={handleCancelDateFilter}

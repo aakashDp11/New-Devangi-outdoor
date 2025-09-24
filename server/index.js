@@ -28,7 +28,6 @@ import inventoryRoutes from './routes/inventory.routes.js';
 import reportRoutes from './routes/reports.routes.js';
 import invoiceRoutes from './routes/invoice.routes.js';
 import invoiceReportRoutes from './routes/invoiceReport.routes.js';
-import ticketRoutes from './routes/ticketroutes.js'; // 🆕 Import ticket routes
 
 // import { requestMetrics } from './metrics.js';
 dotenv.config();
@@ -85,7 +84,6 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/revenue', revenueRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/reports', reportRoutes); // ✅ 2. USE YOUR NEW REPORTS ROUTE
-app.use('/tickets', ticketRoutes); // Corrected base path
 
 app.use((req, res, next) => {
   res.status(404).send({ message: 'Route not found' });

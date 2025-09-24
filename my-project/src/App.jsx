@@ -39,9 +39,7 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import DisclaimerPolicy from "./components/DisclaimerPolicy";
 import NotificationsPage from "./components/NotificationsPage";
 import EditProposal from "./components/EditProposal";
-import InvoiceManagement from './components/InvoiceManagement';
 import CloneCampaignPage from "./components/CloneCampaignPage"; 
-import TicketsDashboard from "./components/TicketsDashboard";
 
 // --- Error Pages ---
 import NotFound from "./components/NotFound";
@@ -71,8 +69,6 @@ export default function App() {
             <Route path="/proposal-dashboard" element={<ProposalDashboard />} />
             <Route path="/finances" element={<FinancePage />} />
             
-            {/* 🟢 Move the InvoiceManagement route inside the protected route */}
-            <Route path="/invoices" element={<InvoiceManagement />} />
             
             <Route path="/booking/:id" element={<BookingDetails />} />
             <Route
@@ -85,8 +81,7 @@ export default function App() {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/disclaimer-policy" element={<DisclaimerPolicy />} />
             
-            {/* 🆕 Support Tickets Route */}
-            <Route path="/tickets" element={<TicketsDashboard />} />
+           
 
             {/* Booking & Space Form Flow */}
             <Route

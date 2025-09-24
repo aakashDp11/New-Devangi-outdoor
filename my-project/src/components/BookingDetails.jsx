@@ -5,120 +5,96 @@ import Navbar from "./Navbar";
 import { PieChart } from "@mui/x-charts/PieChart";
 import InventorySelector from "./BookingFormAddSpaces";
 import { useSidebar } from "../context/SidebarContext";
-import { FaArrowLeft, FaCheck, FaExclamationTriangle } from "react-icons/fa";
+import { FaArrowLeft, FaExclamationTriangle } from "react-icons/fa";
 import axios from "axios";
 import Select from 'react-select';
-import { FiAlertCircle } from "react-icons/fi"; // Added this for CustomSelect validation message
+import { FiAlertCircle } from "react-icons/fi";
 
 // --- REUSABLE UI COMPONENTS (COPIED FROM PREVIOUS COMPONENTS) ---
 
 const Card = ({ children, className = "", ...props }) => (
-  <div
-    className={`
-      bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
-      ${className}
-    `}
-    {...props}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-20 animate-bg-gradient-flow-diagonal z-0"></div>
-    <div className="relative z-10 h-full flex flex-col">{children}</div>
-  </div>
+  <div
+    className={`
+      bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
+      ${className}
+    `}
+    {...props}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-20 animate-bg-gradient-flow-diagonal z-0"></div>
+    <div className="relative z-10 h-full flex flex-col">{children}</div>
+  </div>
 );
 
 const CardContent = ({ children, className = "" }) => (
-  <div className={`p-4 md:p-6 flex-grow flex flex-col ${className}`}>
-    {children}
-  </div>
+  <div className={`p-4 md:p-6 flex-grow flex flex-col ${className}`}>
+    {children}
+  </div>
 );
 
 const Button = ({ children, className = "", disabled = false, loading = false, ...props }) => (
-  <button
-    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
-    disabled={disabled || loading}
-    {...props}
-  >
-    {loading ? (
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-        {children}
-      </div>
-    ) : (
-      children
-    )}
-  </button>
+  <button
+    className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+    disabled={disabled || loading}
+    {...props}
+  >
+    {loading ? (
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        {children}
+      </div>
+    ) : (
+      children
+    )}
+  </button>
 );
 
-const PreviewField = ({ label, value, isValid = true }) => (
+const PreviewField = ({ label, value, className = "", ...props }) => (
   <div className="w-full">
     <label className="text-sm font-medium text-gray-700 block mb-1">
       {label}
     </label>
-    <p className={`border px-4 py-2 rounded-xl w-full bg-white text-[var(--color-text)] shadow-sm ${!isValid ? 'border-red-500' : 'border-gray-200'}`}>
+    <p className={`border px-4 py-2 rounded-xl w-full bg-white text-[var(--color-text)] shadow-sm border-gray-200 ${className}`} {...props}>
       {value || "-"}
     </p>
-    {!isValid && (
-      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-        <FaExclamationTriangle /> Invalid {label.toLowerCase()}
-      </p>
-    )}
   </div>
 );
 
 const InfoDetail = ({ label, value, delay = 0 }) => (
-  <div 
-    className="mb-3 opacity-0 animate-[fadeInUp_0.6s_ease-out_forwards]"
-    style={{ animationDelay: `${delay}ms` }}
-  >
-    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-      {label}
-    </p>
-    <p className="text-sm text-gray-800 break-words">{value || "N/A"}</p>
-  </div>
+  <div 
+    className="mb-3 opacity-0 animate-[fadeInUp_0.6s_ease-out_forwards]"
+    style={{ animationDelay: `${delay}ms` }}
+  >
+    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+      {label}
+    </p>
+    <p className="text-sm text-gray-800 break-words">{value || "N/A"}</p>
+  </div>
 );
 
-const ValidationMessage = ({ message, type = "error" }) => {
-  if (!message) return null;
-  
-  return (
-    <div className={`flex items-center gap-1 mt-1 text-xs animate-[slideInDown_0.3s_ease-out] ${
-      type === "error" ? "text-red-600" : type === "success" ? "text-green-600" : "text-yellow-600"
-    }`}>
-      {type === "error" && <FaExclamationTriangle />}
-      {type === "success" && <FaCheck />}
-      <span>{message}</span>
-    </div>
-  );
-};
+// Removed ValidationMessage component as per user request
 
-const Input = ({ label, error, required = false, className = "", ...props }) => (
-  <div className="relative w-full">
-    <label className="text-sm font-medium text-gray-700 block mb-1">
-      {label}
-      {required && <span className="ml-1 text-red-500">*</span>}
-    </label>
-    <input
-      className={`border ${
-        error ? "border-red-300" : "border-gray-200"
-      } px-4 py-2 rounded-xl w-full bg-white text-[var(--color-text)] focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:shadow-md h-10 ${className}`}
-      {...props}
-    />
-    {error && (
-      <p className="absolute -bottom-5 left-0 text-red-500 text-xs mt-1 animate-slideDown">
-        {error}
-      </p>
-    )}
-  </div>
+const Input = ({ label, required = false, className = "", ...props }) => (
+  <div className="relative w-full">
+    <label className="text-sm font-medium text-gray-700 block mb-1">
+      {label}
+      {required && <span className="ml-1 text-red-500">*</span>}
+    </label>
+    <input
+      className={`border border-gray-200 px-4 py-2 rounded-xl w-full bg-white text-[var(--color-text)] focus:outline-none focus:ring-2 transition-all duration-200 shadow-sm hover:shadow-md h-10 ${className}`}
+      {...props}
+    />
+  </div>
 );
 
-const CustomSelect = ({ label, name, value, onChange, options, error, required = false }) => {
+const CustomSelect = ({ label, name, value, onChange, options, required = false }) => {
     const formattedValue = options.find((option) => option.value === value) || null;
     const customStyles = {
         control: (provided, state) => ({
             ...provided,
-            borderColor: error ? '#ef4444' : '#D1D5DB',
+            borderColor: '#D1D5DB',
             boxShadow: state.isFocused ? '0 0 0 1px #2563EB' : 'none',
             '&:hover': {
-                borderColor: error ? '#ef4444' : '#9CA3AF',
+                borderColor: '#9CA3AF',
             },
             borderRadius: '12px',
             padding: '4px 8px',
@@ -164,30 +140,11 @@ const CustomSelect = ({ label, name, value, onChange, options, error, required =
                 styles={customStyles}
                 placeholder="Select..."
             />
-            {error && (
-                <span className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                    <FiAlertCircle className="inline-block" /> {error}
-                </span>
-            )}
         </div>
     );
 };
 
-// Validation helper functions (unchanged)
-const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const validatePhone = (phone) => /^[6-9]\d{9}$/.test(phone);
-const validatePAN = (pan) => /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
-const validateGST = (gst) => /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gst);
-const validateDate = (startDate, endDate) => {
-  if (!startDate || !endDate) return { isValid: false, message: "Both dates are required" };
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (start < today) return { isValid: false, message: "Start date cannot be in the past" };
-  if (end <= start) return { isValid: false, message: "End date must be after start date" };
-  return { isValid: true, message: "" };
-};
+// Removed validateEmail, validatePhone, validatePAN, validateGST, validateDate functions
 
 // Main component
 export default function BookingDetails() {
@@ -197,7 +154,6 @@ export default function BookingDetails() {
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [campaignDrafts, setCampaignDrafts] = useState([]);
   const [spaces, setSpaces] = useState([]);
-  const [validationErrors, setValidationErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const { isCollapsed } = useSidebar();
 
@@ -253,42 +209,6 @@ export default function BookingDetails() {
     { value: "Edtech", label: "Edtech" }, { value: "Entertainment", label: "Entertainment" },
   ];
 
-  const validateCampaignDraft = (campaign, index) => {
-    const errors = {};
-    const key = `campaign_${index}`;
-
-    if (!campaign.campaignName?.trim()) {
-      errors[`${key}_campaignName`] = "Campaign name is required";
-    } else if (campaign.campaignName.length < 3) {
-      errors[`${key}_campaignName`] = "Campaign name must be at least 3 characters";
-    }
-
-    if (!campaign.industry) {
-      errors[`${key}_industry`] = "Industry is required";
-    }
-
-    if (!campaign.description?.trim()) {
-      errors[`${key}_description`] = "Description is required";
-    } else if (campaign.description.length < 10) {
-      errors[`${key}_description`] = "Description must be at least 10 characters";
-    }
-
-    const dateValidation = validateDate(campaign.startDate, campaign.endDate);
-    if (!dateValidation.isValid) {
-      errors[`${key}_dates`] = dateValidation.message;
-    }
-
-    if (!campaign.selectedSpaces || campaign.selectedSpaces.length === 0) {
-      errors[`${key}_spaces`] = "At least one space must be selected";
-    }
-
-    if (campaign.isFOC === undefined || campaign.isFOC === null) {
-      errors[`${key}_isFOC`] = "Please specify if this is a FOC campaign";
-    }
-
-    return errors;
-  };
-
   const addDraftCampaign = () => {
     setCampaignDrafts([
       ...campaignDrafts,
@@ -300,32 +220,15 @@ export default function BookingDetails() {
     const updatedList = [...campaignDrafts];
     updatedList[index] = updated;
     setCampaignDrafts(updatedList);
-
-    const newErrors = { ...validationErrors };
-    const campaignKey = `campaign_${index}`;
-    Object.keys(newErrors).forEach(key => { if (key.startsWith(campaignKey)) { delete newErrors[key]; } });
-    setValidationErrors(newErrors);
   };
 
   const removeDraftCampaign = (index) => {
     setCampaignDrafts(campaignDrafts.filter((_, i) => i !== index));
-    
-    const newErrors = { ...validationErrors };
-    const campaignKey = `campaign_${index}`;
-    Object.keys(newErrors).forEach(key => { if (key.startsWith(campaignKey)) { delete newErrors[key]; } });
-    setValidationErrors(newErrors);
   };
 
   const saveDraftCampaign = async (index) => {
     const campaign = campaignDrafts[index];
-    const errors = validateCampaignDraft(campaign, index);
     
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(prev => ({ ...prev, ...errors }));
-      toast.error("Please fix all validation errors before saving");
-      return;
-    }
-
     const payload = {
       ...campaign, isFOC: campaign.isFOC,
       spaces: campaign.selectedSpaces.map((space) => ({ id: space.id, selectedUnits: space.selectedUnits, })),
@@ -336,7 +239,6 @@ export default function BookingDetails() {
       if (res.status === 201) {
         toast.success("Campaign added successfully");
         setCampaignDrafts([]);
-        setValidationErrors({});
         setBooking((prev) => ({ ...prev, campaigns: [...(prev.campaigns || []), res.data.campaign], }));
       } else {
         toast.error("Failed to save campaign");
@@ -424,7 +326,7 @@ export default function BookingDetails() {
   ];
 
   return (
-    <div className="min-h-screen bg-white w-screen text-base-content">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-screen text-base-content">
       <style jsx>{`
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(30px); }
@@ -475,34 +377,11 @@ export default function BookingDetails() {
           <div className="card bg-white shadow-xl p-6 rounded-lg flex-grow lg:w-2/3 opacity-0 animate-scaleIn hover-scale">
             <h2 className="text-xl font-semibold text-gray-700 mb-6 border-b pb-3">Client Information</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6">
-              {clientInfoData.map(({ key, label, value, validator }, index) => {
-                const isValid = validator && value ? validator(value) : true;
-                
-                if (key === "bookingSource" && value === "Agency") {
-                  return (
-                    <React.Fragment key={key}>
-                      <InfoDetail label={label} value={value} delay={index * 100} />
-                      <InfoDetail 
-                        label="Agency Name" 
-                        value={booking.agencyName ?? "NA"} 
-                        delay={(index + 1) * 100} 
-                      />
-                    </React.Fragment>
-                  );
-                }
-                
-                return (
-                  <div key={key}>
-                    <InfoDetail label={label} value={value} delay={index * 100} />
-                    {validator && value && (
-                      <ValidationMessage 
-                        message={isValid ? "" : `Invalid ${label.toLowerCase()}`}
-                        type={isValid ? "success" : "error"}
-                      />
-                    )}
-                  </div>
-                );
-              })}
+              {clientInfoData.map(({ key, label, value }, index) => (
+                <div key={key}>
+                  <InfoDetail label={label} value={value} delay={index * 100} />
+                </div>
+              ))}
             </div>
           </div>
           
@@ -519,7 +398,7 @@ export default function BookingDetails() {
               <div>
                 {totalPaid === 0 && totalDue === 0 && grandTotal === 0 ? (
                   <div className="flex items-center justify-center h-48">
-                    <p className="text-gray-500 text-md text-center">Please enter the payment details</p>
+                    <p className="text-gray-500 text-md text-center">Make Payments</p>
                   </div>
                 ) : (
                   <>
@@ -665,7 +544,6 @@ export default function BookingDetails() {
                   };
                   updateDraftCampaign(index, updated);
                 }}
-                error={validationErrors[`campaign_${index}_campaignName`]}
                 required
               />
               <CustomSelect
@@ -677,7 +555,6 @@ export default function BookingDetails() {
                   updateDraftCampaign(index, updated);
                 }}
                 options={industryOptions}
-                error={validationErrors[`campaign_${index}_industry`]}
                 required
               />
               <Input
@@ -688,8 +565,6 @@ export default function BookingDetails() {
                   const updated = { ...campaign, startDate: e.target.value };
                   updateDraftCampaign(index, updated);
                 }}
-                min={new Date().toISOString().split('T')[0]}
-                error={validationErrors[`campaign_${index}_dates`]}
                 required
               />
               <Input
@@ -700,8 +575,6 @@ export default function BookingDetails() {
                   const updated = { ...campaign, endDate: e.target.value };
                   updateDraftCampaign(index, updated);
                 }}
-                min={campaign.startDate || new Date().toISOString().split('T')[0]}
-                error={validationErrors[`campaign_${index}_dates`]}
                 required
               />
               <div className="col-span-2">
@@ -717,15 +590,10 @@ export default function BookingDetails() {
                     };
                     updateDraftCampaign(index, updated);
                   }}
-                  className={`w-full border rounded p-2 mt-1 transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    validationErrors[`campaign_${index}_description`] 
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
-                      : 'border-gray-300'
-                  }`}
-                  placeholder="Enter campaign description (minimum 10 characters)"
+                  className={`w-full border rounded p-2 mt-1 transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-gray-300`}
+                  placeholder="Enter campaign description"
                   rows={3}
                 />
-                <ValidationMessage message={validationErrors[`campaign_${index}_description`]} />
               </div>
               <div className="col-span-2">
                 <label className="text-xs font-medium block mb-2">
@@ -769,7 +637,6 @@ export default function BookingDetails() {
                     <label htmlFor={`foc-no-${index}`} className="ml-2 text-xs font-medium cursor-pointer">No</label>
                   </div>
                 </div>
-                <ValidationMessage message={validationErrors[`campaign_${index}_isFOC`]} />
               </div>
             </div>
             
@@ -807,7 +674,6 @@ export default function BookingDetails() {
                   updateDraftCampaign(index, updated);
                 }}
               />
-              <ValidationMessage message={validationErrors[`campaign_${index}_spaces`]} />
             </div>
             
             <div className="flex mt-4 pt-4 border-t border-gray-200">
@@ -820,8 +686,7 @@ export default function BookingDetails() {
               </button>
               <button
                 onClick={() => saveDraftCampaign(index)}
-                className="bg-blue-500 ml-auto text-white text-xs px-4 py-2 rounded hover:bg-blue-600 transition-all duration-200 button-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={Object.keys(validateCampaignDraft(campaign, index)).length > 0}
+                className="bg-blue-500 ml-auto text-white text-xs px-4 py-2 rounded hover:bg-blue-600 transition-all duration-200 button-hover"
               >
                 Save Campaign
               </button>
@@ -831,7 +696,7 @@ export default function BookingDetails() {
         
         <button
           onClick={addDraftCampaign}
-          className="border-2 border-dashed border-gray-300 px-4 py-3 rounded text-sm mt-4 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 flex items-center gap-2 text-gray-600 hover:text-blue-600"
+          className="px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg mt-4 flex items-center gap-2"
         >
           <span className="text-lg">+</span> Add New Campaign
         </button>

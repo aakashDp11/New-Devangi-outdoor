@@ -163,7 +163,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPe
         <div className="flex items-center gap-4">
           <button
             onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)}
-            className="p-3 rounded-full bg-white shadow-sm hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all duration-200"
+            className="p-3 rounded-full bg-white shadow-sm hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all duration-200 text-black"
             disabled={currentPage === 1}
           >
             <FaArrowLeft className='inline' />
@@ -185,7 +185,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, totalCount, itemsPe
           </div>
           <button
             onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)}
-            className="p-3 rounded-full bg-white shadow-sm hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all duration-200"
+            className="p-3 rounded-full bg-white shadow-sm hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all duration-200 text-black"
             disabled={currentPage === totalPages}
           >
             <FaArrowRight className='inline' />
@@ -343,6 +343,7 @@ const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 text-xs gap-5">
       {data.map((item, index) => {
         const tags = Array.isArray(item.tags) ? item.tags : String(item.tags || '').split(',').filter(tag => tag.trim() !== '');
+        const imageUrl = item.mainPhoto || null;
         return (
           <div
             key={item._id}
@@ -350,13 +351,21 @@ const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => {
             style={{ animationDelay: `${index * 50}ms` }}
           >
             <div className="relative overflow-hidden rounded-t-xl">
-              <img
-                src={item.mainPhoto || 'https://via.placeholder.com/300x200'}
-                alt="Space"
-                className="w-full h-40 object-cover bg-gray-100 cursor-pointer transition-all duration-300 hover:scale-110"
-                onClick={(e) => { e.stopPropagation(); onImageClick(item.mainPhoto || 'https://via.placeholder.com/300x200'); }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-200"></div>
+              {imageUrl ? (
+                <>
+                  <img
+                    src={imageUrl}
+                    alt="Space"
+                    className="w-full h-40 object-cover bg-gray-100 cursor-pointer transition-all duration-300 hover:scale-110"
+                    onClick={(e) => { e.stopPropagation(); onImageClick(imageUrl); }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-200"></div>
+                </>
+              ) : (
+                <div className="w-full h-40 flex items-center justify-center bg-gray-200 text-gray-500 font-medium text-xs">
+                  No image uploaded
+                </div>
+              )}
             </div>
             <div className="p-4 flex flex-col flex-grow">
               <div className="flex-grow" onClick={() => navigate(`/space/${item._id}`)}>
@@ -425,8 +434,8 @@ const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, se
   if (!data || data.length === 0) return null;
 
   return (
-    <Card className="shadow-lg rounded-xl animate-slideUp bg-gray-100 bg-opacity-90">
-      <div className="overflow-x-auto">
+    <Card className="shadow-lg rounded-xl animate-slideUp bg-gray-100 bg-opacity-90 w-full">
+      <div className="overflow-x-auto w-full">
         <table className="w-full text-xs text-left text-[var(--color-muted)]">
           <thead className="text-xs text-[var(--color-text)] uppercase bg-gray-100">
             <tr>
@@ -457,15 +466,21 @@ const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, se
                 <td className="px-6 py-4 font-medium text-[var(--color-text)] whitespace-nowrap">
                   <div className="flex items-center gap-3">
                     <div className="relative overflow-hidden rounded-md shadow">
-                      <img
-                        src={item.mainPhoto || 'https://via.placeholder.com/40'}
-                        alt={item.spaceName}
-                        className="w-10 h-10 object-cover bg-gray-100 cursor-pointer hover:opacity-80 transition-all duration-200 hover:scale-110"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onImageClick(item.mainPhoto || 'https://via.placeholder.com/40');
-                        }}
-                      />
+                      {item.mainPhoto ? (
+                        <img
+                          src={item.mainPhoto}
+                          alt={item.spaceName}
+                          className="w-10 h-10 object-cover bg-gray-100 cursor-pointer hover:opacity-80 transition-all duration-200 hover:scale-110"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onImageClick(item.mainPhoto);
+                          }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 flex items-center justify-center bg-gray-200 text-gray-500 text-[8px] p-1 text-center">
+                          No image uploaded
+                        </div>
+                      )}
                     </div>
                     <div className="cursor-pointer transition-all duration-200 hover:translate-x-1" onClick={() => navigate(`/space/${item._id}`)}>
                       <div className="font-semibold text-[var(--color-text)] hover:text-black transition-colors duration-200">
@@ -609,11 +624,9 @@ export default function InventoryDashboard() {
 
   // Availability options for the dropdown
   const availabilityOptions = [
-    { value: 'Available', label: 'Available' },
-    { value: 'Completely booked', label: 'Completely Booked' },
-    { value: 'Booked', label: 'Booked' },
+    { value: 'Completely available', label: 'Completely Available' },
     { value: 'Partially available', label: 'Partially Available' },
-    { value: 'Partialy available', label: 'Partially Available (Alt)' },
+    { value: 'Completely booked', label: 'Completely Booked' },
     { value: 'Overlapping booking', label: 'Overlapping Booking' }
   ];
 
@@ -625,7 +638,6 @@ export default function InventoryDashboard() {
     { value: 'Gantry', label: 'Gantry' },
     { value: 'BQS', label: 'BQS' },
     { value: 'Transit', label: 'Transit' },
-    { value: 'Miscellaneous', label: 'Miscellaneous' }
   ];
 
   // Ownership type options for the dropdown
@@ -962,11 +974,16 @@ export default function InventoryDashboard() {
       </div>
 
       <main className={`flex-1 h-screen overflow-y-auto px-4 md:px-6 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 animate-slideDown">
-          <h2 className="text-2xl font-sans font-normal">
-            Inventories ({totalCount})
-            {loading && <span className="ml-2 text-sm text-[var(--color-muted)]">Loading...</span>}
-          </h2>
+        <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-6 animate-slideDown'>
+          <div className="flex items-center gap-4">
+            <Button onClick={() => navigate(-1)} className="text-white bg-black">
+              <FaArrowLeft className="inline mr-2" /> Back
+            </Button>
+            <h2 className="text-2xl font-sans font-normal">
+              Inventories ({totalCount})
+              {loading && <span className="ml-2 text-sm text-[var(--color-muted)]">Loading...</span>}
+            </h2>
+          </div>
           <div className="flex items-center gap-2 text-xs">
             <Button onClick={() => navigate('/add-space')}>+ Add Space</Button>
             <input
@@ -1005,8 +1022,8 @@ export default function InventoryDashboard() {
                 />
                 <ValidationMessage message={searchError} />
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <div className="flex items-center p-1 bg-gray-200 rounded-xl shadow-inner">
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center p-1 bg-gray-200 rounded-xl shadow-inner gap-2">
                   {[
                     { mode: 'table', icon: <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="3" x2="9" y2="21" /></svg> },
                     { mode: 'grid', icon: <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg> },
@@ -1026,9 +1043,6 @@ export default function InventoryDashboard() {
                     </Tooltip>
                   ))}
                 </div>
-                <Button onClick={resetFilters} className="bg-gray-700 text-white hover:bg-gray-800 shadow-md hover:shadow-lg">
-                  Reset Filters
-                </Button>
               </div>
             </div>
 
@@ -1071,6 +1085,9 @@ export default function InventoryDashboard() {
                     : "Date Filter"}
                 </button>
               </div>
+              <Button onClick={resetFilters} className="bg-gray-700 text-white hover:bg-gray-800 shadow-md hover:shadow-lg">
+                Reset Filters
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1139,14 +1156,17 @@ export default function InventoryDashboard() {
           <Modal onClose={handleCancelDateFilter}>
             <div className="p-6">
               <h3 className="text-lg font-semibold text-[var(--color-text)] mb-4">Select Date Range</h3>
-              <DateRange
-                editableDateInputs={true}
-                onChange={(item) => setTempDateRange([item.selection])}
-                moveRangeOnFirstSelection={false}
-                ranges={tempDateRange}
-                className='text-xs w-full'
-                rangeColors={['#000000']}
-              />
+              <div className="flex justify-center">
+                <DateRange
+                  editableDateInputs={true}
+                  onChange={(item) => setTempDateRange([item.selection])}
+                  moveRangeOnFirstSelection={false}
+                  ranges={tempDateRange}
+                  className='text-xs w-full'
+                  rangeColors={['#000000']}
+                  showDateDisplay={false}
+                />
+              </div>
               <div className="flex justify-end gap-2 mt-4">
                 <button
                   onClick={handleCancelDateFilter}

@@ -4,223 +4,252 @@ import { saveAs } from "file-saver";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { BarChart } from "@mui/x-charts/BarChart";
+import { LineChart, PieChart } from "@mui/x-charts";
+import { FaExclamationTriangle, FaCheck, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
+import { DateRange } from 'react-date-range';
+import { format } from 'date-fns';
 
 // --- ENHANCED UI HELPER COMPONENTS WITH ANIMATIONS ---
 const Input = ({ error, ...props }) => (
-  <div className="relative">
-    <input
-      className={`w-full px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-        error 
-          ? 'border-red-300 focus:ring-red-500 bg-red-50' 
-          : 'border-gray-300 focus:ring-blue-500 hover:border-blue-300'
-      }`}
-      {...props}
-    />
-    {error && (
-      <div className="absolute top-full left-0 mt-1 text-xs text-red-600 animate-fade-in-down">
-        {error}
-      </div>
-    )}
-  </div>
+  <div className="relative">
+    <input
+      className={`w-full px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+        error 
+          ? 'border-red-300 focus:ring-red-500 bg-red-50' 
+          : 'border-gray-300 focus:ring-blue-500 hover:border-blue-300'
+      }`}
+      {...props}
+    />
+    {error && (
+      <div className="absolute top-full left-0 mt-1 text-xs text-red-600 animate-fade-in-down">
+        {error}
+      </div>
+    )}
+  </div>
 );
 
 const Select = ({ children, error, ...props }) => (
-  <div className="relative">
-    <select
-      className={`w-full px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 bg-white transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
-        error 
-          ? 'border-red-300 focus:ring-red-500 bg-red-50' 
-          : 'border-gray-300 focus:ring-blue-500 hover:border-blue-300'
-      }`}
-      {...props}
-    >
-      {children}
-    </select>
-    {error && (
-      <div className="absolute top-full left-0 mt-1 text-xs text-red-600 animate-fade-in-down">
-        {error}
-      </div>
-    )}
-  </div>
+  <div className="relative">
+    <select
+      className={`w-full px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 bg-white transition-all duration-200 ease-in-out transform hover:scale-[1.02] ${
+        error 
+          ? 'border-red-300 focus:ring-red-500 bg-red-50' 
+          : 'border-gray-300 focus:ring-blue-500 hover:border-blue-300'
+      }`}
+      {...props}
+    >
+      {children}
+    </select>
+    {error && (
+      <div className="absolute top-full left-0 mt-1 text-xs text-red-600 animate-fade-in-down">
+        {error}
+      </div>
+    )}
+  </div>
 );
 
-const Button = ({ children, loading, disabled, variant = 'primary', ...props }) => {
-  const baseClasses = "px-4 py-2 text-xs font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ease-in-out transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none";
-  
-  const variants = {
-    primary: "text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 hover:shadow-lg",
-    secondary: "text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-gray-500",
-    danger: "text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 hover:shadow-lg"
-  };
-
-  return (
-    <button
-      className={`${baseClasses} ${variants[variant]} ${loading ? 'animate-pulse' : ''}`}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading ? (
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
-          Loading...
-        </div>
-      ) : children}
-    </button>
-  );
-};
+const Button = ({ children, loading, disabled, variant = 'primary', ...props }) => (
+  <button
+    className={`px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ease-in-out transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md
+      ${variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500' : ''}
+      ${variant === 'secondary' ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-500' : ''}
+      ${variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500' : ''}
+      ${variant === 'dark' ? 'bg-gray-700 text-white hover:bg-gray-800 focus:ring-gray-500' : ''}
+      ${loading ? 'animate-pulse' : ''}
+    `}
+    disabled={disabled || loading}
+    {...props}
+  >
+    {loading ? (
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+        Loading...
+      </div>
+    ) : children}
+  </button>
+);
 
 const Card = ({ children, className, animate = true }) => (
-  <div className={`bg-white shadow-md rounded-lg overflow-hidden p-6 transition-all duration-300 ease-in-out hover:shadow-lg transform hover:-translate-y-1 ${className}`}>
-    {children}
-  </div>
+  <div className={`bg-white shadow-md rounded-lg overflow-hidden p-6 transition-all duration-300 ease-in-out hover:shadow-lg transform hover:-translate-y-1 ${className}`}>
+    {children}
+  </div>
 );
 
 const CardContent = ({ children }) => (
-  <div className="animate-fade-in">
-    {children}
-  </div>
+  <div className="animate-fade-in">
+    {children}
+  </div>
 );
 
 const SortableHeader = ({ title, sortKey, sortConfig = {}, onSort, disabled = false }) => {
-  const isSorting = sortConfig.key === sortKey;
-  const direction = isSorting ? sortConfig.direction : null;
+  const isSorting = sortConfig.key === sortKey;
+  const direction = isSorting ? sortConfig.direction : null;
 
-  const handleSort = () => {
-    if (disabled) return;
-    const newDirection = sortConfig.key === sortKey && sortConfig.direction === 'asc' ? 'desc' : 'asc';
-    onSort(sortKey, newDirection);
-  };
+  const handleSort = () => {
+    if (disabled) return;
+    const newDirection = sortConfig.key === sortKey && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    onSort(sortKey, newDirection);
+  };
 
-  return (
-    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-      <div
-        onClick={handleSort}
-        className={`flex items-center gap-1.5 transition-all duration-200 ${
-          disabled 
-            ? 'cursor-default' 
-            : 'cursor-pointer select-none hover:text-blue-600 transform hover:scale-105'
-        }`}
-      >
-        {title}
-        {!disabled && (
-          <span className={`text-gray-400 transition-all duration-200 ${isSorting ? 'text-blue-600' : ''}`}>
-            {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '⇅'}
-          </span>
-        )}
-      </div>
-    </th>
-  );
+  return (
+    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+      <div
+        onClick={handleSort}
+        className={`flex items-center gap-1.5 transition-all duration-200 ${
+          disabled 
+            ? 'cursor-default' 
+            : 'cursor-pointer select-none hover:text-blue-600 transform hover:scale-105'
+        }`}
+      >
+        {title}
+        {!disabled && (
+          <span className={`text-gray-400 transition-all duration-200 ${isSorting ? 'text-blue-600' : ''}`}>
+            {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '⇅'}
+          </span>
+        )}
+      </div>
+    </th>
+  );
 };
 
 const EnhancedPaginationControls = ({ currentPage, totalPages, onPageChange, totalCount, itemsPerPage }) => {
-    const [pageInput, setPageInput] = useState(currentPage.toString());
-    const [pageError, setPageError] = useState('');
+    const [pageInput, setPageInput] = useState(currentPage.toString());
+    const [pageError, setPageError] = useState('');
 
-    useEffect(() => {
-        setPageInput(currentPage.toString());
-        setPageError('');
-    }, [currentPage]);
+    useEffect(() => {
+        setPageInput(currentPage.toString());
+        setPageError('');
+    }, [currentPage]);
 
-    const handlePageSubmit = (e) => {
-        e.preventDefault();
-        const pageNum = parseInt(pageInput, 10);
-        
-        if (!pageInput.trim()) {
-            setPageError('Page number is required');
-            return;
-        }
-        
-        if (isNaN(pageNum) || pageNum < 1) {
-            setPageError('Please enter a valid page number');
-            return;
-        }
-        
-        if (pageNum > totalPages) {
-            setPageError(`Page cannot exceed ${totalPages}`);
-            return;
-        }
-        
-        setPageError('');
-        onPageChange(pageNum);
-    };
+    const handlePageSubmit = (e) => {
+        e.preventDefault();
+        const pageNum = parseInt(pageInput, 10);
+        
+        if (!pageInput.trim()) {
+            setPageError('Page number is required');
+            return;
+        }
+        
+        if (isNaN(pageNum) || pageNum < 1) {
+            setPageError('Please enter a valid page number');
+            return;
+        }
+        
+        if (pageNum > totalPages) {
+            setPageError(`Page cannot exceed ${totalPages}`);
+            return;
+        }
+        
+        setPageError('');
+        onPageChange(pageNum);
+    };
 
-    const handlePageInputChange = (e) => {
-        setPageInput(e.target.value);
-        if (pageError) setPageError('');
-    };
+    const handlePageInputChange = (e) => {
+        setPageInput(e.target.value);
+        if (pageError) setPageError('');
+    };
 
-    if (totalCount === 0) return null;
+    if (totalCount === 0) return null;
 
-    return (
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-xs gap-4 animate-fade-in">
-            <span className="text-gray-600 animate-slide-in-left">
-                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)} - {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} results
-            </span>
-            {totalPages > 1 && (
-                <div className="flex items-center gap-2 animate-slide-in-right">
-                    <button 
-                        onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)} 
-                        disabled={currentPage === 1} 
-                        className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 transition-all duration-200 transform hover:scale-105 disabled:transform-none"
-                    >
-                        Previous
-                    </button>
-                    <form onSubmit={handlePageSubmit} className="flex items-center gap-2 relative">
-                        <span className="text-gray-700">Page</span>
-                        <div className="relative">
-                            <input 
-                                type="text" 
-                                value={pageInput} 
-                                onChange={handlePageInputChange}
-                                className={`w-10 h-7 text-center border rounded-md focus:outline-none focus:ring-1 transition-all duration-200 ${
-                                    pageError ? 'border-red-300 focus:ring-red-500 bg-red-50' : 'border-gray-300 focus:ring-blue-500'
-                                }`}
-                            />
-                            {pageError && (
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 text-xs text-red-600 whitespace-nowrap animate-fade-in-down">
-                                    {pageError}
-                                </div>
-                            )}
-                        </div>
-                        <span className="text-gray-700">of {totalPages}</span>
-                    </form>
-                    <button 
-                        onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)} 
-                        disabled={currentPage === totalPages} 
-                        className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 transition-all duration-200 transform hover:scale-105 disabled:transform-none"
-                    >
-                        Next
-                    </button>
-                </div>
-            )}
-        </div>
-    );
+    return (
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-xs gap-4 animate-fade-in">
+            <span className="text-gray-600 animate-slide-in-left">
+                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)} - {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} results
+            </span>
+            {totalPages > 1 && (
+                <div className="flex items-center gap-2 animate-slide-in-right">
+                    <button 
+                        onClick={() => onPageChange(currentPage > 1 ? currentPage - 1 : 1)} 
+                        disabled={currentPage === 1} 
+                        className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+                    >
+                        Previous
+                    </button>
+                    <form onSubmit={handlePageSubmit} className="flex items-center gap-2 relative">
+                        <span className="text-gray-700">Page</span>
+                        <div className="relative">
+                            <input 
+                                type="text" 
+                                value={pageInput} 
+                                onChange={handlePageInputChange}
+                                className={`w-10 h-7 text-center border rounded-md focus:outline-none focus:ring-1 transition-all duration-200 ${
+                                    pageError ? 'border-red-300 focus:ring-red-500 bg-red-50' : 'border-gray-300 focus:ring-blue-500'
+                                }`}
+                            />
+                            {pageError && (
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 text-xs text-red-600 whitespace-nowrap animate-fade-in-down">
+                                    {pageError}
+                                </div>
+                            )}
+                        </div>
+                        <span className="text-gray-700">of {totalPages}</span>
+                    </form>
+                    <button 
+                        onClick={() => onPageChange(currentPage < totalPages ? currentPage + 1 : totalPages)} 
+                        disabled={currentPage === totalPages} 
+                        className="px-3 py-1.5 border rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
+        </div>
+    );
 };
 
 // Loading Spinner Component
 const LoadingSpinner = ({ size = 'md' }) => {
-  const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12'
-  };
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-8 h-8',
+    lg: 'w-12 h-12'
+  };
 
-  return (
-    <div className="flex justify-center items-center py-8">
-      <div className={`${sizeClasses[size]} border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin`}></div>
-    </div>
-  );
+  return (
+    <div className="flex justify-center items-center py-8">
+      <div className={`${sizeClasses[size]} border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin`}></div>
+    </div>
+  );
 };
 
 // Error Message Component
 const ErrorMessage = ({ message }) => (
-  <div className="text-center py-8 animate-fade-in">
-    <div className="inline-flex items-center gap-2 text-red-600 bg-red-50 px-4 py-2 rounded-md">
-      <span>⚠️</span>
-      <span className="text-sm">{message}</span>
-    </div>
-  </div>
+  <div className="text-center py-8 animate-fade-in">
+    <div className="inline-flex items-center gap-2 text-red-600 bg-red-50 px-4 py-2 rounded-md">
+      <span>⚠️</span>
+      <span className="text-sm">{message}</span>
+    </div>
+  </div>
 );
+
+// New Modal Component
+const Modal = ({ children, onClose }) => {
+    const modalRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (modalRef.current && !modalRef.current.contains(event.target)) {
+                onClose();
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [onClose]);
+
+    return (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50 animate-fade-in">
+            <div ref={modalRef} className="relative p-6 bg-white rounded-xl shadow-lg animate-fade-in-down w-full max-w-md">
+                {children}
+            </div>
+        </div>
+    );
+};
+
 
 // --- MAIN COMPONENT ---
 const ITEMS_PER_PAGE = 10;
@@ -397,8 +426,11 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
         const excelData = allBookings.map(b => {
             let totalPaid = 0, totalDue = 0;
             b.campaigns?.forEach(c => {
-                totalPaid += c.paymentSummary?.totalPaid || 0;
-                totalDue += c.paymentSummary?.totalDue || 0;
+                const p = c.paymentSummary;
+                if (p) {
+                  totalPaid += p.totalPaid || 0;
+                  totalDue += p.totalDue || 0;
+                }
             });
             let paymentStatus = "Completed";
             if (totalDue > 0 && totalPaid < totalDue) {
@@ -848,11 +880,11 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
               <div className="relative">
                 <button 
                   onClick={() => handleShowDateModal("bookings", bookingFilters, setBookingFilters)} 
-                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-200 transform hover:scale-[1.02]"
+                  className="w-full px-4 py-2 rounded-xl bg-white text-xs text-left shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105"
                 >
                   {bookingFilters.startDate && bookingFilters.endDate 
-                    ? `${bookingFilters.startDate} to ${bookingFilters.endDate}` 
-                    : "Filter by Booking Date"
+                    ? `${dayjs(bookingFilters.startDate).format("DD MMM YYYY")} to ${dayjs(bookingFilters.endDate).format("DD MMM YYYY")}` 
+                    : "Date Filter"
                   }
                 </button>
                 {(bookingFilterErrors.startDate || bookingFilterErrors.dateRange) && (
@@ -862,7 +894,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                 )}
               </div>
               
-              <Button onClick={resetBookingFilters} variant="secondary">
+              <Button onClick={resetBookingFilters} variant="dark">
                 Reset Filters
               </Button>
             </div>
@@ -892,71 +924,71 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                   </tr>
                 </thead>
                 <tbody>
-  {bookingLoading ? (
-    <tr>
-      <td colSpan="5">
-        <LoadingSpinner />
-      </td>
-    </tr>
-  ) : bookings.length > 0 ? (
-    bookings.map((b, index) => {
-      let totalPaid = 0, totalDue = 0;
-      b.campaigns?.forEach((c) => {
-        const p = c.paymentSummary;
-        if (p) {
-          totalPaid += p.totalPaid || 0;
-          totalDue += p.totalDue || 0;
-        }
-      });
-      let paymentStatus = "Completed";
-      if (totalDue > 0 && totalPaid < totalDue) {
-        paymentStatus = totalPaid > 0 ? "Partial" : "Pending";
-      }          
-      const poStatuses = b.campaigns?.map(c => c.poConfirmed === true) || [];
-      let poStatus = "Pending";
+                  {bookingLoading ? (
+                    <tr>
+                      <td colSpan="5">
+                        <LoadingSpinner />
+                      </td>
+                    </tr>
+                  ) : bookings.length > 0 ? (
+                    bookings.map((b, index) => {
+                      let totalPaid = 0, totalDue = 0;
+                      b.campaigns?.forEach((c) => {
+                        const p = c.paymentSummary;
+                        if (p) {
+                          totalPaid += p.totalPaid || 0;
+                          totalDue += p.totalDue || 0;
+                        }
+                      });
+                      let paymentStatus = "Completed";
+                      if (totalDue > 0 && totalPaid < totalDue) {
+                        paymentStatus = totalPaid > 0 ? "Partial" : "Pending";
+                      }          
+                      const poStatuses = b.campaigns?.map(c => c.poConfirmed === true) || [];
+                      let poStatus = "Pending";
 
-      if (poStatuses.length > 0) {
-          if (poStatuses.every(status => status === true)) {
-              poStatus = "Completed";
-          } else if (poStatuses.some(status => status === true)) {
-              poStatus = "Partial";
-          }
-      }          
-      return (
-        <tr 
-          key={b._id} 
-          className={`bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover-scale table-row-enter ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`} 
-          onClick={() => navigate(`/booking-details/${b._id}`)}
-          style={{ animationDelay: `${index * 0.1}s` }}
-        >
-          <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{b.companyName}</td>
-          <td className="px-6 py-4">{b.clientName}</td>
-          <td className="px-6 py-4">{dayjs(b.createdAt).format("DD MMM YYYY")}</td>
-          <td className="px-6 py-4">
-            <span className={`px-2 py-1 text-xs rounded-full ${
-              paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-              paymentStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-red-100 text-red-800'
-            }`}>
-              {paymentStatus}
-            </span>
-          </td>
-          <td className="px-6 py-4">
-            <span className={`px-2 py-1 text-xs rounded-full ${
-              poStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-              poStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-red-100 text-red-800'
-            }`}>
-              {poStatus}
-            </span>
-          </td>
-        </tr>
-      );
-    })
-  ) : (
-    <tr><td colSpan="5" className="text-center py-10 text-gray-500">No bookings found.</td></tr>
-  )}
-</tbody>
+                      if (poStatuses.length > 0) {
+                          if (poStatuses.every(status => status === true)) {
+                              poStatus = "Completed";
+                          } else if (poStatuses.some(status => status === true)) {
+                              poStatus = "Partial";
+                          }
+                      }          
+                      return (
+                        <tr 
+                          key={b._id} 
+                          className={`bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover-scale table-row-enter ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`} 
+                          onClick={() => navigate(`/booking-details/${b._id}`)}
+                          style={{ animationDelay: `${index * 0.1}s` }}
+                        >
+                          <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{b.companyName}</td>
+                          <td className="px-6 py-4">{b.clientName}</td>
+                          <td className="px-6 py-4">{dayjs(b.createdAt).format("DD MMM YYYY")}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              paymentStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+                              paymentStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {paymentStatus}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              poStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+                              poStatus === 'Partial' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {poStatus}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr><td colSpan="5" className="text-center py-10 text-gray-500">No bookings found.</td></tr>
+                  )}
+                </tbody>
               </table>
             </div>
             
@@ -1026,11 +1058,11 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
               <div className="relative">
                 <button 
                   onClick={() => handleShowDateModal("proposals", proposalTableFilters, setProposalTableFilters)} 
-                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 transition-all duration-200 transform hover:scale-[1.02]"
+                  className="w-full px-4 py-2 rounded-xl bg-white text-xs text-left shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105"
                 >
                   {proposalTableFilters.startDate && proposalTableFilters.endDate 
-                    ? `${proposalTableFilters.startDate} to ${proposalTableFilters.endDate}` 
-                    : "Filter by Proposal Date"
+                    ? `${dayjs(proposalTableFilters.startDate).format("DD MMM YYYY")} to ${dayjs(proposalTableFilters.endDate).format("DD MMM YYYY")}` 
+                    : "Date Filter"
                   }
                 </button>
                 {(proposalFilterErrors.startDate || proposalFilterErrors.dateRange) && (
@@ -1040,7 +1072,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                 )}
               </div>
               
-              <Button onClick={resetProposalTableFilters} variant="secondary">
+              <Button onClick={resetProposalTableFilters} variant="dark">
                 Reset Filters
               </Button>
             </div>
@@ -1073,34 +1105,34 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                   </tr>
                 </thead>
                 <tbody>
-  {proposalLoading ? (
-    <tr>
-      <td colSpan="8">
-        <LoadingSpinner />
-      </td>
-    </tr>
-  ) : proposals.length > 0 ? (
-    proposals.map((p, index) => (
-      <tr 
-        key={p._id} 
-        className={`bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover-scale table-row-enter ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`} 
-        onClick={() => navigate(`/proposal-details/${p._id}`)}
-        style={{ animationDelay: `${index * 0.1}s` }}
-      >
-        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.companyName}</td>
-        <td className="px-6 py-4">{p.clientName}</td>
-        <td className="px-6 py-4">{p.industry || "N/A"}</td>
-        <td className="px-6 py-4">{p.clientType || "N/A"}</td>
-        <td className="px-6 py-4">{p.bookingSource || "N/A"}</td>
-        <td className="px-6 py-4">{dayjs(p.createdAt).format("DD MMM YYYY")}</td>
-        <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceName).join(", ") || "N/A"}</td>
-        <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceType).join(", ") || "N/A"}</td>
-      </tr>
-    ))
-  ) : (
-    <tr><td colSpan="8" className="text-center py-10 text-gray-500">No proposals found for the selected filters.</td></tr>
-  )}
-</tbody>
+                  {proposalLoading ? (
+                    <tr>
+                      <td colSpan="8">
+                        <LoadingSpinner />
+                      </td>
+                    </tr>
+                  ) : proposals.length > 0 ? (
+                    proposals.map((p, index) => (
+                      <tr 
+                        key={p._id} 
+                        className={`bg-white border-b hover:bg-gray-50 cursor-pointer transition-all duration-200 hover-scale table-row-enter ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`} 
+                        onClick={() => navigate(`/proposal-details/${p._id}`)}
+                        style={{ animationDelay: `${index * 0.1}s` }}
+                      >
+                        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{p.companyName}</td>
+                        <td className="px-6 py-4">{p.clientName}</td>
+                        <td className="px-6 py-4">{p.industry || "N/A"}</td>
+                        <td className="px-6 py-4">{p.clientType || "N/A"}</td>
+                        <td className="px-6 py-4">{p.bookingSource || "N/A"}</td>
+                        <td className="px-6 py-4">{dayjs(p.createdAt).format("DD MMM YYYY")}</td>
+                        <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceName).join(", ") || "N/A"}</td>
+                        <td className="px-6 py-4">{p.spaceDetails?.map((s) => s.spaceType).join(", ") || "N/A"}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan="8" className="text-center py-10 text-gray-500">No proposals found for the selected filters.</td></tr>
+                  )}
+                </tbody>
               </table>
             </div>
             
@@ -1183,11 +1215,11 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
               <div className="relative">
                 <button 
                   onClick={() => handleShowDateModal("graph", proposalGraphFilters, setProposalGraphFilters)} 
-                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md text-left hover:bg-gray-50 bg-white transition-all duration-200 transform hover:scale-[1.02]"
+                  className="w-full px-4 py-2 rounded-xl bg-white text-xs text-left shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105"
                 >
                   {proposalGraphFilters.startDate && proposalGraphFilters.endDate 
                     ? `${proposalGraphFilters.startDate} to ${proposalGraphFilters.endDate}` 
-                    : "Filter by Proposal Date"
+                    : "Date Filter"
                   }
                 </button>
                 {(graphFilterErrors.startDate || graphFilterErrors.dateRange) && (
@@ -1197,7 +1229,7 @@ export default function BookingReport({ handleShowDateModal = () => {} }) {
                 )}
               </div>
               
-              <Button onClick={resetProposalGraphFilters} variant="secondary">
+              <Button onClick={resetProposalGraphFilters} variant="dark">
                 Reset Filters
               </Button>
             </div>

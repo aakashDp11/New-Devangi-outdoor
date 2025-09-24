@@ -468,8 +468,15 @@ export default function CampaignDetails() {
         }`}
       >
         <div className="flex justify-between items-center mb-6 animate-slideDown">
-          <div>
-            <div className="mb-2">
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => navigate(-1)}
+              className="bg-black text-white"
+            >
+              <FaArrowLeft className="inline mr-2" />
+              Back
+            </Button>
+            <div>
               <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text)]">
                 Campaign: {campaignName}
               </h1>
@@ -480,30 +487,8 @@ export default function CampaignDetails() {
                 </div>
               )}
             </div>
-            <div className="flex space-x-4 mt-4">
-              {["Details", "Pipeline"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1 rounded-xl font-medium transition duration-200 ${
-                    activeTab === tab
-                      ? "bg-black text-white"
-                      : "bg-white text-[var(--color-text)] border border-gray-200"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
           </div>
           <div className="my-6 flex gap-2">
-            <Button
-              onClick={() => navigate(-1)}
-              className="bg-black text-gray-700 hover:bg-gray-300"
-            >
-              <FaArrowLeft className="inline mr-2" />
-              Back
-            </Button>
             <Button
               onClick={() => setShowEditModal(true)}
               className="bg-[black] text-white"
@@ -512,6 +497,21 @@ export default function CampaignDetails() {
               Edit Campaign
             </Button>
           </div>
+        </div>
+        <div className="flex space-x-4 mt-4">
+          {["Details", "Pipeline"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-1 rounded-xl font-medium transition duration-200 ${
+                activeTab === tab
+                  ? "bg-black text-white"
+                  : "bg-white text-[var(--color-text)] border border-gray-200"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
         {activeTab === "Pipeline" && (
@@ -890,7 +890,6 @@ export default function CampaignDetails() {
           }
           to {
             opacity: 1;
-            transform: translateX(0);
           }
         }
         @keyframes scaleIn {

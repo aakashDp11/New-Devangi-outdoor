@@ -357,11 +357,17 @@ export default function ProposalsDashboard() {
         }`}
       >
         <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-6 animate-slideDown'>
-          <h2 className='text-2xl font-sans font-normal'>
-            Proposals ({filteredData.length})
-            {loading && <span className='ml-2 text-sm text-[var(--color-muted)]'>Loading...</span>}
-          </h2>
-       </div>
+          <div className="flex items-center gap-4">
+            <Button onClick={() => navigate(-1)} className="text-white bg-black">
+              <FaArrowLeft className="inline mr-2" />
+              Back
+            </Button>
+            <h2 className='text-2xl font-sans font-normal'>
+              Proposals ({filteredData.length})
+              {loading && <span className='ml-2 text-sm text-[var(--color-muted)]'>Loading...</span>}
+            </h2>
+          </div>
+        </div>
 
         <Card className='mt-6 shadow-xl animate-slideUp bg-gray-100 bg-opacity-80'>
           <CardContent>
@@ -453,8 +459,8 @@ export default function ProposalsDashboard() {
                           </span>
                         )}
                          <span className='text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-800'>
-                          {formatDate(item.createdAt)}
-                        </span>
+                           {formatDate(item.createdAt)}
+                         </span>
                       </div>
                     </CardContent>
                   </Card>
