@@ -203,7 +203,7 @@ export default function BookingDetails() {
       const res = await axios.delete(
         `${
           import.meta.env.VITE_API_BASE_URL
-        }/api/campaigns/${campaignId}/booking/${booking._id}`,
+        }/api/campaigns/${campaignId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.status === 200) {

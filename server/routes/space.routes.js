@@ -7,6 +7,7 @@ import Campaign from '../models/campaign.model.js';
 import { authenticate } from '../middleware/authenticate.middleware.js';
 import * as XLSX from 'xlsx';
 import { uploadToS3 } from '../utils/s3uploader.js';
+import moment from 'moment'; 
 import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
 const router = express.Router();
 
@@ -197,6 +198,35 @@ router.post('/upload-excel', excelUpload.single('file'), async (req, res) => {
   }
 });
 
+//   try {
+//     const spaces = await Space.find({}, {
+//       spaceName: 1,
+//       faciaTowards: 1,
+//       city: 1,
+//       category: 1,
+//       spaceType: 1,
+//       unit: 1,
+//       occupiedUnits: 1,
+//       ownershipType: 1,
+//       specification: 1,
+//       price: 1,
+//       traded: 1,
+//       overlappingBooking: 1,
+//       dates: 1,
+//       mainPhoto: 1,
+//       campaignDates: 1,
+//       width: 1,
+//       height: 1,
+//       transitType: 1,
+//       transitLine: 1,
+//     });
+
+//     res.json(spaces);
+//   } catch (error) {
+//     console.error('Error fetching optimized spaces:', error);
+//     res.status(500).json({ error: 'Failed to fetch space data' });
+//   }
+// });
 router.get('/selectcampaignSpaces', async (req, res) => {
   try {
     const spaces = await Space.find({}, {
@@ -214,19 +244,53 @@ router.get('/selectcampaignSpaces', async (req, res) => {
       overlappingBooking: 1,
       dates: 1,
       mainPhoto: 1,
-      campaignDates: 1,
+      // campaignDates: 1, // We will derive this, so no need to select directly from Space if it's not a stored field
       width: 1,
       height: 1,
       transitType: 1,
       transitLine: 1,
+    }).lean(); // Use .lean() for better performance when populating virtuals or custom fields
+
+    // Fetch all relevant campaign inventory mappings in one go
+    // This is more efficient than querying inside the loop
+    const spaceIds = spaces.map(space => space._id);
+    const campaignMappings = await CampaignInventoryMapping.find({
+      spaceId: { $in: spaceIds }
+    }, {
+      spaceId: 1,
+      startDate: 1,
+      endDate: 1
+    }).lean();
+
+    // Map campaign mappings to their spaceId for easy lookup
+    const campaignDatesMap = new Map();
+    campaignMappings.forEach(mapping => {
+      const sId = mapping.spaceId.toString();
+      if (!campaignDatesMap.has(sId)) {
+        campaignDatesMap.set(sId, []);
+      }
+      campaignDatesMap.get(sId).push({
+        startDate: mapping.startDate,
+        endDate: mapping.endDate
+      });
     });
 
-    res.json(spaces);
+    // Populate campaignDates for each space
+    const spacesWithCampaignDates = spaces.map(space => {
+      const sId = space._id.toString();
+      return {
+        ...space,
+        campaignDates: campaignDatesMap.get(sId) || [] // Attach the retrieved campaign dates
+      };
+    });
+
+    res.json(spacesWithCampaignDates);
   } catch (error) {
-    console.error('Error fetching optimized spaces:', error);
-    res.status(500).json({ error: 'Failed to fetch space data' });
+    console.error('Error fetching optimized spaces with campaign dates:', error);
+    res.status(500).json({ error: 'Failed to fetch space data with campaign dates' });
   }
 });
+
 
 router.patch('/:id/toggle-inventory', async (req, res) => {
 try {
@@ -788,10 +852,64 @@ router.get('/map-locations', authenticate, async (req, res) => {
 
 router.get('/dashboard-stats', async (req, res) => {
   try {
-    const spaces = await Space.find({}, {
-      spaceType: 1, unit: 1, occupiedUnits: 1, overlappingBooking: 1,
-      ownershipType: 1, traded: 1
-    });
+    // const spaces = await Space.find({}, {
+    //   spaceType: 1, unit: 1, occupiedUnits: 1, overlappingBooking: 1,
+    //   ownershipType: 1, traded: 1
+    // });
+    const currentDateString = moment().format('YYYY-MM-DD'); // Match DB format
+    const currentDate = new Date(currentDateString); // Convert to Date object for robust comparison
+
+    const spaces = await Space.aggregate([
+      {
+        $lookup: {
+          from: 'campaigninventorymappings', // The collection name for CampaignInventoryMapping
+          localField: '_id',
+          foreignField: 'spaceId',
+          as: 'campaignMappings',
+        },
+      },
+      {
+        $addFields: {
+          occupiedUnits: {
+            $size: {
+              $filter: {
+                input: '$campaignMappings',
+                as: 'mapping',
+                cond: {
+                  $and: [
+                    // Convert startDate and endDate from 'YYYY-MM-DD' to Date objects
+                    {
+                      $lte: [
+                        { $toDate: { $dateFromString: { dateString: '$$mapping.startDate', format: '%Y-%m-%d' } } }, // <-- CHANGED FORMAT HERE
+                        currentDate, // Compare with the actual Date object
+                      ],
+                    },
+                    {
+                      $gte: [
+                        { $toDate: { $dateFromString: { dateString: '$$mapping.endDate', format: '%Y-%m-%d' } } },   // <-- CHANGED FORMAT HERE
+                        currentDate, // Compare with the actual Date object
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          spaceType: 1,
+          unit: 1,
+          occupiedUnits: 1,
+          overlappingBooking: 1,
+          ownershipType: 1,
+          traded: 1,
+        },
+      },
+    ]);
+
 
     let totalUnits = 0, bookedUnits = 0, available = 0, booked = 0, overlapping = 0;
     let doohCompletelyAvailable = 0, doohPartiallyAvailable = 0, doohCompletelyBooked = 0;

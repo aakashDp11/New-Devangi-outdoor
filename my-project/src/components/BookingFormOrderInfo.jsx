@@ -79,6 +79,7 @@ export default function BookingFormOrderInfo() {
         name: space.spaceName,
         facia: space.faciaTowards,
         city: space.city,
+        dates:space.dates,
         category: space.category,
         spaceType: space.spaceType,
         isInventoryEnabled:space.isInventoryEnabled,

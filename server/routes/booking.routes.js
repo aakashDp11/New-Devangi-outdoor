@@ -11,6 +11,7 @@ import { authenticate } from '../middleware/authenticate.middleware.js';
 import BookingCampaign from '../models/bookingCampaignMapping.model.js';
 import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
 const router = express.Router();
+
 // export const updateCampaign = async (req, res) => {
 // const { id } = req.params;
 // const { campaignName, description, startDate, endDate, industry, isFOC } = req.body;
@@ -451,6 +452,89 @@ export const getFilteredBookings = async (req, res) => {
         currentPage: page,
         totalPages: Math.ceil(totalCount / limit),
       },
+    });
+  } catch (error) {
+    console.error('Error fetching filtered bookings:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch filtered bookings' });
+  }
+};
+export const getBookingsCount = async (req, res) => {
+  try {
+    const page  = parseInt(req.query.page, 10)  || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip  = (page - 1) * limit;
+
+    const search    = req.query.search || '';
+    const startDate = req.query.startDate;
+    const endDate   = req.query.endDate;
+
+    const searchRegex = new RegExp(search, 'i');
+
+    // ----- Build campaign-side filter (for date/name filters) -----
+    const campaignFilter = {};
+    if (startDate) campaignFilter.startDate = { $gte: startDate };
+    if (endDate)   campaignFilter.endDate   = { ...(campaignFilter.endDate || {}), $lte: endDate };
+    if (search)    campaignFilter.campaignName = searchRegex;
+
+    // ----- Build direct booking search conditions -----
+    const directBookingOr = [];
+    if (search) {
+      directBookingOr.push(
+        { companyName: searchRegex },
+        { clientName: searchRegex },
+        { brandDisplayName: searchRegex }
+      );
+    }
+
+    let finalBookingQuery = {};
+    let bookingIdFilterFromCampaigns = null;
+
+    // If any campaign filters were provided, constrain bookings by mapping table
+    if (Object.keys(campaignFilter).length > 0) {
+      const matchingCampaigns = await Campaign.find(campaignFilter)
+        .select('_id')
+        .lean();
+
+      const matchedCampaignIds = matchingCampaigns.map(c => c._id);
+      if (matchedCampaignIds.length === 0) {
+        bookingIdFilterFromCampaigns = [];
+      } else {
+        const bcLinks = await BookingCampaign.find({ campaignId: { $in: matchedCampaignIds } })
+          .select('bookingId')
+          .lean();
+        bookingIdFilterFromCampaigns = bcLinks.map(x => x.bookingId);
+      }
+    }
+
+    // Combine booking filters
+    if (bookingIdFilterFromCampaigns !== null && directBookingOr.length > 0) {
+      finalBookingQuery = {
+        $or: [
+          { _id: { $in: bookingIdFilterFromCampaigns } },
+          { $or: directBookingOr },
+        ],
+      };
+    } else if (bookingIdFilterFromCampaigns !== null) {
+      finalBookingQuery = { _id: { $in: bookingIdFilterFromCampaigns } };
+    } else if (directBookingOr.length > 0) {
+      finalBookingQuery = { $or: directBookingOr };
+    }
+
+    // ----- Count for pagination -----
+    const totalCount = await Booking.countDocuments(finalBookingQuery);
+
+    // ----- Page bookings -----
+    const bookings = await Booking.find() // No filter
+    .sort({ createdAt: -1 }) // Sort by createdAt in descending order
+    .lean(); // Return plain JavaScript objects
+
+
+
+   
+
+    return res.status(200).json({
+      bookings
+    
     });
   } catch (error) {
     console.error('Error fetching filtered bookings:', error);
@@ -938,6 +1022,7 @@ export const createBooking = async (req, res) => {
 
         // Update space occupancy + availability snapshot (optional, if you keep these counters)
         const bookedCount = unitIds.length;
+      
         space.occupiedUnits = Math.max(0, Number(space.occupiedUnits || 0)) + bookedCount;
 
         if (isDOOH) {
@@ -1158,7 +1243,7 @@ export const getBookingById = async (req, res) => {
           select: 'payment ',  // Select relevant fields from Pipeline
         }
       });
-
+console.log("Booking campaigns are ",bookingCampaigns );
     // Step 3: Prepare the response data in the desired structure
     const result = {
       _id: bookingId,
@@ -1318,33 +1403,167 @@ export const getAllBookings1 = async (req, res) => {
 };
 
 
+// export const getBookingDashboardStats = async (req, res) => {
+//   try {
+//     const pipeline = [
+//       // 1. Lookup to get BookingCampaigns (mapping between bookings and campaigns)
+//       {
+//         $lookup: {
+//           from: "bookingcampaigns", // BookingCampaign collection
+//           localField: "_id",         // Booking's _id
+//           foreignField: "bookingId", // Mapping with the bookingId field in BookingCampaign
+//           as: "bookingCampaigns"
+//         }
+//       },
+      
+//       // 2. Unwind the bookingCampaigns
+//       { $unwind: { path: "$bookingCampaigns", preserveNullAndEmptyArrays: true } },
+
+//       // 3. Lookup to get the campaigns from the campaign collection
+//       {
+//         $lookup: {
+//           from: "campaigns",   // Campaign collection
+//           localField: "bookingCampaigns.campaignId", // Referencing campaignId in BookingCampaign
+//           foreignField: "_id", // Matching with campaign's _id
+//           as: "campaigns"
+//         }
+//       },
+
+//       // 4. Unwind the campaigns
+//       { $unwind: { path: "$campaigns", preserveNullAndEmptyArrays: true } },
+
+//       // 5. Lookup to get the pipeline associated with each campaign
+//       {
+//         $lookup: {
+//           from: "pipelines",
+//           localField: "campaigns.pipeline",
+//           foreignField: "_id",
+//           as: "pipeline"
+//         }
+//       },
+
+//       // 6. Unwind pipeline (as there will be only one pipeline per campaign)
+//       { $unwind: { path: "$pipeline", preserveNullAndEmptyArrays: true } },
+
+//       // 7. Lookup to get the spaces associated with the campaign
+//       {
+//         $lookup: {
+//           from: "spaces",
+//           localField: "campaigns.spaces.id",
+//           foreignField: "_id",
+//           as: "spaces"
+//         }
+//       },
+
+//       // 🔒 Normalize everything into arrays
+//       {
+//         $addFields: {
+//           safeSpaces: {
+//             $cond: [
+//               { $isArray: "$spaces" },
+//               "$spaces",
+//               { $cond: [{ $gt: ["$spaces", null] }, ["$spaces"], []] }
+//             ]
+//           },
+//           safeInvoices: {
+//             $cond: [
+//               { $isArray: "$pipeline.invoice" },
+//               "$pipeline.invoice",
+//               { $cond: [{ $gt: ["$pipeline.invoice", null] }, ["$pipeline.invoice"], []] }
+//             ]
+//           }
+//         }
+//       },
+
+//       {
+//         $project: {
+//           createdAt: 1,
+//           companyName: 1,
+//           clientName: 1,
+//           campaignId: "$campaigns._id",
+//           campaignName: "$campaigns.campaignName",
+//           startDate: "$campaigns.startDate",
+//           endDate: "$campaigns.endDate",
+//           isFOC: "$campaigns.isFOC",
+
+//           totalPaid: { $ifNull: ["$pipeline.payment.totalPaid", 0] },
+//           paymentDue: { $ifNull: ["$pipeline.payment.paymentDue", 0] },
+//           bookingConfirmed: { $ifNull: ["$pipeline.bookingStatus.confirmed", false] },
+//           artworkReceived: { $ifNull: ["$pipeline.artwork.confirmed", false] },
+//           poReceived: { $ifNull: ["$pipeline.po.documentUrl", false] },
+
+//           invoiceReceived: {
+//             $cond: [{ $gt: [{ $size: "$safeInvoices" }, 0] }, true, false]
+//           },
+
+//           invoices: {
+//             $map: {
+//               input: "$safeInvoices",
+//               as: "inv",
+//               in: {
+//                 documentName: { $ifNull: ["$$inv.invoiceNumber", "Invoice Document"] },
+//                 fileUrl: "$$inv.documentUrl"
+//               }
+//             }
+//           },
+
+//           printingStatus: {
+//             $size: {
+//               $filter: {
+//                 input: "$safeSpaces",
+//                 as: "s",
+//                 cond: { $eq: ["$$s.printingStatus.confirmed", true] }
+//               }
+//             }
+//           },
+
+//           mountingStatus: {
+//             $size: {
+//               $filter: {
+//                 input: "$safeSpaces",
+//                 as: "s",
+//                 cond: { $eq: ["$$s.mountingStatus.confirmed", true] }
+//               }
+//             }
+//           }
+//         }
+//       }
+//     ];
+
+//     // Step 8: Execute the aggregation pipeline
+//     const bookingStats = await Booking.aggregate(pipeline);
+
+//     // Step 9: Return the results
+//     return res.status(200).json({ bookingStats });
+//   } catch (error) {
+//     console.error("Error in booking dashboard stats:", error);
+//     res.status(500).json({ error: error.message || "Failed to generate booking dashboard stats" });
+//   }
+// };
+
 export const getBookingDashboardStats = async (req, res) => {
   try {
     const pipeline = [
       // 1. Lookup to get BookingCampaigns (mapping between bookings and campaigns)
       {
         $lookup: {
-          from: "bookingcampaigns", // BookingCampaign collection
-          localField: "_id",         // Booking's _id
-          foreignField: "bookingId", // Mapping with the bookingId field in BookingCampaign
+          from: "bookingcampaigns",
+          localField: "_id",
+          foreignField: "bookingId",
           as: "bookingCampaigns"
         }
       },
-      
-      // 2. Unwind the bookingCampaigns
       { $unwind: { path: "$bookingCampaigns", preserveNullAndEmptyArrays: true } },
 
       // 3. Lookup to get the campaigns from the campaign collection
       {
         $lookup: {
-          from: "campaigns",   // Campaign collection
-          localField: "bookingCampaigns.campaignId", // Referencing campaignId in BookingCampaign
-          foreignField: "_id", // Matching with campaign's _id
+          from: "campaigns",
+          localField: "bookingCampaigns.campaignId",
+          foreignField: "_id",
           as: "campaigns"
         }
       },
-
-      // 4. Unwind the campaigns
       { $unwind: { path: "$campaigns", preserveNullAndEmptyArrays: true } },
 
       // 5. Lookup to get the pipeline associated with each campaign
@@ -1356,28 +1575,44 @@ export const getBookingDashboardStats = async (req, res) => {
           as: "pipeline"
         }
       },
-
-      // 6. Unwind pipeline (as there will be only one pipeline per campaign)
       { $unwind: { path: "$pipeline", preserveNullAndEmptyArrays: true } },
 
-      // 7. Lookup to get the spaces associated with the campaign
+      // NEW STAGE: Lookup CampaignInventoryMapping to get space details and statuses
       {
         $lookup: {
-          from: "spaces",
-          localField: "campaigns.spaces.id",
-          foreignField: "_id",
+          from: "campaigninventorymappings", // Use the correct collection name for CampaignInventoryMapping
+          localField: "campaigns._id",       // Match campaign's _id
+          foreignField: "campaignId",        // with campaignId in CampaignInventoryMapping
+          as: "campaignInventoryMappings"
+        }
+      },
+      // Unwind CampaignInventoryMappings if you want one result per inventory mapping
+      // Or keep as an array if a campaign can have multiple mappings and you want to aggregate all statuses
+      { $unwind: { path: "$campaignInventoryMappings", preserveNullAndEmptyArrays: true } },
+
+      // Lookup to get the actual Space documents for each mapped spaceId
+      // This will use the spaceId from the campaignInventoryMappings
+      {
+        $lookup: {
+          from: "spaces", // Space collection
+          localField: "campaignInventoryMappings.spaceId", // From the new mapping
+          foreignField: "_id", // Matching with space's _id
           as: "spaces"
         }
       },
+      // Unwind spaces (assuming one space per campaignInventoryMapping for simplicity here)
+      { $unwind: { path: "$spaces", preserveNullAndEmptyArrays: true } },
 
       // 🔒 Normalize everything into arrays
       {
         $addFields: {
+          // Now 'spaces' will come from the lookup above, it might be an array if not unwound
+          // If you unwind spaces, it will be an object, so adjust safeSpaces accordingly
           safeSpaces: {
             $cond: [
               { $isArray: "$spaces" },
               "$spaces",
-              { $cond: [{ $gt: ["$spaces", null] }, ["$spaces"], []] }
+              { $cond: [{ $gt: ["$spaces", null] }, ["$spaces"], []] } // If unwound, spaces is an object, so wrap it
             ]
           },
           safeInvoices: {
@@ -1385,6 +1620,21 @@ export const getBookingDashboardStats = async (req, res) => {
               { $isArray: "$pipeline.invoice" },
               "$pipeline.invoice",
               { $cond: [{ $gt: ["$pipeline.invoice", null] }, ["$pipeline.invoice"], []] }
+            ]
+          },
+          // We also need the printing and mounting statuses from the campaignInventoryMappings
+          safePrintingStatuses: {
+            $cond: [
+              { $isArray: "$campaignInventoryMappings.printingStatus" },
+              "$campaignInventoryMappings.printingStatus",
+              { $cond: [{ $gt: ["$campaignInventoryMappings.printingStatus", null] }, ["$campaignInventoryMappings.printingStatus"], []] }
+            ]
+          },
+          safeMountingStatuses: {
+            $cond: [
+              { $isArray: "$campaignInventoryMappings.mountingStatus" },
+              "$campaignInventoryMappings.mountingStatus",
+              { $cond: [{ $gt: ["$campaignInventoryMappings.mountingStatus", null] }, ["$campaignInventoryMappings.mountingStatus"], []] }
             ]
           }
         }
@@ -1397,9 +1647,18 @@ export const getBookingDashboardStats = async (req, res) => {
           clientName: 1,
           campaignId: "$campaigns._id",
           campaignName: "$campaigns.campaignName",
-          startDate: "$campaigns.startDate",
-          endDate: "$campaigns.endDate",
+          startDate: "$campaigns.startDate", // This might be overridden by campaignInventoryMappings.startDate if preferred
+          endDate: "$campaigns.endDate",     // Same here
           isFOC: "$campaigns.isFOC",
+
+          // New fields from CampaignInventoryMapping
+          // If a campaign can have multiple mappings, you might need $first or $sum/average here
+          mappedSpaceId: "$campaignInventoryMappings.spaceId",
+          mappedUnitIds: "$campaignInventoryMappings.unitIds",
+          mappedStartDate: "$campaignInventoryMappings.startDate", // More specific to the space usage
+          mappedEndDate: "$campaignInventoryMappings.endDate",     // More specific to the space usage
+          mappedDisplayCost: "$campaignInventoryMappings.displayCost",
+          mappedInvoiceNo: "$campaignInventoryMappings.invoiceNo",
 
           totalPaid: { $ifNull: ["$pipeline.payment.totalPaid", 0] },
           paymentDue: { $ifNull: ["$pipeline.payment.paymentDue", 0] },
@@ -1422,41 +1681,40 @@ export const getBookingDashboardStats = async (req, res) => {
             }
           },
 
-          printingStatus: {
+          // Now calculate printing and mounting status based on the safePrintingStatuses and safeMountingStatuses
+          printingStatusConfirmedUnits: { // Renamed to clarify it's a count of confirmed units
             $size: {
               $filter: {
-                input: "$safeSpaces",
-                as: "s",
-                cond: { $eq: ["$$s.printingStatus.confirmed", true] }
+                input: "$safePrintingStatuses",
+                as: "ps",
+                cond: { $eq: ["$$ps.confirmed", true] }
               }
             }
           },
 
-          mountingStatus: {
+          mountingStatusConfirmedUnits: { // Renamed to clarify it's a count of confirmed units
             $size: {
               $filter: {
-                input: "$safeSpaces",
-                as: "s",
-                cond: { $eq: ["$$s.mountingStatus.confirmed", true] }
+                input: "$safeMountingStatuses",
+                as: "ms",
+                cond: { $eq: ["$$ms.confirmed", true] }
               }
             }
-          }
+          },
+          // You might also want to expose the space details directly
+          spaceName: "$spaces.name", // Assuming 'name' is a field on the Space model
+          spaceLocation: "$spaces.location" // Assuming 'location' is a field on the Space model
         }
       }
     ];
 
-    // Step 8: Execute the aggregation pipeline
     const bookingStats = await Booking.aggregate(pipeline);
-
-    // Step 9: Return the results
     return res.status(200).json({ bookingStats });
   } catch (error) {
     console.error("Error in booking dashboard stats:", error);
     res.status(500).json({ error: error.message || "Failed to generate booking dashboard stats" });
   }
 };
-
-
 router.get('/inventories-for-selection', authenticate, async (req, res) => {
   try {
       const inventories = await Space.find({}, '_id spaceName city address spaceType availability ownershipType').lean();
@@ -1637,6 +1895,7 @@ router.post('/:bookingId/campaigns', async (req, res) => {
 router.get('/', authenticate, getAllBookings);
 router.get('/optimized', authenticate, getAllBookings1);
 router.get('/filter-by-date', authenticate, getFilteredBookings);
+router.get('/countDetails', authenticate, getBookingsCount);
 router.post('/', upload.single('companyLogo'),
 createBooking
 );

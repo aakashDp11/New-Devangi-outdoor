@@ -49,12 +49,26 @@ export default function InventorySelector({
           const campEnd = new Date(camp.endDate);
           return doesDateRangeIntersect(selectedStart, selectedEnd, campStart, campEnd);
         });
+        let noofDOOHUnitsOccupied=0;
+        space.campaignDates.map(camp => {
+          const campStart = new Date(camp.startDate);
+          const campEnd = new Date(camp.endDate);
+         if( doesDateRangeIntersect(selectedStart, selectedEnd, campStart, campEnd)){
+          noofDOOHUnitsOccupied++;
+         };
+        });
+        
       if (withinRange && !hasIntersection && space.spaceType !== "DOOH") {
         space.status = "Completely available";
       } else if (withinRange && hasIntersection && space.spaceType !== "DOOH") {
         space.status = "Completely booked";
       } else if (space.spaceType === "DOOH" && withinRange) {
-        const occupied = space.occupiedUnits || 0;
+        console.log("Is intersection",hasIntersection);
+        console.log("Is within Range",withinRange);
+        console.log("Space DOOH is",space);
+        const occupied = noofDOOHUnitsOccupied || 0;
+        space.occupiedUnits=noofDOOHUnitsOccupied;
+        console.log("Current no of DOOH units occ",occupied);
         space.status = occupied === 0 ? "Completely available" : occupied < space.unit ? "Partially available" : "Completely booked";
       }
       return withinRange;

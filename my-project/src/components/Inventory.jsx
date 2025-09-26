@@ -213,7 +213,40 @@ export default function InventoryDashboard() {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/listInventory?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.status === 403) { localStorage.clear(); navigate('/login'); return; }
       const data = await res.json();
+      
+      const currentDate = new Date();
+
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const year = currentDate.getFullYear();
+      
+      const formattedDate = `${day}/${month}/${year}`;
+      const doesDateRangeIntersect = (currentDate, targetStart, targetEnd) => {
+        return currentDate <= targetEnd && currentDate >= targetStart;
+      };
       setSpaces(data.spaces);
+      console.log("Today spaces are",spaces);
+      spaces.map(space=>{
+        space.campaignDates.map(camp => {
+          let noofDOOHUnitsOccupied=0;
+            const campStart = new Date(camp.startDate);
+            const campEnd = new Date(camp.endDate);
+           if( doesDateRangeIntersect(formattedDate, campStart, campEnd)){
+            noofDOOHUnitsOccupied++;
+           };
+           if (spaceType === "DOOH"){
+             if(noofDOOHUnitsOccupied===0){
+              space.availability='Completley Available';
+             }else if(noofDOOHUnitsOccupied<space.units){
+                 space.availability='Partialy Available';
+             }
+             else{
+              space.availability='Completley Booked';
+             }
+           }
+          });
+      })
+     
       setTotalCount(data.totalCount);
     } catch (error) { toast.error("Failed to fetch inventories."); }
   }, [currentPage, search, selectedRegion, availability, startDate, endDate, spaceType, ownershipType, navigate]);
@@ -229,7 +262,9 @@ export default function InventoryDashboard() {
       setMapSpaces(data);
       // For map view, totalCount reflects the number of *visible* map markers after all filters
       setTotalCount(data.length); 
-    } catch (error) { toast.error("Failed to fetch map locations."); }
+    } catch (error) { 
+      toast.error("Failed to fetch map locations."); 
+    }
   }, [search, selectedRegion, availability, startDate, endDate, spaceType, ownershipType, navigate]);
 
 

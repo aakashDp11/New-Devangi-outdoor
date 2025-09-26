@@ -18,6 +18,57 @@ const router = express.Router();
  * @desc    Get all campaigns with populated pipeline and space details
  * @access  Public
  */
+export const deleteCampaign = async (req, res) => {
+    const { id } = req.params; // Campaign ID from URL
+  
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid Campaign ID' });
+    }
+  
+    try {
+      // 1. Find the campaign to ensure it exists
+      const campaignToDelete = await Campaign.findById(id);
+      if (!campaignToDelete) {
+        return res.status(404).json({ message: 'Campaign not found.' });
+      }
+  
+      // Use a Mongoose session for atomicity, especially for cascading deletes
+      const session = await mongoose.startSession();
+      session.startTransaction();
+  
+      try {
+        // 2. Delete associated Pipeline document
+        await Pipeline.deleteOne({ campaign: id }, { session });
+        console.log(`Deleted Pipeline for Campaign ID: ${id}`);
+  
+        // 3. Delete associated CampaignInventoryMapping documents
+        await CampaignInventoryMapping.deleteMany({ campaignId: id }, { session });
+        console.log(`Deleted CampaignInventoryMappings for Campaign ID: ${id}`);
+       
+        await BookingCampaign.deleteOne({ campaignId: id }, { session });
+        // 4. Delete the Campaign itself
+        await Campaign.deleteOne({ _id: id }, { session }); // Use deleteOne with _id
+        console.log(`Deleted Campaign ID: ${id}`);
+  
+        await session.commitTransaction();
+        session.endSession();
+  
+        res.status(200).json({ message: 'Campaign and all associated data deleted successfully.' });
+  
+      } catch (transactionError) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error('Transaction failed during campaign deletion:', transactionError);
+        res.status(500).json({ message: 'Failed to delete campaign and associated data.', error: transactionError.message });
+      }
+  
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      res.status(500).json({ message: 'Server error during campaign deletion.', error: error.message });
+    }
+  };
+
+  router.delete('/:id', deleteCampaign);
 router.get('/', async (req, res) => {
   try {
     const campaigns = await Campaign.find({})
