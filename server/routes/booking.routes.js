@@ -10,6 +10,7 @@ import { uploadToS3 } from '../utils/s3uploader.js';
 import { authenticate } from '../middleware/authenticate.middleware.js';
 import BookingCampaign from '../models/bookingCampaignMapping.model.js';
 import CampaignInventoryMapping from '../models/campaignInventoryMapping.model.js';
+import Pipeline from '../models/pipeline.model.js';
 const router = express.Router();
 
 // export const updateCampaign = async (req, res) => {
@@ -1289,7 +1290,6 @@ export const getAllBookings1 = async (req, res) => {
 
     const search       = req.query.search || '';
     const { sortKey = 'createdAt', sortDirection = 'desc' } = req.query;
-
     const sortOptions = { [sortKey]: sortDirection === 'asc' ? 1 : -1 };
 
     // 🔍 Search filter
@@ -1306,40 +1306,49 @@ export const getAllBookings1 = async (req, res) => {
     const pipeline = [
       { $match: searchMatch },
 
-      // Join BookingCampaignMapping to find associated campaigns for the booking
+      // 🔗 Lookup BookingCampaignMapping
       {
         $lookup: {
-          from: 'bookingcampaignmappings', // New model to map bookings to campaigns
-          localField: '_id', // Booking ID
-          foreignField: 'bookingId', // Referencing the bookingId field in the new model
+          from: 'bookingcampaigns',
+          localField: '_id',
+          foreignField: 'bookingId',
           as: 'campaignMappings'
         }
       },
-
-      // Unwind the campaignMappings to get the campaign IDs
       { $unwind: '$campaignMappings' },
 
-      // Join campaigns based on the campaignId from the mapping model
+      // 🔗 Join Campaigns
       {
         $lookup: {
           from: 'campaigns',
-          localField: 'campaignMappings.campaignId', // Reference to the campaignId in BookingCampaignMapping
+          localField: 'campaignMappings.campaignId',
           foreignField: '_id',
           as: 'campaigns'
         }
       },
+      { $unwind: '$campaigns' },
 
-      // Join spaces inside each campaign
+      // 🔗 Join CampaignInventoryMapping
+      {
+        $lookup: {
+          from: 'campaigninventorymappings',
+          localField: 'campaigns._id',
+          foreignField: 'campaignId',
+          as: 'campaignInventory'
+        }
+      },
+
+      // 🔗 Join Spaces from campaignInventory
       {
         $lookup: {
           from: 'spaces',
-          localField: 'campaigns.spaces.id',
+          localField: 'campaignInventory.spaceId',
           foreignField: '_id',
           as: 'spaces'
         }
       },
 
-      // Join pipelines
+      // 🔗 Join Pipelines
       {
         $lookup: {
           from: 'pipelines',
@@ -1349,7 +1358,7 @@ export const getAllBookings1 = async (req, res) => {
         }
       },
 
-      // Keep only the fields you actually need
+      // 🎯 Project only the fields you need
       {
         $project: {
           companyName: 1,
@@ -1357,20 +1366,31 @@ export const getAllBookings1 = async (req, res) => {
           brandDisplayName: 1,
           clientType: 1,
           createdAt: 1,
+
           campaigns: {
             campaignName: 1,
             startDate: 1,
             endDate: 1,
             industry: 1,
-            pipeline: 1,
-            spaces: 1
+            pipeline: 1
           },
-          // flatten lookups
+
+          campaignInventory: {
+            spaceId: 1,
+            displayCost: 1,
+            printingCostPerSquareFeet: 1,
+            mountingCostPerSquareFeet: 1,
+            area: 1,
+            digitalStatus: 1
+          },
+
           spaces: { spaceName: 1 },
+
           pipelines: {
             payment: 1,
             po: 1,
-            bookingStatus: 1
+            bookingStatus: 1,
+            artwork: 1
           }
         }
       },
@@ -1397,11 +1417,120 @@ export const getAllBookings1 = async (req, res) => {
       totalPages: Math.ceil(totalCount / limit)
     });
   } catch (error) {
-    console.error('Error in getAllBookings1 (agg optimized):', error);
+    console.error('Error in getAllBookings1:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch bookings' });
   }
 };
 
+ const getArtworksGroupedByBooking = async (page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+
+    // Define the core aggregation pipeline stages
+    const aggregationStages = [
+      // Stage 1: Lookup Booking details
+      {
+        $lookup: {
+          from: Booking.collection.name,
+          localField: 'bookingId',
+          foreignField: '_id',
+          as: 'bookingDetails',
+        },
+      },
+      {
+        $unwind: '$bookingDetails',
+      },
+
+      // Stage 2: Lookup Pipeline details
+      {
+        $lookup: {
+          from: Pipeline.collection.name,
+          localField: 'campaignId',
+          foreignField: 'campaign',
+          as: 'pipelineDetails',
+        },
+      },
+      {
+        $unwind: {
+          path: '$pipelineDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Stage 3: Filter out pipelines without artwork or confirmed artwork
+      {
+        $match: {
+          'pipelineDetails.artwork.documentUrl': { $exists: true, $ne: null, $ne: '' },
+          // 'pipelineDetails.artwork.confirmed': true, // Uncomment if only confirmed artworks are needed
+        },
+      },
+
+      // Stage 4: Group by Booking and collect artwork URLs
+      {
+        $group: {
+          _id: '$bookingDetails._id',
+          companyName: { $first: '$bookingDetails.companyName' },
+          clientName: { $first: '$bookingDetails.clientName' },
+          campaigns: {
+            $push: {
+              campaignId: '$campaignId',
+              campaignName:'$campaignName',
+              artworkDocumentUrl: '$pipelineDetails.artwork.documentUrl',
+             
+            },
+          },
+        },
+      },
+
+      // Stage 5: Project the final output before pagination
+      {
+        $project: {
+          _id: 0,
+          bookingId: '$_id',
+          companyName: 1,
+          clientName: 1,
+          
+          campaigns: 1,
+        },
+      },
+    ];
+
+    // Add pagination stages
+    const paginatedArtworks = await BookingCampaign.aggregate([
+      ...aggregationStages, // Spread the core stages
+      { $skip: skip },
+      { $limit: limit },
+    ]);
+
+    // To get the total count for pagination metadata (optional but recommended)
+    // We run a separate pipeline or add a $facet stage. $facet is more efficient.
+    const [result] = await BookingCampaign.aggregate([
+        ...aggregationStages, // Use the same core stages
+        {
+          $count: 'totalCount' // Count the total documents after grouping
+        }
+      ]);
+
+    const totalCount = result ? result.totalCount : 0;
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      bookings: paginatedArtworks,
+      pagination: {
+        totalItems: totalCount,
+        totalPages: totalPages,
+        currentPage: page,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+
+  } catch (error) {
+    console.error('Error fetching artworks grouped by booking with pagination:', error);
+    throw error;
+  }
+};
 
 // export const getBookingDashboardStats = async (req, res) => {
 //   try {
@@ -1541,7 +1670,8 @@ export const getAllBookings1 = async (req, res) => {
 //   }
 // };
 
-export const getBookingDashboardStats = async (req, res) => {
+
+ const getBookingDashboardStats = async (req, res) => {
   try {
     const pipeline = [
       // 1. Lookup to get BookingCampaigns (mapping between bookings and campaigns)
@@ -1725,6 +1855,16 @@ router.get('/inventories-for-selection', authenticate, async (req, res) => {
   }
 });
 
+router.get('/artworks-by-booking', async (req, res) => {
+  try {
+    const artworks = await getArtworksGroupedByBooking();
+    res.status(200).json(artworks);
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ message: 'Failed to fetch artworks', error: error.message });
+  }
+});
+
 router.get('/dashboard-stats', authenticate, getBookingDashboardStats);
 router.get('/campaign/:id', getCampaignById);
 router.patch('/campaign/:id', updateCampaign);
@@ -1903,4 +2043,5 @@ router.get('/payment-report', getPaymentReport);
 router.get('/:id', getBookingById);
 router.put('/:id', updateBooking);
 router.delete('/:id', deleteBooking);
+
 export default router;

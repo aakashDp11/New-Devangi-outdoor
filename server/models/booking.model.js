@@ -27,10 +27,7 @@ const bookingSchema = new Schema({
     required: true, // optional: if every booking must have a user
   },
   campaignImages: [String],
-  // Add the bookingCampaigns field here
-  // bookingCampaigns: [
-  //   { type: mongoose.Schema.Types.ObjectId, ref: 'BookingCampaign' },
-  // ],
+
 }, {
   timestamps: true
 });

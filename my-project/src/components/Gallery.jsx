@@ -85,17 +85,43 @@ export default function Gallery() {
             const token = localStorage.getItem('accessToken');
             try {
                 // MODIFIED: Added sortKey and sortDirection to the API call
+                // const params = new URLSearchParams({
+                //     page: currentPage,
+                //     limit: 10,
+                //     search: search,
+                //     sortKey: sortConfig.key,
+                //     sortDirection: sortConfig.direction,
+                // });
+
+                // const response = await fetch(
+                //     `${import.meta.env.VITE_API_BASE_URL}/api/bookings/artworks-by-booking`,
+                //     { headers: { Authorization: `Bearer ${token}` } }
+                // );
+                const baseUrl = `${import.meta.env.VITE_API_BASE_URL}/api/bookings/artworks-by-booking`;
+
+                // 2. Create URLSearchParams for all query parameters
                 const params = new URLSearchParams({
                     page: currentPage,
-                    limit: 10,
-                    search: search,
+                    limit: 10, // Assuming a fixed limit for now, or make it a state variable
+                    // Only add search param if it has a value
+                    ...(search && { search: search }),
                     sortKey: sortConfig.key,
                     sortDirection: sortConfig.direction,
                 });
 
+                // 3. Combine base URL and params to form the final API endpoint URL
+                const finalUrl = `${baseUrl}?${params.toString()}`;
+
+                console.log("Fetching from URL:", finalUrl); // Good for debugging
+
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_BASE_URL}/api/bookings/optimized?${params.toString()}`,
-                    { headers: { Authorization: `Bearer ${token}` } }
+                    finalUrl, // *** CORRECTED: Use the URL with query parameters ***
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json', // Good practice for APIs
+                        }
+                    }
                 );
 
                 if (response.status === 403) {
@@ -218,24 +244,23 @@ export default function Gallery() {
                         <Card key={item._id} className="transition hover:shadow-md">
                             <CardContent className="flex flex-col gap-4">
                                 <div className="text-md font-semibold text-black">
-                                    {item.companyName || 'No Campaign Name'}
+                                    {item.companyName || 'No Company Name'}
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                {/* <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                                     {(item.campaigns || []).flatMap((campaign, cIdx) => {
-                                        const pipelines = Array.isArray(campaign.pipeline) ? campaign.pipeline : [campaign.pipeline].filter(Boolean);
+                                       
                                         
-                                        return pipelines.map((pipe, pIdx) => {
-                                            const url = pipe?.artwork?.documentUrl;
+                                       
+                                            const url = campaign?.artworkDocumentUrl;
                                             const campaignName = campaign.campaignName || 'Campaign';
                                             const campaignId = campaign._id;
-                                            
-                                            const campaignStartDate = campaign.startDate || pipe?.artwork?.startDate;
-                                            const campaignEndDate = campaign.endDate || pipe?.artwork?.endDate;
+                                            console.log("Url is",url);
+                                        
 
-                                            return url ? (
+                                            
                                                 <div
-                                                    key={`${cIdx}-${pIdx}`}
+                                                    key={`${cIdx}`}
                                                     className="relative group w-full h-32 cursor-pointer"
                                                     onClick={() => navigate(`/campaign-details/${campaignId}`)}
                                                 >
@@ -247,16 +272,7 @@ export default function Gallery() {
                                                     />
                                                     <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2">
                                                         <p className="text-white text-center text-xs font-semibold">{campaignName}</p>
-                                                        {campaignStartDate && (
-                                                            <p className="text-white text-center text-xs mt-1">
-                                                                Start: {new Date(campaignStartDate).toLocaleDateString()}
-                                                            </p>
-                                                        )}
-                                                        {campaignEndDate && (
-                                                            <p className="text-white text-center text-xs">
-                                                                End: {new Date(campaignEndDate).toLocaleDateString()}
-                                                            </p>
-                                                        )}
+                                                       
                                                         <button 
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -269,11 +285,57 @@ export default function Gallery() {
                                                         </button>
                                                     </div>
                                                 </div>
-                                            ) : null;
-                                        }).filter(Boolean);
+                                           
+                                       
                                     })}
-                                </div>
-
+                                </div> */}
+<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+    {(item.campaigns || []).flatMap((campaign, cIdx) => {
+        const url = campaign?.artworkDocumentUrl;
+        const campaignName = campaign.campaignName || 'Campaign';
+        const campaignId = campaign.campaignId;
+        console.log("Url is", url);
+        if (!url) {
+            // If there's no URL, return a blank placeholder div
+            return (
+                <div
+                    key={`${cIdx}-blank`} // Use a distinct key for blank items
+                    className="relative group w-full h-32 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-sm"
+                >
+                  
+                </div>
+            );
+        }
+        // You need to explicitly return the JSX element here
+        return (
+            <div
+                key={`${cIdx}`} // Consider using a more unique key if possible, like campaignId
+                className="relative group w-full h-32 cursor-pointer"
+                onClick={() => navigate(`/campaign-details/${campaignId}`)}
+            >
+                <img
+                    src={url}
+                    // alt={`Artwork for ${campaignName}`}
+                    className="rounded w-full h-full object-cover bg-gray-100"
+                    loading="lazy"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2">
+                    <p className="text-white text-center text-xs font-semibold">{campaignName}</p>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            const fileName = `${campaignName || 'artwork'}_${url.substring(url.lastIndexOf('/') + 1)}`;
+                            handleDownloadSingleImage(e, url, fileName);
+                        }}
+                        className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-full text-xs flex items-center gap-1 mt-2"
+                    >
+                        <FaDownload /> Download
+                    </button>
+                </div>
+            </div>
+        );
+    })}
+</div>
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
                                     <div className="flex-1 flex flex-col gap-1">
                                         <div className="text-xs text-gray-600">Client: {item.clientName || 'N/A'}</div>
