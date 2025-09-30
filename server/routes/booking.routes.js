@@ -1061,6 +1061,86 @@ export const createBooking = async (req, res) => {
   }
 };
 
+export const deleteBooking = async (req, res) => {
+  const { id: bookingId } = req.params;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 1️⃣ Fetch booking
+    const booking = await Booking.findById(bookingId).session(session);
+    if (!booking) throw new Error('Booking not found');
+
+    // 2️⃣ Fetch all BookingCampaigns linked to this booking
+    const bookingCampaigns = await BookingCampaign.find({ bookingId })
+      .populate('campaignId')
+      .session(session);
+
+    // 3️⃣ Loop through each BookingCampaign
+    for (const bc of bookingCampaigns) {
+      const campaign = bc.campaignId;
+      if (!campaign) continue;
+
+      // 4️⃣ Fetch all space mappings for this campaign
+      const mappings = await CampaignInventoryMapping.find({ campaignId: campaign._id }).session(session);
+
+      for (const mapping of mappings) {
+        const space = await Space.findById(mapping.spaceId).session(session);
+        if (!space) continue;
+
+        // Reduce occupied units by the number of booked units
+        const bookedUnits = mapping.unitIds.length;
+        space.occupiedUnits = Math.max(0, space.occupiedUnits - bookedUnits);
+
+        // Update availability based on type
+        const isDOOH = space.spaceType === 'DOOH';
+        const allUnitsBooked = space.occupiedUnits >= space.unit;
+        const noUnitsBooked = space.occupiedUnits === 0;
+
+        if (isDOOH) {
+          space.availability = allUnitsBooked
+            ? 'Completely booked'
+            : noUnitsBooked
+            ? 'Completely available'
+            : 'Partialy available';
+        } else {
+          if (space.overlappingBooking) {
+            space.availability = 'Overlapping booking';
+          } else {
+            space.availability = allUnitsBooked ? 'Booked' : 'Available';
+          }
+        }
+
+        // Decrement number of bookings
+        space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
+
+        await space.save({ session });
+
+        // 5️⃣ Delete CampaignInventoryMapping entry
+        await CampaignInventoryMapping.findByIdAndDelete(mapping._id).session(session);
+      }
+
+      // 6️⃣ Delete the Campaign
+      await Campaign.findByIdAndDelete(campaign._id).session(session);
+
+      // 7️⃣ Delete the BookingCampaign
+      await BookingCampaign.findByIdAndDelete(bc._id).session(session);
+    }
+
+    // 8️⃣ Delete the Booking itself
+    await Booking.findByIdAndDelete(bookingId).session(session);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({ message: 'Booking deleted successfully' });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error('Booking deletion error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to delete booking' });
+  }
+};
 export const updateBooking = async (req, res) => {
 const { id: bookingId } = req.params;
 const {
@@ -1147,80 +1227,80 @@ console.error(error);
 return res.status(500).json({ error: error.message || 'Failed to update booking' });
 }
 };
-export const deleteBooking = async (req, res) => {
-  const { id: bookingId } = req.params;
-  const session = await mongoose.startSession();
-  session.startTransaction();
+// export const deleteBooking = async (req, res) => {
+//   const { id: bookingId } = req.params;
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
 
-  try {
-    // 1️⃣ Fetch booking
-    const booking = await Booking.findById(bookingId).session(session);
-    if (!booking) throw new Error('Booking not found');
+//   try {
+//     // 1️⃣ Fetch booking
+//     const booking = await Booking.findById(bookingId).session(session);
+//     if (!booking) throw new Error('Booking not found');
 
-    // 2️⃣ Fetch all BookingCampaigns linked to this booking
-    const bookingCampaigns = await BookingCampaign.find({ bookingId })
-      .populate('campaignId')
-      .session(session);
+//     // 2️⃣ Fetch all BookingCampaigns linked to this booking
+//     const bookingCampaigns = await BookingCampaign.find({ bookingId })
+//       .populate('campaignId')
+//       .session(session);
 
-    // 3️⃣ Loop through each BookingCampaign
-    for (const bc of bookingCampaigns) {
-      const campaign = bc.campaignId;
-      if (!campaign) continue;
+//     // 3️⃣ Loop through each BookingCampaign
+//     for (const bc of bookingCampaigns) {
+//       const campaign = bc.campaignId;
+//       if (!campaign) continue;
 
-      // 4️⃣ Update spaces
-      for (const selected of campaign.spaces) {
-        const space = await Space.findById(selected.id).session(session);
-        if (!space) continue;
+//       // 4️⃣ Update spaces
+//       for (const selected of campaign.spaces) {
+//         const space = await Space.findById(selected.id).session(session);
+//         if (!space) continue;
 
-        // Reduce occupied units
-        space.occupiedUnits = Math.max(0, space.occupiedUnits - selected.selectedUnits);
+//         // Reduce occupied units
+//         space.occupiedUnits = Math.max(0, space.occupiedUnits - selected.selectedUnits);
 
-        // Update availability based on type
-        const isDOOH = space.spaceType === 'DOOH';
-        const allUnitsBooked = space.occupiedUnits >= space.unit;
-        const noUnitsBooked = space.occupiedUnits === 0;
+//         // Update availability based on type
+//         const isDOOH = space.spaceType === 'DOOH';
+//         const allUnitsBooked = space.occupiedUnits >= space.unit;
+//         const noUnitsBooked = space.occupiedUnits === 0;
 
-        if (isDOOH) {
-          space.availability = allUnitsBooked
-            ? 'Completely booked'
-            : noUnitsBooked
-            ? 'Completely available'
-            : 'Partialy available';
-        } else {
-          if (space.overlappingBooking) {
-            space.availability = 'Overlapping booking';
-          } else {
-            space.availability = allUnitsBooked ? 'Booked' : 'Available';
-          }
-        }
+//         if (isDOOH) {
+//           space.availability = allUnitsBooked
+//             ? 'Completely booked'
+//             : noUnitsBooked
+//             ? 'Completely available'
+//             : 'Partialy available';
+//         } else {
+//           if (space.overlappingBooking) {
+//             space.availability = 'Overlapping booking';
+//           } else {
+//             space.availability = allUnitsBooked ? 'Booked' : 'Available';
+//           }
+//         }
 
-        // Decrement number of bookings
-        space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
+//         // Decrement number of bookings
+//         space.numberOfBookings = Math.max(0, space.numberOfBookings - 1);
 
-        await space.save({ session });
-      }
+//         await space.save({ session });
+//       }
 
-      // 5️⃣ Delete the Campaign
-      await Campaign.findByIdAndDelete(campaign._id).session(session);
+//       // 5️⃣ Delete the Campaign
+//       await Campaign.findByIdAndDelete(campaign._id).session(session);
 
-      // 6️⃣ Delete the BookingCampaign
-      await BookingCampaign.findByIdAndDelete(bc._id).session(session);
-    }
+//       // 6️⃣ Delete the BookingCampaign
+//       await BookingCampaign.findByIdAndDelete(bc._id).session(session);
+//     }
 
-    // 7️⃣ Delete the Booking itself
-    await Booking.findByIdAndDelete(bookingId).session(session);
+//     // 7️⃣ Delete the Booking itself
+//     await Booking.findByIdAndDelete(bookingId).session(session);
 
-    await session.commitTransaction();
-    session.endSession();
+//     await session.commitTransaction();
+//     session.endSession();
 
-    return res.status(200).json({ message: 'Booking deleted successfully' });
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error('Booking deletion error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to delete booking' });
-  }
-};
+//     return res.status(200).json({ message: 'Booking deleted successfully' });
+//   } catch (error) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     console.error('Booking deletion error:', error);
+//     return res.status(500).json({ error: error.message || 'Failed to delete booking' });
+//   }
+// };
 
 export const getBookingById = async (req, res) => {
   const { id: bookingId } = req.params;

@@ -65,6 +65,37 @@ export default function ProposalDetails() {
       toast.error('An error occurred while deleting.');
     }
   };
+// Add this function inside ProposalDetails component
+const handleDownloadPPT = async () => {
+  try {
+    const inventories = proposal.spaces.map(space => space.spaceName); // use space names as inventory names
+    const response = await fetch(`http://localhost:5000/generate-ppt`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ inventories }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to generate PPT");
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "custom_proposal.pptx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    toast.success("PPT downloaded successfully!");
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to download PPT.");
+  }
+};
 
   const handleEdit = () => {
     navigate(`/edit-proposal/${id}`);
@@ -90,13 +121,27 @@ export default function ProposalDetails() {
       <main className={`flex-1 h-full overflow-y-auto px-4 md:px-8 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          {/* <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Proposal Details</h1>
               <p className="text-sm text-gray-500">Review the complete information for this proposal.</p>
             </div>
-            <Button onClick={handleEdit} className="bg-black text-white hover:bg-gray-800 px-4 py-2">Edit Proposal</Button>
-          </div>
+            <Button onClick={handleEdit} className="bg-black text-xs text-white hover:bg-gray-800 px-4 py-2">Edit </Button>
+          </div> */}
+<div className="flex items-center justify-between mb-6">
+  <div>
+    <h1 className="text-2xl font-bold text-gray-800">Proposal Details</h1>
+    <p className="text-sm text-gray-500">Review the complete information for this proposal.</p>
+  </div>
+  <div className="flex gap-2">
+    <Button onClick={handleEdit} className="bg-black text-xs text-white hover:bg-gray-800 px-4 py-2">
+      Edit
+    </Button>
+    <Button onClick={handleDownloadPPT} className="bg-black text-xs text-white hover:bg-blue-700 px-4 py-2">
+      Download PPT
+    </Button>
+  </div>
+</div>
 
           {/* New Two-Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -130,8 +175,8 @@ export default function ProposalDetails() {
                         Created At: {new Date(proposal.createdAt).toLocaleString()}
                     </span>
                     <div className="flex gap-3">
-                        <Button onClick={() => navigate(-1)} className="bg-white text-black border border-gray-300 hover:bg-gray-100">Back</Button>
-                        <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={() => setShowDeleteModal(true)}>
+                        <Button onClick={() => navigate(-1)} className="bg-white text-xs text-black border border-gray-300 hover:bg-gray-100">Back</Button>
+                        <Button className="bg-red-600 text-xs hover:bg-red-700 text-white" onClick={() => setShowDeleteModal(true)}>
                         Delete
                         </Button>
                     </div>

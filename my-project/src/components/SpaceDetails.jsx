@@ -28,15 +28,7 @@ const CampaignCard = ({ campaign, navigate, onEdit }) => (
         <p className="text-xs text-gray-500 uppercase tracking-wider">Campaign Name</p>
         <p className="font-medium text-gray-800 break-words">{campaign.campaignName}</p>
       </div>
-      <button 
-        onClick={(e) => {
-          e.stopPropagation(); 
-          onEdit(campaign);
-        }}
-        className="text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300 flex-shrink-0"
-      >
-        Edit
-      </button>
+
     </div>
     <div 
       onClick={() => navigate(`/campaign-details/${campaign._id}`)} 
@@ -141,7 +133,12 @@ export default function SpaceDetails() {
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
+console.log("today's date",today);
+const formattedDate = today.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+});
         const ongoing = [];
         const upcoming = [];
         const ended = [];
@@ -149,12 +146,22 @@ export default function SpaceDetails() {
         campaigns.forEach(campaign => {
           const startDate = new Date(campaign.startDate);
           const endDate = new Date(campaign.endDate);
-          
-          if (endDate < today) {
+          const formattedStartDate = startDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          });
+          const formattedEndDate = endDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          });
+          console.log("Campaign name: ",campaign.campaignName,startDate,endDate);
+          if (formattedEndDate < formattedDate) {
             ended.push(campaign);
-          } else if (startDate <= today && endDate >= today) {
+          } else if (formattedStartDate <= formattedDate && formattedEndDate >= formattedDate) {
             ongoing.push(campaign);
-          } else if (startDate > today) {
+          } else if (formattedStartDate > formattedDate) {
             upcoming.push(campaign);
           }
         });
@@ -274,7 +281,7 @@ export default function SpaceDetails() {
               <DetailItem label="Space Type" value={space.spaceType} />
               {space.spaceType === 'DOOH' && (
                 <>
-                  <DetailItem label="Unit" value={space.unit} />
+                  {/* <DetailItem label="Unit" value={space.unit} /> */}
                   <DetailItem label="Resolution" value={space.resolution} />
                 </>
               )}
@@ -291,7 +298,7 @@ export default function SpaceDetails() {
               <DetailItem label="Latitude" value={space.latitude} />
               <DetailItem label="Longitude" value={space.longitude} />
               <DetailItem label="Total Units" value={space.unit} />
-              <DetailItem label="Occupied Units" value={space.occupiedUnits} />
+              <DetailItem label="Currently occupied units" value={ongoingCampaigns.length} />
             </div>
 
             {space.description && (
