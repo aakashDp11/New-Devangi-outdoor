@@ -125,6 +125,8 @@ export function CustomSelect({ mandatory = false, label, value, onChange, name, 
                 name={name}
                 options={displayOptions}
                 value={formattedValue}
+                // 💡 ISSUE FIX: Ensure the change handler always creates a proper pseudo-event object 
+                // for the parent component to consume.
                 onChange={(selectedOption) => onChange({ target: { name, value: selectedOption?.value || "" } })}
                 isSearchable
                 styles={customStyles}
@@ -167,6 +169,7 @@ function MultiAudienceSelect({ label, name, value, onChange, options, mandatory,
             backgroundColor: state.isFocused ? '#E5E7EB' : null,
             color: '#374151',
             '&:active': { backgroundColor: '#D1D5DB' },
+            fontSize: '0.875rem',
         }),
         multiValue: () => ({ display: 'none' }),
         control: (provided, state) => ({
@@ -473,7 +476,9 @@ export default function AddSpaceForm() {
 
     const formatForInput = (dateStr) => {
         if (!dateStr) return "";
+        // Assuming dateStr is in dd-mm-yyyy format
         const [dd, mm, yyyy] = dateStr.split("-");
+        // Ensure reverse formatting for date input type
         if (!yyyy || !mm || !dd) return "";
         return `${yyyy}-${mm}-${dd}`;
     };
@@ -509,6 +514,11 @@ export default function AddSpaceForm() {
 
         if (formData.spaceType === 'Transit') {
             mandatoryFields.Basic.push('transitType', 'transitLine');
+        }
+
+        // Add zip to mandatory fields for non-special types
+        if (!isSpecialType) {
+            mandatoryFields.Location.push("zip");
         }
 
         const currentStepFields = mandatoryFields[step] || [];
@@ -570,6 +580,11 @@ export default function AddSpaceForm() {
                 if (value && !validators.longitude(value)) errors.push(getValidationMessage('Longitude', 'longitude'));
                 break;
             case 'zip':
+                // Check mandatory field for zip
+                if (isMandatory && value === '') {
+                     errors.push(getValidationMessage('Pin-code', 'required'));
+                }
+                // Always validate format if there's a value
                 if (value && !validators.pincode(value)) errors.push(getValidationMessage('Pin-code', 'pincode'));
                 break;
             case 'address':
@@ -589,10 +604,16 @@ export default function AddSpaceForm() {
     // Function to handle input changes with validation and error/touch updates
     const handleValidatedInputChange = (e) => {
         const { name, value } = e.target;
-        handleInputChange(e);
+        // Use a functional update to ensure you're validating against the latest state
         setTouched(prev => ({ ...prev, [name]: true }));
-        // Validate against the *new* state (optimistic update)
-        const errors = validateField(name, value, { ...form, [name]: value }); 
+        
+        // Optimistically update the form state (use handleInputChange which updates global form state)
+        handleInputChange(e); 
+        
+        // Validate against the *new* state, combining the optimistic update with current form data
+        const newFormData = { ...form, [name]: value }; 
+        const errors = validateField(name, value, newFormData); 
+        
         setFieldErrors(prev => ({ ...prev, [name]: errors.length > 0 ? errors[0] : null }));
     };
 
@@ -618,7 +639,7 @@ export default function AddSpaceForm() {
             mandatoryFieldsByStep.Specifications = ["illumination"];
             mandatoryFieldsByStep.Location = mandatoryFieldsByStep.Location.filter(field => !['zip', 'latitude', 'longitude'].includes(field));
         } else {
-            mandatoryFieldsByStep.Location.push("latitude", "longitude");
+            mandatoryFieldsByStep.Location.push("latitude", "longitude", "zip");
             mandatoryFieldsByStep.Basic.push("price");
         }
         
@@ -722,29 +743,30 @@ export default function AddSpaceForm() {
         }
     };
 
-    // --- CASCADING DROPDOWN HANDLERS (FROM Code 1, using new validation handler) ---
+    // --- CASCADING DROPDOWN HANDLERS (FROM Code 1) ---
 
     const handleSpaceTypeChange = (selectedOption) => {
         const value = selectedOption?.value || "";
-        // Simulate event object for handleValidatedInputChange
+        
+        // 💡 FIX: Pass the selected value as a synthetic event to trigger main validation and form update
         handleValidatedInputChange({ target: { name: 'spaceType', value } }); 
         
-        // Reset dependent fields and state
-        setTransitTypeOptions([]);
-        setLineOptions([]);
+        // Reset dependent fields and state manually since we are outside handleValidatedInputChange
         handleInputChange({ target: { name: 'transitType', value: '' } });
         handleInputChange({ target: { name: 'transitLine', value: '' } });
+        handleInputChange({ target: { name: 'illumination', value: value === 'DOOH' ? '' : form.illumination } });
 
-        if (value === 'DOOH') {
-            handleInputChange({ target: { name: 'illumination', value: '' } });
-        }
+        setTransitTypeOptions([]);
+        setLineOptions([]);
 
         if (value === 'Transit') {
             const transitData = spaceOptions.find(opt => opt.value === 'Transit');
             if (transitData && transitData.transitTypes) {
-                setTransitTypeOptions(transitData.transitTypes);
+                // Map the options to exclude the nested lines array before setting state for the next select
+                setTransitTypeOptions(transitData.transitTypes.map(({ lines, ...rest }) => rest));
             }
         }
+        
         // Clear errors for dependent fields
         setFieldErrors(prev => ({
             ...prev,
@@ -762,7 +784,9 @@ export default function AddSpaceForm() {
         setLineOptions([]);
         handleInputChange({ target: { name: 'transitLine', value: '' } });
 
-        const selectedTypeData = transitTypeOptions.find(opt => opt.value === value);
+        const transitOptionsWithLines = spaceOptions.find(opt => opt.value === 'Transit')?.transitTypes || [];
+        
+        const selectedTypeData = transitOptionsWithLines.find(opt => opt.value === value);
         if (selectedTypeData && selectedTypeData.lines) {
             setLineOptions(selectedTypeData.lines);
         }
@@ -899,8 +923,8 @@ export default function AddSpaceForm() {
                                                 label="Space Type"
                                                 name="spaceType"
                                                 value={form.spaceType}
-                                                // Note: CustomSelect uses the selected option object, so we adjust handler here
-                                                onChange={handleSpaceTypeChange}
+                                                // 💡 FIX: Use the dedicated cascading handler here. The CustomSelect component internally converts the selected option into the pseudo-event object expected by this handler.
+                                                onChange={handleSpaceTypeChange} 
                                                 options={spaceOptions.map(({ transitTypes, ...rest }) => rest)}
                                                 mandatory
                                                 error={touched.spaceType && fieldErrors.spaceType}
@@ -913,7 +937,7 @@ export default function AddSpaceForm() {
                                                         name="transitType"
                                                         value={form.transitType}
                                                         onChange={handleTransitTypeChange}
-                                                        options={transitTypeOptions.map(({ lines, ...rest }) => rest)}
+                                                        options={transitTypeOptions}
                                                         mandatory
                                                         error={touched.transitType && fieldErrors.transitType}
                                                     />
@@ -922,7 +946,7 @@ export default function AddSpaceForm() {
                                                             label="Transit Line"
                                                             name="transitLine"
                                                             value={form.transitLine}
-                                                            onChange={handleValidatedInputChange} 
+                                                            onChange={handleValidatedInputChange} // Simple selection, use direct handler
                                                             options={lineOptions}
                                                             mandatory
                                                             error={touched.transitLine && fieldErrors.transitLine}
@@ -976,7 +1000,7 @@ export default function AddSpaceForm() {
                                                 value={form.specification} 
                                                 onChange={handleValidatedInputChange} 
                                                 options={specificationOptions} 
-                                                mandatory={!["BQS", "DigitalBQS", "Transit"].includes(form.spaceType)}
+                                                mandatory={false} // Note: Keeping false based on your visible image and form's current step constraints
                                                 error={touched.specification && fieldErrors.specification}
                                             />
                                             
@@ -998,7 +1022,7 @@ export default function AddSpaceForm() {
                                                     onChange={handleValidatedInputChange}
                                                     onBlur={handleBlur}
                                                     error={touched.price && fieldErrors.price}
-                                                    mandatory // Added mandatory based on Code 2's validation logic
+                                                    mandatory 
                                                 />
                                             )}
 
@@ -1009,7 +1033,7 @@ export default function AddSpaceForm() {
                                                 onChange={handleValidatedInputChange}
                                                 onBlur={handleBlur}
                                                 error={touched.footfall && fieldErrors.footfall}
-                                                type="number" // Assuming footfall is a number
+                                                type="number"
                                             />
                                             <MultiAudienceSelect 
                                                 label="Audience" 
@@ -1211,6 +1235,7 @@ export default function AddSpaceForm() {
                                             onBlur={handleBlur}
                                             error={touched.zip && fieldErrors.zip}
                                             placeholder="e.g., 400001"
+                                            mandatory={!["BQS", "DigitalBQS", "Transit"].includes(form.spaceType)} 
                                         />
                                         <Input 
                                             label="Latitude" 
@@ -1310,7 +1335,7 @@ export default function AddSpaceForm() {
                             </Button>
                             <Button 
                                 onClick={handleNext} 
-                                className="bg-black text-white hover:bg-blue-700" // Using black and blue color scheme as implied by Code 2's theme
+                                className="bg-black text-white hover:bg-blue-700"
                             >
                                 {step === stepOrder[stepOrder.length - 1] ? "Preview" : "Next"}
                             </Button>
