@@ -1,0 +1,350 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSidebar } from '../context/SidebarContext';
+import { DateRange } from 'react-date-range';
+import dayjs from 'dayjs';
+import { FaArrowLeft, FaExclamationTriangle, FaCheck } from 'react-icons/fa';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
+
+import Navbar from './Navbar';
+import RevenueReport from './reports/RevenueReport';
+import BookingReport from './reports/BookingReport';
+import InventoryReport from './reports/InventoryReport';
+import ActivitiesReport from './reports/ActivitiesReport';
+import OtherReport from './reports/OtherReport';
+
+// --- REUSABLE UI COMPONENTS (FROM CODE 2) ---
+
+// Button component with consistent styling and loading state
+const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
+  <button
+    className={`
+      px-4 py-2 rounded-xl bg-black text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg
+      ${className}
+    `}
+    disabled={disabled || loading}
+    {...props}
+  >
+    {loading ? (
+      <div className='flex items-center gap-2'>
+        <div className='w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
+        {children}
+      </div>
+    ) : (
+      children
+    )}
+  </button>
+);
+
+// Notification system component
+const Notification = ({ message, type = 'success', onClose }) => (
+  <div
+    className={`px-4 py-3 rounded-lg shadow-lg animate-fadeIn ${
+      type === 'error' ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'
+    }`}
+  >
+    <div className='flex items-center gap-2'>
+      {type === 'error' ? <FaExclamationTriangle /> : <FaCheck />}
+      <span className='text-sm font-medium'>{message}</span>
+      <button
+        onClick={onClose}
+        className='ml-auto text-sm text-gray-500 hover:text-gray-700'
+      >
+        &times;
+      </button>
+    </div>
+  </div>
+);
+
+// --- MAIN REPORT COMPONENT (LOGIC FROM CODE 1, UI/STYLES FROM CODE 2) ---
+
+export default function Report() {
+  const { isCollapsed } = useSidebar();
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState('revenue');
+
+  const [allBookingsForPayments, setAllBookingsForPayments] = useState([]);
+  const [bookingStats, setBookingStats] = useState([]);
+  const [loadingCharts, setLoadingCharts] = useState(true);
+
+  const [activeDateModal, setActiveDateModal] = useState(null);
+  const [tempDateRange, setTempDateRange] = useState([{ startDate: new Date(), endDate: new Date(), key: 'selection' }]);
+  const [currentFilterUpdater, setCurrentFilterUpdater] = useState(null);
+  
+  const [notifications, setNotifications] = useState([]); // FROM CODE 2 for notifications
+
+  // Notification system logic (FROM CODE 2)
+  const addNotification = (message, type = 'success') => {
+    const id = Date.now();
+    const notification = { id, message, type };
+    setNotifications((prev) => [...prev, notification]);
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    }, 5000);
+  };
+
+  // Logic: Data Fetching (FROM CODE 1, added error notification from Code 2)
+  const fetchAllBookingsForPaymentReport = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings`, {
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 403) {
+        localStorage.clear();
+        navigate('/login');
+        return;
+      }
+      if (!res.ok) { // Added check from Code 2 to throw error for non-403 error statuses
+        throw new Error('Failed to fetch bookings for payment report');
+      }
+      const data = await res.json();
+      setAllBookingsForPayments(Array.isArray(data.bookings) ? data.bookings : (data || []));
+    } catch (err) { 
+      console.error('Failed to fetch all bookings for payment report:', err); 
+      addNotification('Failed to fetch payment report data.', 'error'); // Notification from Code 2
+    }
+  };
+
+  // Logic: Data Fetching (FROM CODE 1, added error notification from Code 2)
+  const fetchDashboardData = async () => {
+    setLoadingCharts(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/bookings/dashboard-stats`, {
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 403) {
+        localStorage.clear();
+        navigate('/login');
+        return;
+      }
+      if (!res.ok) { // Added check from Code 2 to throw error for non-403 error statuses
+        throw new Error('Failed to fetch dashboard stats');
+      }
+      const data = await res.json();
+      setBookingStats(data.bookingStats || []);
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err);
+      addNotification('Failed to fetch dashboard stats.', 'error'); // Notification from Code 2
+    } finally {
+      setLoadingCharts(false);
+    }
+  };
+
+  // Logic: useEffect (FROM CODE 1)
+  useEffect(() => {
+    fetchDashboardData(); 
+    fetchAllBookingsForPaymentReport();
+  }, []);
+
+  // Logic: formatDateForPicker (FROM CODE 1)
+  const formatDateForPicker = (date) => {
+    if (!date) return '';
+    return dayjs(date).format('YYYY-MM-DD');
+  };
+
+  // Logic: handleShowDateModal (FROM CODE 1)
+  const handleShowDateModal = (filterType, currentFilters, setFilterFunc) => {
+    const startDate = currentFilters.startDate ? new Date(currentFilters.startDate) : new Date();
+    const endDate = currentFilters.endDate ? new Date(currentFilters.endDate) : new Date();
+    setTempDateRange([{ startDate, endDate, key: 'selection' }]);
+    setCurrentFilterUpdater(() => setFilterFunc);
+    setActiveDateModal(filterType);
+  };
+
+  // Logic: handleApplyDateFilter (FROM CODE 1, added notification from Code 2)
+  const handleApplyDateFilter = () => {
+    if (!currentFilterUpdater) return;
+    const newStartDate = formatDateForPicker(tempDateRange[0].startDate);
+    const newEndDate = formatDateForPicker(tempDateRange[0].endDate);
+
+    currentFilterUpdater(prev => ({ ...prev, startDate: newStartDate, endDate: newEndDate }));
+
+    setActiveDateModal(null);
+    setCurrentFilterUpdater(null);
+    addNotification('Date filter applied successfully.'); // Notification from Code 2
+  };
+
+  // Logic: handleCancelDateModal (FROM CODE 1, added notification from Code 2)
+  const handleCancelDateModal = () => {
+    setActiveDateModal(null);
+    setCurrentFilterUpdater(null);
+    addNotification('Date filter cancelled.', 'error'); // Notification from Code 2
+  };
+
+  // Logic: renderActiveTab (FROM CODE 1, converted to useCallback from Code 2)
+  const renderActiveTab = useCallback(() => {
+    switch (activeTab) {
+      case 'revenue':
+        return (
+          <RevenueReport
+            bookingStats={bookingStats}
+            loadingCharts={loadingCharts}
+            allBookingsForPayments={allBookingsForPayments}
+            handleShowDateModal={handleShowDateModal}
+            navigate={navigate}
+          />
+        );
+      case 'bookings':
+        return <BookingReport handleShowDateModal={handleShowDateModal} />;
+      case 'inventories':
+        return <InventoryReport />;
+      case 'activities':
+        return <ActivitiesReport handleShowDateModal={handleShowDateModal} />;
+      case 'other':
+        return <OtherReport bookingStats={bookingStats} loadingCharts={loadingCharts} />;
+      default:
+        return null;
+    }
+  }, [activeTab, bookingStats, loadingCharts, allBookingsForPayments, navigate, handleShowDateModal]);
+
+
+  return (
+    // Styling from Code 2
+    <div className='min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-screen h-screen text-gray-800 flex flex-col lg:flex-row overflow-hidden'>
+      <Navbar />
+
+      {/* Notification System (FROM CODE 2) */}
+      <div className='fixed top-4 right-4 z-50 space-y-2'>
+        {notifications.map((notification) => (
+          <Notification
+            key={notification.id}
+            message={notification.message}
+            type={notification.type}
+            onClose={() => setNotifications((prev) => prev.filter((n) => n.id !== notification.id))}
+          />
+        ))}
+      </div>
+
+      {/* Styling from Code 2 */}
+      <main className={`flex-1 h-full overflow-y-auto px-4 md:px-6 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
+        <div className='flex items-center gap-4 mb-4 animate-slideDown'>
+          {/* Button component from Code 2 */}
+          <Button onClick={() => navigate(-1)} className='text-white bg-black'>
+            <FaArrowLeft className='inline mr-2' />
+            Back
+          </Button>
+          <h2 className='text-2xl font-sans font-normal'>Reports</h2>
+        </div>
+
+        {/* Tab styling from Code 2 */}
+        <div className='flex border-b-2 border-gray-200 mb-6 gap-x-4 animate-slideIn'>
+          {['Revenue', 'Bookings', 'Inventories', 'Activities', 'Other'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab.toLowerCase())}
+              className={`
+                py-2 px-4 text-sm font-medium transition-all duration-300 ease-in-out relative
+                ${activeTab === tab.toLowerCase() ? 
+                  'text-indigo-700 border-b-2 border-indigo-700' : 
+                  'text-gray-500 hover:text-indigo-700 hover:border-b-2 hover:border-indigo-300'
+                }
+              `}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <div className="animate-fadeIn">{renderActiveTab()}</div>
+
+        {/* Date Modal Styling from Code 2 */}
+        {activeDateModal && (
+          <div
+            className='fixed inset-0 text-xs flex items-center justify-center bg-black bg-opacity-50 z-50 animate-fadeIn'
+            onClick={handleCancelDateModal}
+          >
+            <div
+              className='bg-white rounded-xl shadow-lg p-2 transform scale-95 animate-scaleIn'
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-center">
+                <DateRange
+                  editableDateInputs={true}
+                  onChange={(item) => setTempDateRange([item.selection])}
+                  moveRangeOnFirstSelection={false}
+                  ranges={tempDateRange}
+                  className='text-xs w-full'
+                  rangeColors={['#4b5563']}
+                />
+              </div>
+              <div className='flex justify-end gap-2 p-2 pt-0'>
+                <button onClick={handleCancelDateModal} className="px-4 py-2 rounded-xl bg-gray-200 text-gray-700 text-xs font-medium hover:bg-gray-300">
+                  Cancel
+                </button>
+                {/* Button component from Code 2 */}
+                <Button onClick={handleApplyDateFilter}>
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Global CSS for Animations (FROM CODE 2) */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        @keyframes bg-gradient-flow-diagonal {
+          0% { background-position: 0% 0%; }
+          100% { background-position: 100% 100%; }
+        }
+        .animate-bg-gradient-flow-diagonal {
+          background-size: 200% 200%;
+          animation: bg-gradient-flow-diagonal 10s linear infinite;
+        }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        .animate-slideUp { animation: slideUp 0.4s ease-out; }
+        .animate-slideDown { animation: slideDown 0.4s ease-out; }
+        .animate-slideIn { animation: slideIn 0.4s ease-out; }
+        .animate-scaleIn { animation: scaleIn 0.3s ease-out; }
+      `}</style>
+    </div>
+  );
+}
