@@ -745,53 +745,53 @@ export default function AddSpaceForm() {
 
     // --- CASCADING DROPDOWN HANDLERS (FROM Code 1) ---
 
-    const handleSpaceTypeChange = (selectedOption) => {
-        const value = selectedOption?.value || "";
-        
-        // 💡 FIX: Pass the selected value as a synthetic event to trigger main validation and form update
-        handleValidatedInputChange({ target: { name: 'spaceType', value } }); 
-        
-        // Reset dependent fields and state manually since we are outside handleValidatedInputChange
-        handleInputChange({ target: { name: 'transitType', value: '' } });
-        handleInputChange({ target: { name: 'transitLine', value: '' } });
-        handleInputChange({ target: { name: 'illumination', value: value === 'DOOH' ? '' : form.illumination } });
+    const handleSpaceTypeChange = (e) => {
+    const { value } = e.target;
+    
+    // Update form state with validated input change
+    handleValidatedInputChange({ target: { name: 'spaceType', value } }); 
+    
+    // Reset dependent fields and state manually since we are outside handleValidatedInputChange
+    handleInputChange({ target: { name: 'transitType', value: '' } });
+    handleInputChange({ target: { name: 'transitLine', value: '' } });
+    handleInputChange({ target: { name: 'illumination', value: value === 'DOOH' ? '' : form.illumination } });
 
-        setTransitTypeOptions([]);
-        setLineOptions([]);
+    setTransitTypeOptions([]);
+    setLineOptions([]);
 
-        if (value === 'Transit') {
-            const transitData = spaceOptions.find(opt => opt.value === 'Transit');
-            if (transitData && transitData.transitTypes) {
-                // Map the options to exclude the nested lines array before setting state for the next select
-                setTransitTypeOptions(transitData.transitTypes.map(({ lines, ...rest }) => rest));
-            }
+    if (value === 'Transit') {
+        const transitData = spaceOptions.find(opt => opt.value === 'Transit');
+        if (transitData && transitData.transitTypes) {
+            // Map the options to exclude the nested lines array before setting state for the next select
+            setTransitTypeOptions(transitData.transitTypes.map(({ lines, ...rest }) => rest));
         }
-        
-        // Clear errors for dependent fields
-        setFieldErrors(prev => ({
-            ...prev,
-            transitType: null,
-            transitLine: null,
-            illumination: null
-        }));
-    };
+    }
+    
+    // Clear errors for dependent fields
+    setFieldErrors(prev => ({
+        ...prev,
+        transitType: null,
+        transitLine: null,
+        illumination: null
+    }));
+};
 
-    const handleTransitTypeChange = (selectedOption) => {
-        const value = selectedOption?.value || "";
-        handleValidatedInputChange({ target: { name: 'transitType', value } });
-        
-        // Reset the line selection
-        setLineOptions([]);
-        handleInputChange({ target: { name: 'transitLine', value: '' } });
+const handleTransitTypeChange = (e) => {
+    const { value } = e.target;
+    handleValidatedInputChange({ target: { name: 'transitType', value } });
+    
+    // Reset the line selection
+    setLineOptions([]);
+    handleInputChange({ target: { name: 'transitLine', value: '' } });
 
-        const transitOptionsWithLines = spaceOptions.find(opt => opt.value === 'Transit')?.transitTypes || [];
-        
-        const selectedTypeData = transitOptionsWithLines.find(opt => opt.value === value);
-        if (selectedTypeData && selectedTypeData.lines) {
-            setLineOptions(selectedTypeData.lines);
-        }
-        setFieldErrors(prev => ({ ...prev, transitLine: null }));
-    };
+    const transitOptionsWithLines = spaceOptions.find(opt => opt.value === 'Transit')?.transitTypes || [];
+    
+    const selectedTypeData = transitOptionsWithLines.find(opt => opt.value === value);
+    if (selectedTypeData && selectedTypeData.lines) {
+        setLineOptions(selectedTypeData.lines);
+    }
+    setFieldErrors(prev => ({ ...prev, transitLine: null }));
+};
 
     // --- OPTIONS DATA (FROM Code 1) ---
 

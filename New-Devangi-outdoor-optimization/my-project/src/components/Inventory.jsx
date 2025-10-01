@@ -22,7 +22,7 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 
-// --- VALIDATION & NOTIFICATION HELPERS (Unchanged) ---
+// --- VALIDATION & NOTIFICATION HELPERS ---
 
 const ValidationMessage = ({ message, type = 'error' }) => {
     if (!message) return null;
@@ -109,7 +109,7 @@ const ImagePreviewModal = ({ imageUrl, onClose }) => {
 };
 
 
-// --- UI HELPER COMPONENTS (Unchanged) ---
+// --- UI HELPER COMPONENTS ---
 
 // Custom Button Component
 const Button = ({ children, className = '', disabled = false, loading = false, ...props }) => (
@@ -316,10 +316,9 @@ const CustomSelect = ({ value, onChange, options, placeholder, className = '' })
 };
 
 
-// --- VIEW COMPONENTS (Modified InventoryTableView) ---
+// --- VIEW COMPONENTS ---
 
 const InventoryGridView = ({ data, onTagUpdate, navigate, onImageClick }) => {
-    // ... (InventoryGridView remains unchanged as it uses the Card component)
     const [tagInputErrors, setTagInputErrors] = useState({});
 
     const validateTag = (tag) => {
@@ -516,7 +515,6 @@ const InventoryTableView = ({ data, currentPage, limit, navigate, sortConfig, se
 };
 
 const InventoryMapView = ({ spaces, navigate }) => {
-    // ... (InventoryMapView remains unchanged as it uses the Card component)
     const mapContainerRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const [mapLoading, setMapLoading] = useState(true);
@@ -588,19 +586,21 @@ const InventoryMapView = ({ spaces, navigate }) => {
 };
 
 
-// --- MAIN DASHBOARD COMPONENT (Unchanged outside of component usage) ---
+// --- MAIN DASHBOARD COMPONENT ---
 export default function InventoryDashboard() {
     const navigate = useNavigate();
     const { isCollapsed } = useSidebar();
-    const datePickerRef = useRef(null);
     
-    // --- State Initialization (From Code 1 & 2) ---
+    // datePickerRef is no longer needed/used in the fixed version, but keeping for reference
+    const datePickerRef = useRef(null); 
+    
+    // --- State Initialization ---
     const [spaces, setSpaces] = useState([]);
     const [mapSpaces, setMapSpaces] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
     const [viewMode, setViewMode] = useState('table');
-    const [loading, setLoading] = useState(false); // From Code 2
+    const [loading, setLoading] = useState(false);
     const limit = 10;
 
     const [search, setSearch] = useState('');
@@ -613,18 +613,19 @@ export default function InventoryDashboard() {
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
     const [showDateModal, setShowDateModal] = useState(false);
-    const [dateRange, setDateRange] = useState([{ startDate: null, endDate: null, key: 'selection' }]);
-    const [tempDateRange, setTempDateRange] = useState([{ startDate: null, endDate: null, key: 'selection' }]);
+    const initialDateRange = useMemo(() => [{ startDate: null, endDate: null, key: 'selection' }], []);
+    const [dateRange, setDateRange] = useState(initialDateRange);
+    const [tempDateRange, setTempDateRange] = useState(initialDateRange);
     const [sortConfig, setSortConfig] = useState({ key: '', direction: 'asc' });
-    const [previewImageUrl, setPreviewImageUrl] = useState(null); // From Code 2
-    const [uploadLoading, setUploadLoading] = useState(false); // From Code 2
-    const [notifications, setNotifications] = useState([]); // From Code 2
+    const [previewImageUrl, setPreviewImageUrl] = useState(null);
+    const [uploadLoading, setUploadLoading] = useState(false);
+    const [notifications, setNotifications] = useState([]);
 
-    // Validation states (From Code 2)
+    // Validation states
     const [searchError, setSearchError] = useState('');
     const [fileError, setFileError] = useState('');
 
-    // Filter options for CustomSelect (From Code 2)
+    // Filter options for CustomSelect
     const availabilityOptions = [
         { value: 'Completely available', label: 'Completely Available' },
         { value: 'Partially available', label: 'Partially Available' },
@@ -638,7 +639,7 @@ export default function InventoryDashboard() {
         { value: 'Gantry', label: 'Gantry' },
         { value: 'BQS', label: 'BQS' },
         { value: 'Transit', label: 'Transit' },
-        { value: 'Miscellaneous', label: 'Miscellaneous' } // Added from Code 1's options
+        { value: 'Miscellaneous', label: 'Miscellaneous' }
     ];
     const ownershipTypeOptions = [
         { value: 'Owned', label: 'Owned' },
@@ -647,9 +648,9 @@ export default function InventoryDashboard() {
     ];
 
 
-    // --- Core Functions (Logic from Code 1, wrapped with Code 2's UX) ---
+    // --- Core Functions ---
 
-    // Notification system (From Code 2)
+    // Notification system
     const addNotification = useCallback((message, type = 'success') => {
         const id = Date.now();
         const notification = { id, message, type };
@@ -659,7 +660,7 @@ export default function InventoryDashboard() {
         }, 5000);
     }, []);
 
-    // Load/Save viewMode from localStorage (From Code 2)
+    // Load/Save viewMode from localStorage
     useEffect(() => {
         const savedViewMode = localStorage.getItem('inventoryViewMode');
         if (savedViewMode) {
@@ -670,7 +671,7 @@ export default function InventoryDashboard() {
         localStorage.setItem('inventoryViewMode', viewMode);
     }, [viewMode]);
 
-    // Fetch paginated data for table and grid (Logic from Code 1, enhanced with loading/notifications)
+    // Fetch paginated data for table and grid
     const fetchSpaces = useCallback(async () => {
         setLoading(true);
         try {
@@ -697,7 +698,7 @@ export default function InventoryDashboard() {
             }
 
             const data = await res.json();
- 
+    
             setSpaces(data.spaces || []);
             setTotalCount(data.totalCount || 0);
         } catch (error) {
@@ -708,7 +709,7 @@ export default function InventoryDashboard() {
         }
     }, [currentPage, search, selectedRegion, availability, startDate, endDate, spaceType, ownershipType, navigate, addNotification]);
 
-    // Fetch all location data for the map view (Logic from Code 1, enhanced with loading/notifications)
+    // Fetch all location data for the map view
     const fetchMapLocations = useCallback(async () => {
         setLoading(true);
         try {
@@ -753,22 +754,12 @@ export default function InventoryDashboard() {
         }
     }, [viewMode, fetchSpaces, fetchMapLocations]);
 
-    // Effect to handle clicks outside the date picker popover to close it (From Code 1)
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
-                setShowDateModal(false);
-            }
-        }
-        if (showDateModal) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [showDateModal]);
+    // ***************************************************************
+    // FIX APPLIED: Removed the problematic click-outside-to-close useEffect
+    // The Modal component's backdrop click handler now solely manages closing.
+    // ***************************************************************
 
-    // Memoized sorting logic (From Code 1)
+    // Memoized sorting logic
     const sortedSpaces = useMemo(() => {
         let sortableItems = [...spaces];
         if (sortConfig.key) {
@@ -783,7 +774,7 @@ export default function InventoryDashboard() {
         return sortableItems;
     }, [spaces, sortConfig]);
 
-    // Search input change handler with validation (From Code 2)
+    // Search input change handler with validation
     const handleSearchChange = (value) => {
         setSearch(value);
         const error = validateSearch(value);
@@ -793,7 +784,7 @@ export default function InventoryDashboard() {
         }
     };
 
-    // Tag update logic (From Code 1)
+    // Tag update logic
     const handleTagUpdate = async (action, spaceId, tag) => {
         try {
             const token = localStorage.getItem('accessToken');
@@ -823,7 +814,7 @@ export default function InventoryDashboard() {
         }
     };
 
-    // Download Excel logic (From Code 1, enhanced with notification)
+    // Download Excel logic
     const handleDownloadExcel = () => {
         if (spaces.length === 0) {
             addNotification("No data to download.", 'error');
@@ -859,7 +850,7 @@ export default function InventoryDashboard() {
         }
     };
 
-    // File selection handler with validation (From Code 2)
+    // File selection handler with validation
     const handleFileSelect = (file) => {
         setSelectedFile(file);
         const error = validateFile(file);
@@ -869,7 +860,7 @@ export default function InventoryDashboard() {
         }
     };
 
-    // Confirm Upload logic (From Code 1, enhanced with loading/notifications)
+    // Confirm Upload logic
     const handleConfirmUpload = async () => {
         if (!selectedFile || fileError) return;
 
@@ -908,7 +899,7 @@ export default function InventoryDashboard() {
         }
     };
 
-    // Reset filters logic (From Code 1, enhanced with notification)
+    // Reset filters logic
     const resetFilters = () => {
         setSearch('');
         setSelectedRegion('');
@@ -919,7 +910,7 @@ export default function InventoryDashboard() {
         setSpaceType('');
         setOwnershipType('');
         setSortConfig({ key: '', direction: 'asc' });
-        setSearchError(''); // From Code 2
+        setSearchError('');
 
         const initialRange = [{ startDate: null, endDate: null, key: 'selection' }];
         setDateRange(initialRange);
@@ -928,14 +919,14 @@ export default function InventoryDashboard() {
         addNotification("Filters reset successfully");
     };
 
-    // Date formatting helper (From Code 1, adjusted for standard date object)
+    // Date formatting helper
     const formatDate = (date) => {
         if (!date) return '';
         // Use standard ISO format for consistency in the UI display
         return new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     };
 
-    // Apply date filter logic (From Code 1, enhanced with validation/notifications)
+    // Apply date filter logic
     const handleApplyDateFilter = () => {
         const { startDate: start, endDate: end } = tempDateRange[0];
 
@@ -957,10 +948,11 @@ export default function InventoryDashboard() {
         }
     };
 
-    // Cancel date filter logic (From Code 1)
+    // Cancel date filter logic
     const handleCancelDateFilter = () => {
         setShowDateModal(false);
-        setTempDateRange(dateRange);
+        // Revert temporary range back to the active range upon cancel
+        setTempDateRange(dateRange); 
     };
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -969,7 +961,7 @@ export default function InventoryDashboard() {
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-screen text-black flex flex-col lg:flex-row">
             <Navbar />
 
-            {/* Notification System (From Code 2) */}
+            {/* Notification System */}
             <div className="fixed top-4 right-4 z-50 space-y-2">
                 {notifications.map((notification) => (
                     <div
@@ -1091,7 +1083,8 @@ export default function InventoryDashboard() {
                                 placeholder="All Availabilities"
                             />
 
-                            <div className="relative w-full md:w-auto" ref={datePickerRef}>
+                            {/* Removed ref={datePickerRef} as it's no longer needed */}
+                            <div className="relative w-full md:w-auto"> 
                                 <button
                                     onClick={() => { setTempDateRange(dateRange); setShowDateModal(prev => !prev); }}
                                     className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:ring-2 ring-black w-full text-left bg-white text-black transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
@@ -1175,7 +1168,7 @@ export default function InventoryDashboard() {
                     </Modal>
                 )}
 
-                {/* Date Picker Modal (Unchanged) */}
+                {/* Date Picker Modal - Now works correctly as the conflicting click-outside-handler is removed */}
                 {showDateModal && (
                     <Modal onClose={handleCancelDateFilter}>
                         <div className="p-6">

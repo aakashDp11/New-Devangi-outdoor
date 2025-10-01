@@ -327,7 +327,7 @@ export default function BookingsDashboard() {
     const [notifications, setNotifications] = useState([]); // Notification state
 
     const limit = 10;
-    const datePickerRef = useRef(null);
+    // const datePickerRef = useRef(null); // Ref for date picker is no longer needed/used
 
     // Notification system logic
     const addNotification = useCallback((message, type = 'success') => {
@@ -435,7 +435,9 @@ export default function BookingsDashboard() {
         fetchBookings();
     }, [fetchBookings]);
     
-    // Effect to handle clicks outside the date picker popover to close it (Copied from InventoryDashboard)
+    // 💥 FIX: Removed the problematic click-outside useEffect.
+    // The Modal component's backdrop click handler now solely manages closing.
+    /*
     useEffect(() => {
         function handleClickOutside(event) {
             if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
@@ -449,6 +451,7 @@ export default function BookingsDashboard() {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [showDateModal]);
+    */
 
     // Filter Handlers
     const handleApplyDateFilters = () => {
@@ -578,7 +581,8 @@ export default function BookingsDashboard() {
                                 {/* Note: We don't have search validation logic here, so ValidationMessage is not used for search input */}
                             </div>
                             <div className='flex items-center gap-3 flex-shrink-0'>
-                                <div className='relative w-full md:w-auto' ref={datePickerRef}>
+                                {/* Removed ref={datePickerRef} */}
+                                <div className='relative w-full md:w-auto'> 
                                     <button
                                         onClick={() => {
                                             setTempDateRange(dateRange); // Sync temp state before opening
@@ -661,7 +665,8 @@ export default function BookingsDashboard() {
                         <div className='flex justify-center'>
                             <DateRange
                                 editableDateInputs={true}
-                                onChange={(item) => setTempDateRange([item.selection])}
+                                // This onChange now works without being interrupted
+                                onChange={(item) => setTempDateRange([item.selection])} 
                                 moveRangeOnFirstSelection={false}
                                 ranges={tempDateRange}
                                 className='text-xs w-full'

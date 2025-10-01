@@ -1,325 +1,359 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion"; 
+import { motion } from "framer-motion";
+import { toast } from "sonner"; // Assuming sonner is installed
 
-// --- MOCK IMPORTS for standalone execution ---
+// --- ACTUAL IMPORTS ---
+// Assuming these are the actual paths in your project
+import Navbar from "./Navbar";
+import { useSpaceForm } from "../context/SpaceFormContext"; // Replace mock with actual path
+import { useSidebar } from "../context/SidebarContext"; // Replace mock with actual path
+import { FaArrowLeft, FaCheck } from "react-icons/fa";
 
-// Mock Navbar Component (Assuming it was just a layout component)
-const Navbar = () => (
-    <div className="bg-gray-800 text-white w-24 lg:w-64 fixed h-full flex flex-col items-center py-4 transition-all duration-300">
-        <h2 className="text-xl font-bold">App</h2>
+// --- REUSABLE UI COMPONENTS ---
+
+const Card = ({ children, className = "", ...props }) => (
+    <div
+        className={`
+            bg-gray-100 bg-opacity-80 shadow-xl rounded-2xl w-full flex flex-col relative overflow-hidden
+            ${className}
+        `}
+        {...props}
+    >
+        <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50 to-purple-50 opacity-20 animate-bg-gradient-flow-diagonal z-0"></div>
+        <div className="relative z-10 h-full flex flex-col">{children}</div>
     </div>
 );
 
-// Mock useSpaceForm Hook (Provides basic form data structure for preview)
-const useSpaceForm = () => ({
-    form: {
-        spaceName: "Example Billboard Ad Space",
-        spaceType: "BQS",
-        category: "Outdoor",
-        ownershipType: "Leased",
-        previousBrands: "Coca-Cola, Nike",
-        tags: "High Traffic, City Center",
-        demographics: "Youth, Professionals",
-        additionalTags: "24/7 Visibility",
-        buyingPrice: "5000 USD",
-        sellingPrice: "6500 USD",
-        price: "N/A", // Should be deleted in real submit logic
-        illumination: "Front-lit",
-        width: 10,
-        height: 5,
-        unit: "Billboard",
-        resolution: "1920x1080 (Digital Mock)",
-        facing: "North",
-        address: "123 Main St",
-        city: "Mumbai",
-        zip: "400001",
-        state: "Maharashtra",
-        tier: "Tier 1",
-        faciaTowards: "Highway",
-        mainPhoto: null, // Replace with a File object in a real scenario
-        startDate: new Date().toISOString(),
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
-    },
-    stepOrder: ["Basic", "Details", "Media"],
-    completedSteps: ["Basic", "Details"],
-    // Mock toast is handled by the consumer environment (sonner)
-});
+const CardContent = ({ children, className = "" }) => (
+    <div className={`p-4 md:p-6 flex-grow flex flex-col ${className}`}>
+        {children}
+    </div>
+);
 
-// Mock useSidebar Hook
-const useSidebar = () => ({
-    isCollapsed: false,
-});
+const Button = ({ children, className = "", disabled = false, loading = false, ...props }) => (
+    <button
+        className={`px-4 py-2 rounded-xl bg-[black] text-white text-xs font-medium transition-all duration-200 transform hover:scale-105 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-md hover:shadow-lg ${className}`}
+        disabled={disabled || loading}
+        {...props}
+    >
+        {loading ? (
+            <div className="flex items-center gap-2">
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                {children}
+            </div>
+        ) : (
+            children
+        )}
+    </button>
+);
 
-// Mock toast utility (must be installed in a real environment)
-const toast = {
-    loading: (message) => console.log('LOADING:', message),
-    success: (message) => console.log('SUCCESS:', message),
-    error: (message) => console.error('ERROR:', message),
+const PreviewField = ({ label, value }) => (
+    <div className="w-full">
+        <label className="text-sm font-medium text-gray-700 block mb-1">
+            {label}
+        </label>
+        <p className="border px-4 py-2 rounded-xl w-full bg-white text-gray-900 shadow-sm whitespace-pre-wrap">
+            {value || "-"}
+        </p>
+    </div>
+);
+
+const Stepper = ({ stepOrder, completedSteps }) => {
+    const currentStepIndex = completedSteps.length;
+    const isPreviewActive = completedSteps.length === stepOrder.length;
+
+    return (
+        <div className="flex flex-wrap gap-x-6 gap-y-2 mb-8 text-sm font-medium border-b border-gray-200 animate-fadeIn">
+            {stepOrder.map((label, idx) => {
+                const isCompleted = completedSteps.includes(label) || idx < currentStepIndex;
+                const isActive = idx === currentStepIndex;
+                return (
+                    <div
+                        key={label}
+                        className={`flex items-center gap-2 pb-2 cursor-pointer transition-colors duration-200
+                        ${isCompleted
+                                ? "text-green-600"
+                                : isActive ? "text-[black]" : "text-gray-500"}
+                        ${isActive ? "border-b-2 border-[black] text-[black]" : "border-b-2 border-transparent"}
+                        `}
+                    >
+                        <span className={`${isCompleted ? "text-green-600" : "text-gray-400"}`}>
+                            {isCompleted ? <FaCheck /> : <span className="text-xl leading-none">•</span>}
+                        </span>
+                        {label}
+                    </div>
+                );
+            })}
+             {/* The Preview Step itself, active only after all others are done */}
+             <div
+                className={`flex items-center gap-2 pb-2 transition-colors duration-200
+                ${isPreviewActive ? "text-[black] border-b-2 border-[black]" : "text-gray-500 border-b-2 border-transparent"}
+                `}
+            >
+                <span className={`${isPreviewActive ? "text-green-600" : "text-gray-400"}`}>
+                    <span className="text-xl leading-none">•</span>
+                </span>
+                Preview
+            </div>
+        </div>
+    );
 };
 
-// --- END MOCK IMPORTS ---
+
+// --- MAIN COMPONENT ---
 
 export default function PreviewAddSpace() {
-  const navigate = useNavigate();
-  // Using destructuring to get form data and stepper state
-  const { form, stepOrder, completedSteps } = useSpaceForm();
-  const { isCollapsed } = useSidebar();
+    const navigate = useNavigate();
+    const { form, stepOrder, completedSteps } = useSpaceForm();
+    const { isCollapsed } = useSidebar();
 
-  const handleBack = () => navigate("/add-space");
+    const handleBack = () => navigate("/add-space"); // Navigate back to the main form route
 
-  // Logic and data preparation from Code 1
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const loadingToast = toast.loading('Saving Space...');
-    
-    // NOTE: In a real application, the fetch call to the API would succeed here.
-    // For this mock, we simulate success after a delay.
+    // Determine price requirement outside of handleSubmit
+    const requiresBQSPrice = ['BQS', 'DigitalBQS', 'Transit'].includes(form.spaceType);
 
-    // 1. Create a clean data object and append required structured fields.
-    const dataToSubmit = { ...form };
-    dataToSubmit.dates = [form.startDate, form.endDate];
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const loadingToast = toast.loading('Saving Space...');
 
-    // 2. Conditionally remove irrelevant price fields as per Code 1 logic.
-    const requiresBQSPrice = ['BQS', 'DigitalBQS', 'Transit'].includes(dataToSubmit.spaceType);
+        // 1. Create a clean data object and append required structured fields.
+        const dataToSubmit = { ...form };
+        dataToSubmit.dates = [form.startDate, form.endDate];
 
-    if (requiresBQSPrice) {
-      // For BQS/Transit, we only want buyingPrice and sellingPrice.
-      delete dataToSubmit.price;
-    } else {
-      // For other types, we only want the single price field.
-      delete dataToSubmit.buyingPrice;
-      delete dataToSubmit.sellingPrice;
-    }
-    
-    // Since we cannot run actual fetch, we simulate the submission for demonstration
-    // console.log("Submitting Data:", dataToSubmit);
-    // console.log("Simulated FormData generation and submission successful.");
+        // 2. Conditionally remove irrelevant price fields
+        if (requiresBQSPrice) {
+            delete dataToSubmit.price;
+        } else {
+            delete dataToSubmit.buyingPrice;
+            delete dataToSubmit.sellingPrice;
+        }
+        
+        const formData = new FormData();
+        const fileKeys = ['mainPhoto', 'longShot', 'closeShot', 'otherPhotos'];
 
-    // Simulate API call success
-    setTimeout(() => {
-        toast.success('Space created successfully! (Simulated)', { id: loadingToast });
-        // navigate is mocked here, in a real environment it would redirect
-        console.log("Navigating to / (Simulated)"); 
-        // navigate('/'); 
-    }, 1500);
+        // 3. Loop over the clean data object to build the FormData payload.
+        for (const key in dataToSubmit) {
+            const value = dataToSubmit[key];
 
-    /*
-    // Original API Submission Logic (kept for reference in a real environment)
-    const formData = new FormData();
-    const fileKeys = ['mainPhoto', 'longShot', 'closeShot', 'otherPhotos'];
+            if (fileKeys.includes(key) || value === null || value === undefined || value === '') {
+                continue;
+            }
+            if (Array.isArray(value)) {
+                value.forEach(item => { formData.append(key, item); });
+            } else {
+                formData.append(key, value);
+            }
+        }
 
-    // 3. Loop over the clean data object to build the FormData payload (Code 1 loop structure).
-    for (const key in dataToSubmit) {
-      const value = dataToSubmit[key];
+        // 4. Append files if they exist (File object check is crucial)
+        if (form.mainPhoto instanceof File) formData.append('mainPhoto', form.mainPhoto);
+        if (form.longShot instanceof File) formData.append('longShot', form.longShot);
+        if (form.closeShot instanceof File) formData.append('closeShot', form.closeShot);
+        if (form.otherPhotos && Array.isArray(form.otherPhotos)) {
+            form.otherPhotos.forEach((file) => {
+                if (file instanceof File) {
+                    formData.append('otherPhotos', file);
+                }
+            });
+        }
+        
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/create`, {
+                method: 'POST',
+                body: formData,
+            });
 
-      if (fileKeys.includes(key) || value === null || value === undefined || value === '') {
-        continue;
-      }
-      if (Array.isArray(value)) {
-        value.forEach(item => { formData.append(key, item); });
-      } else {
-        formData.append(key, value);
-      }
-    }
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ message: 'Upload failed. The server returned an invalid response.' }));
+                throw new Error(errorData.message || 'Upload failed');
+            }
 
-    // 5. Append files if they exist (Code 1 file handling).
-    if (form.mainPhoto) formData.append('mainPhoto', form.mainPhoto);
-    if (form.longShot) formData.append('longShot', form.longShot);
-    if (form.closeShot) formData.append('closeShot', form.closeShot);
-    if (form.otherPhotos && Array.isArray(form.otherPhotos)) {
-      form.otherPhotos.forEach((file) => {
-        formData.append('otherPhotos', file);
-      });
-    }
-
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/spaces/create`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: 'Upload failed. The server returned an invalid response.' }));
-        throw new Error(errorData.message || 'Upload failed');
-      }
-
-      await res.json();
-      
-      toast.success('Space created successfully!', { id: loadingToast });
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
-    } catch (error) {
-      console.error(error);
-      toast.error(error.message || 'Something went wrong!', { id: loadingToast });
-    }
-    */
-  };
-
-  // UI structure, styling, and motion components from Code 2
-  return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Navbar will render the mock version */}
-      <Navbar /> 
-      <main
-        className={`flex-1 transition-all duration-300 ${
-          isCollapsed ? "lg:ml-24" : "lg:ml-64"
-        } overflow-x-hidden`}
-      >
-        <motion.form
-          onSubmit={handleSubmit}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="h-full flex flex-col"
-        >
-          {/* Title + Stepper (Fixed Header) */}
-          <div className="bg-white border-b flex justify-between items-center px-6 py-3 sticky top-0 z-10 shadow-sm">
-            <h1 className="text-lg font-semibold">Preview & Create Space</h1>
-            <div className="flex gap-3 text-xs font-medium">
-              {stepOrder.slice(0, 3).map((label, i) => (
-                <div
-                  key={label}
-                  className={`px-2 py-1 rounded-lg ${
-                    completedSteps.includes(label)
-                      ? "text-green-600 border-b-2 border-green-600 bg-green-50"
-                      : "text-gray-500 border-b-2 border-transparent"
-                  } transition-colors duration-200`}
-                >
-                  {completedSteps.includes(label) ? "✓" : i + 1}. {label}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Content Area */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr,2fr] gap-6 p-6">
+            await res.json(); 
             
-            {/* Image Section */}
-            <div className="flex items-center justify-center bg-white rounded-xl shadow-lg p-6 border border-gray-100 h-fit lg:sticky lg:top-20">
-              {form.mainPhoto && typeof form.mainPhoto === "object" ? (
-                // In a real app, form.mainPhoto would be a File object
-                <motion.img
-                  src={URL.createObjectURL(form.mainPhoto)}
-                  alt="Main Space Preview"
-                  className="object-cover max-h-[500px] w-full rounded-xl shadow-lg"
-                  whileHover={{ scale: 1.01 }}
-                  transition={{ duration: 0.3 }}
-                />
-              ) : (
-                <div className="h-64 w-full flex items-center justify-center bg-gray-100 rounded-xl">
-                    <span className="text-gray-400 text-sm">No Main Image Uploaded</span>
-                </div>
-              )}
-            </div>
+            toast.success('Space created successfully!', { id: loadingToast });
+            
+            setTimeout(() => {
+                navigate('/');
+            }, 1500);
 
-            {/* Details Section (Scrollable) */}
-            <div className="bg-white shadow-lg rounded-xl p-8 border border-gray-100">
-              <div className="space-y-6">
-                
-                {/* Space Title and Type */}
-                <div className="border-b pb-4 mb-4">
-                  <div className="text-2xl font-extrabold text-gray-800">{form.spaceName || 'Untitled Space'}</div>
-                  <div className="flex items-center gap-3 text-sm mt-1">
-                    <span className="bg-blue-100 text-blue-800 px-3 py-0.5 rounded-full font-semibold">
-                      {form.spaceType || 'N/A'}
-                    </span>
-                    <span className="bg-purple-100 text-purple-800 px-3 py-0.5 rounded-full font-semibold">
-                      {form.category || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="text-md text-gray-600 font-medium mt-2">{form.ownershipType || 'Unknown Ownership'}</div>
-                </div>
+        } catch (error) {
+            console.error(error);
+            toast.error(error.message || 'Something went wrong!', { id: loadingToast });
+        }
+    };
 
-                {/* Details Grid */}
-                <h2 className="text-lg font-bold text-gray-700">General Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 text-sm">
-                  
-                  <DetailItem label="Advertising Brands" value={form.previousBrands} />
-                  <DetailItem label="Advertising Tags" value={form.tags} />
-                  <DetailItem label="Demographics" value={form.demographics} />
-                  <DetailItem label="Additional Tags" value={form.additionalTags} />
-
-                  {/* Price fields logic */}
-                  {requiresBQSPrice ? (
-                    <>
-                      <DetailItem label="Buying Price" value={form.buyingPrice} />
-                      <DetailItem label="Selling Price" value={form.sellingPrice} />
-                    </>
-                  ) : (
-                    <DetailItem label="Price" value={form.price} />
-                  )}
-
-                  {/* Transit specific fields */}
-                  {form.spaceType === "Transit" && (
-                    <>
-                      <DetailItem label="Transit Type" value={form.transitType} />
-                      <DetailItem label="Transit Line" value={form.transitLine} />
-                    </>
-                  )}
-                </div>
-
-                {/* Specifications Section */}
-                <h2 className="text-lg font-bold text-gray-700 pt-4 border-t mt-4">Specifications</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 text-sm">
-                  { form.illumination && <DetailItem label="Illumination" value={form.illumination} /> }
-                  { (form.width && form.height) && <DetailItem label="Size (W x H)" value={`${form.width}ft x ${form.height}ft`} /> }
-                  { form.unit && <DetailItem label="Unit" value={form.unit} /> }
-                  { form.resolution && <DetailItem label="Resolution" value={form.resolution} /> }
-                  { form.facing && <DetailItem label="Facing" value={form.facing} /> }
-                </div>
-
-                {/* Location Section */}
-                <h2 className="text-lg font-bold text-gray-700 pt-4 border-t mt-4">Location</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 text-sm">
-                  <DetailItem label="Address" value={form.address} />
-                  <DetailItem label="City" value={form.city} />
-                  { form.zip && <DetailItem label="Pin Code" value={form.zip} /> }
-                  <DetailItem label="State" value={form.state} />
-                  <DetailItem label="Tier" value={form.tier} />
-                  <DetailItem label="Facia Towards" value={form.faciaTowards} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer (Fixed Footer) */}
-          <div className="bg-white border-t flex justify-between px-6 py-4 sticky bottom-0 z-10 shadow-md">
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="px-4 py-2 rounded-xl text-sm border border-gray-300 text-gray-700 hover:bg-gray-100 transition duration-150"
+    return (
+        <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 w-screen text-gray-900 flex flex-col lg:flex-row overflow-hidden`}>
+            <Navbar /> 
+            <main
+                className={`flex-1 overflow-y-auto px-4 md:px-6 py-8 transition-all duration-300 ${
+                    isCollapsed ? "lg:ml-24" : "lg:ml-64"
+                }`}
             >
-              Cancel
-            </button>
-            <div className="space-x-2">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="bg-gray-700 text-white px-4 py-2 text-sm rounded-xl hover:bg-gray-800 transition duration-150"
-              >
-                Back to Edit
-              </button>
-              <motion.button
-                type="submit"
-                whileTap={{ scale: 0.95 }}
-                className="bg-[#FF5733] text-white px-4 py-2 text-sm rounded-xl font-semibold shadow-lg hover:bg-[#e04d2d] transition duration-150"
-              >
-                Save & Publish
-              </motion.button>
-            </div>
-          </div>
-        </motion.form>
-      </main>
-    </div>
-  );
-}
+                <div className="max-w-screen-xl w-full mx-auto">
+                    
+                    {/* Header/Back Button */}
+                    <div className="flex justify-between items-center mb-6 animate-slideDown">
+                        <Button onClick={handleBack} className="bg-gray-700 text-white">
+                            <FaArrowLeft className="inline mr-2" /> Back to Edit
+                        </Button>
+                    </div>
+                    
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 animate-slideDown">
+                        Preview & Create Space
+                    </h1>
 
-// Helper component for cleaner detail rendering
-const DetailItem = ({ label, value }) => (
-    <div>
-        <strong className="text-gray-900 font-semibold">{label}</strong>
-        <div className="text-gray-600 mt-1">{value || "N/A"}</div>
-    </div>
-);
+                    {/* Stepper */}
+                    <Stepper 
+                        stepOrder={stepOrder.slice(0, 3)} // Basic, Details, Media
+                        completedSteps={completedSteps} 
+                    />
+
+                    <motion.form
+                        onSubmit={handleSubmit}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                        className="h-full flex flex-col"
+                        // ⭐ FIX 1: Add a unique ID to the form
+                        id="addSpaceForm" 
+                    >
+                        
+                        {/* Content Area */}
+                        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr,2fr] gap-6 mb-24">
+                            
+                            {/* Image Section */}
+                            <Card className="h-fit lg:sticky lg:top-8 animate-slideIn">
+                                <CardContent className="items-center justify-center p-6">
+                                    <h2 className="text-xl font-semibold text-gray-800 mb-4 w-full">Main Photo Preview</h2>
+                                    {form.mainPhoto instanceof File ? (
+                                        <motion.img
+                                            src={URL.createObjectURL(form.mainPhoto)}
+                                            alt="Main Space Preview"
+                                            className="object-cover max-h-[500px] w-full rounded-xl shadow-lg border border-gray-200"
+                                            whileHover={{ scale: 1.01 }}
+                                            transition={{ duration: 0.3 }}
+                                        />
+                                    ) : (
+                                        <div className="h-64 w-full flex items-center justify-center bg-gray-200 rounded-xl border border-dashed border-gray-400">
+                                            <span className="text-gray-500 text-base font-medium">No Main Image Uploaded</span>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Details Section */}
+                            <Card className="animate-slideIn">
+                                <CardContent>
+                                    <div className="space-y-6">
+                                        
+                                        {/* Space Title and Type */}
+                                        <div className="border-b pb-4 mb-4">
+                                            <div className="text-3xl font-extrabold text-blue-800">{form.spaceName || 'Untitled Space'}</div>
+                                            <div className="flex items-center gap-3 text-sm mt-2">
+                                                <span className="bg-blue-200 text-blue-900 px-3 py-1 rounded-full font-semibold">
+                                                    {form.spaceType || 'N/A'}
+                                                </span>
+                                                <span className="bg-purple-200 text-purple-900 px-3 py-1 rounded-full font-semibold">
+                                                    {form.category || 'N/A'}
+                                                </span>
+                                            </div>
+                                            <div className="text-md text-gray-700 font-medium mt-2">Ownership: {form.ownershipType || 'Unknown'}</div>
+                                        </div>
+
+                                        {/* General Information */}
+                                        <h2 className="text-xl font-bold text-gray-800 border-b pb-2">General Information</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                                            <PreviewField label="Advertising Brands" value={form.previousBrands} />
+                                            <PreviewField label="Advertising Tags" value={form.tags} />
+                                            <PreviewField label="Demographics" value={form.demographics} />
+                                            <PreviewField label="Additional Tags" value={form.additionalTags} />
+                                        </div>
+
+                                        {/* Pricing Information */}
+                                        <h2 className="text-xl font-bold text-gray-800 pt-4 border-t border-gray-200 pb-2">Pricing</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                                            {requiresBQSPrice ? (
+                                                <>
+                                                    <PreviewField label="Buying Price" value={form.buyingPrice} />
+                                                    <PreviewField label="Selling Price" value={form.sellingPrice} />
+                                                </>
+                                            ) : (
+                                                <PreviewField label="Price" value={form.price} />
+                                            )}
+                                        </div>
+                                        
+                                        {/* Specifications Section */}
+                                        <h2 className="text-xl font-bold text-gray-800 pt-4 border-t border-gray-200 pb-2">Specifications</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                                            { form.illumination && <PreviewField label="Illumination" value={form.illumination} /> }
+                                            { (form.width && form.height) && <PreviewField label="Size (W x H)" value={`${form.width}ft x ${form.height}ft`} /> }
+                                            { form.unit && <PreviewField label="Unit" value={form.unit} /> }
+                                            { form.resolution && <PreviewField label="Resolution" value={form.resolution} /> }
+                                            { form.facing && <PreviewField label="Facing" value={form.facing} /> }
+                                        </div>
+
+                                        {/* Location Section */}
+                                        <h2 className="text-xl font-bold text-gray-800 pt-4 border-t border-gray-200 pb-2">Location</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                                            <PreviewField label="Address" value={form.address} />
+                                            <PreviewField label="City" value={form.city} />
+                                            { form.zip && <PreviewField label="Pin Code" value={form.zip} /> }
+                                            <PreviewField label="State" value={form.state} />
+                                            <PreviewField label="Tier" value={form.tier} />
+                                            <PreviewField label="Facia Towards" value={form.faciaTowards} />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </motion.form>
+                </div>
+            </main>
+
+            {/* Footer (Fixed Footer) */}
+            <div className={`fixed bottom-0 right-0 bg-white z-10 transition-all duration-300 border-t border-gray-200 ${isCollapsed ? 'lg:left-24' : 'lg:left-64'}`}>
+                <div className="flex justify-between items-center w-full px-6 py-4 max-w-screen-xl mx-auto">
+                    <Button onClick={() => navigate("/")} className="bg-gray-700 hover:bg-gray-800">
+                        Cancel
+                    </Button>
+                    <div className="flex items-center space-x-3">
+                        <Button
+                            onClick={handleBack}
+                            className="bg-gray-200 text-gray-800 hover:bg-gray-300"
+                        >
+                            Back to Edit
+                        </Button>
+                        <motion.div whileTap={{ scale: 0.95 }}>
+                            <Button
+                                type="submit" 
+                                // ⭐ FIX 2: Link the button to the form ID
+                                form="addSpaceForm" 
+                                className="bg-orange-500 text-white hover:bg-orange-600"
+                            >
+                                Save & Publish
+                            </Button>
+                        </motion.div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Animation Styles */}
+            <style jsx>{`
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+                @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+                @keyframes bg-gradient-flow-diagonal { 0% { background-position: 0% 0%; } 100% { background-position: 100% 100%; } }
+                .animate-bg-gradient-flow-diagonal { background-size: 200% 200%; animation: bg-gradient-flow-diagonal 10s linear infinite; }
+                .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+                .animate-slideUp { animation: slideUp 0.4s ease-out; }
+                .animate-slideDown { animation: slideDown 0.4s ease-out; }
+                .animate-slideIn { animation: slideIn 0.4s ease-out; }
+                .animate-scaleIn { animation: scaleIn 0.3s ease-out; }
+            `}</style>
+        </div>
+    );
+}
