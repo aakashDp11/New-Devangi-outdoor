@@ -94,7 +94,8 @@ export default function InvoiceList() {
           </div>
           <div className="flex gap-3">
             <button
-              onClick={() => navigate('/reports')}
+              // ✅ FIX: Navigate to the correct route for Invoice Reports
+              onClick={() => navigate('/reports/invoices')} 
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center gap-2"
             >
               <FaChartBar /> View Reports
@@ -132,13 +133,13 @@ export default function InvoiceList() {
                     <tr key={invoice._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">{invoice.invoiceNumber}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        <span className="font-medium text-gray-900">
-                            {invoice.entityName || 'N/A'} 
-                        </span>
-                        <span className="text-xs text-gray-500 ml-1">
-                            ({(invoice.entityType || 'N/A').charAt(0).toUpperCase()})
-                        </span>
-                      </td>
+                        <span className="font-medium text-gray-900">
+                            {invoice.entityName || 'N/A'} 
+                        </span>
+                        <span className="text-xs text-gray-500 ml-1">
+                            ({(invoice.entityType || 'N/A').charAt(0).toUpperCase()})
+                        </span>
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-600">{new Date(invoice.invoiceDate).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-sm text-right font-semibold text-gray-900">
                         {formatCurrency(invoice.totalAmount)}

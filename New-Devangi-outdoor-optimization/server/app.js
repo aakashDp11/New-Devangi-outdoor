@@ -61,8 +61,8 @@ app.use(cors({
 // });
 
 app.use(express.json());
+app.use('/api/invoices/reports', invoiceReportRoutes);
 app.use('/api/invoices', invoiceRoutes);
-app.use('/api/invoice-reports', invoiceReportRoutes);
 
 
 app.use('/api/spaces', spaceRoutes);

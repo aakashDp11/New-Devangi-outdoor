@@ -68,8 +68,8 @@ app.use(express.json()); // for parsing application/json
 // app.use(requestMetrics());
 
 // --- API Route Registrations ---
-app.use('/api/invoices', invoiceRoutes);
-app.use('/api/invoice-reports', invoiceReportRoutes);
+app.use('/api/invoices/reports', invoiceReportRoutes); // Specific first
+app.use('/api/invoices', invoiceRoutes);               // General after
 app.use('/api/spaces', spaceRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/pipeline', pipelineRoutes);
