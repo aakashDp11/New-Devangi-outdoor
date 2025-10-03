@@ -1,3 +1,5 @@
+// C:\Users\rajes\Downloads\New-Devangi-outdoor-optimization (5)\New-Devangi-outdoor-optimization\my-project\server\routes\invoice.routes.js
+
 import express from 'express';
 import Invoice from '../models/invoice.model.js';
 
@@ -6,6 +8,7 @@ const router = express.Router();
 // Create invoice
 router.post('/', async (req, res) => {
   try {
+    // Saves entityName and entityType directly
     const invoice = new Invoice(req.body);
     await invoice.save();
     res.status(201).json(invoice);
@@ -17,13 +20,14 @@ router.post('/', async (req, res) => {
 // Get all invoices
 router.get('/', async (req, res) => {
   try {
-    const { clientId, status, startDate, endDate } = req.query;
+    const { entityType, status, startDate, endDate } = req.query;
     const filter = {};
-    if (clientId) filter.clientId = clientId;
+    
+    if (entityType) filter.entityType = entityType;
     if (status) filter.status = status;
     if (startDate && endDate) filter.invoiceDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
 
-    const invoices = await Invoice.find(filter).populate('clientId');
+    const invoices = await Invoice.find(filter); 
     res.json(invoices);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -33,7 +37,7 @@ router.get('/', async (req, res) => {
 // Get one invoice
 router.get('/:id', async (req, res) => {
   try {
-    const invoice = await Invoice.findById(req.params.id).populate('clientId');
+    const invoice = await Invoice.findById(req.params.id); 
     if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
     res.json(invoice);
   } catch (err) {
@@ -58,7 +62,20 @@ router.post('/:id/payments', async (req, res) => {
 // Update invoice
 router.put('/:id', async (req, res) => {
   try {
-    const invoice = await Invoice.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    // FIX: Use findById + save instead of findByIdAndUpdate
+    // This ensures the pre('save') middleware hook runs to recalculate totals
+    const invoice = await Invoice.findById(req.params.id);
+    
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+    
+    // Update the invoice fields with the request body
+    Object.assign(invoice, req.body);
+    
+    // Save will trigger the pre('save') middleware for calculations
+    await invoice.save();
+    
     res.json(invoice);
   } catch (err) {
     res.status(400).json({ message: err.message });
