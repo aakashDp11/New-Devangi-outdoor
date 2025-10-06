@@ -66,9 +66,47 @@ export default function ProposalDetails() {
     }
   };
 // Add this function inside ProposalDetails component
+// const handleDownloadPPT = async () => {
+//   try {
+//     const inventories = proposal.spaces.map(space => space.spaceName); // use space names as inventory names
+//     const response = await fetch(`http://localhost:5000/generate-ppt`, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({ inventories }),
+//     });
+
+//     if (!response.ok) {
+//       throw new Error("Failed to generate PPT");
+//     }
+
+//     const blob = await response.blob();
+//     const url = window.URL.createObjectURL(blob);
+//     const a = document.createElement("a");
+//     a.href = url;
+//     a.download = "custom_proposal.pptx";
+//     document.body.appendChild(a);
+//     a.click();
+//     a.remove();
+//     window.URL.revokeObjectURL(url);
+//     toast.success("PPT downloaded successfully!");
+//   } catch (error) {
+//     console.error(error);
+//     toast.error("Failed to download PPT.");
+//   }
+// };
+
 const handleDownloadPPT = async () => {
   try {
-    const inventories = proposal.spaces.map(space => space.spaceName); // use space names as inventory names
+    // Build inventory data from proposal.spaces
+    const inventories = proposal.spaces.map(space => ({
+      name: space.spaceName,
+      city: space.city,
+      initial_cost: space.price,
+      final_cost_gst: Math.round(space.price * 1.18), // assuming 18% GST
+    }));
+
     const response = await fetch(`http://localhost:5000/generate-ppt`, {
       method: "POST",
       headers: {
@@ -83,16 +121,18 @@ const handleDownloadPPT = async () => {
 
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
-    a.download = "custom_proposal.pptx";
+    a.download = `${proposal.companyName || "proposal"}_custom.pptx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
+
     window.URL.revokeObjectURL(url);
     toast.success("PPT downloaded successfully!");
   } catch (error) {
-    console.error(error);
+    console.error("Download PPT error:", error);
     toast.error("Failed to download PPT.");
   }
 };
@@ -120,14 +160,7 @@ const handleDownloadPPT = async () => {
       <Navbar />
       <main className={`flex-1 h-full overflow-y-auto px-4 md:px-8 py-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-24' : 'lg:ml-64'}`}>
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          {/* <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Proposal Details</h1>
-              <p className="text-sm text-gray-500">Review the complete information for this proposal.</p>
-            </div>
-            <Button onClick={handleEdit} className="bg-black text-xs text-white hover:bg-gray-800 px-4 py-2">Edit </Button>
-          </div> */}
+        
 <div className="flex items-center justify-between mb-6">
   <div>
     <h1 className="text-2xl font-bold text-gray-800">Proposal Details</h1>
