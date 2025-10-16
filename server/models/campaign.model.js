@@ -28,7 +28,7 @@ const campaignSchema = new Schema({
 
 
 campaignSchema.index({ startDate: 1, endDate: 1 });
-campaignSchema.index({ pipeline: 1 }, { unique: true, sparse: true });
+// campaignSchema.index({ pipeline: 1 }, { unique: true, sparse: true });
 
 const Campaign = model('Campaign', campaignSchema);
 export default Campaign;
